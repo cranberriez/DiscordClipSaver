@@ -4,7 +4,7 @@ import { cookies } from "next/headers";
 const baseUrl = process.env.NEXTAUTH_URL ?? "http://localhost:3000";
 
 export default async function GuildList() {
-	const res = await fetch(`${baseUrl}/api/discord/guilds`, {
+	const res = await fetch(`${baseUrl}/api/discord/user/guilds`, {
 		headers: { Cookie: (await cookies()).toString() },
 		cache: "no-store",
 	});
