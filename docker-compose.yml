@@ -10,8 +10,8 @@ services:
         ports:
             - "8000:8000"
         depends_on:
-            - postgres
-            - redis
+            - discord-clip-saver-postgres
+            - discord-clip-saver-redis
         restart: unless-stopped
 
     interface:
@@ -26,11 +26,11 @@ services:
             - "3000:3000"
         depends_on:
             - bot
-            - postgres
-            - redis
+            - discord-clip-saver-postgres
+            - discord-clip-saver-redis
         restart: unless-stopped
 
-    postgres:
+    discord-clip-saver-postgres:
         image: postgres:16-alpine
         container_name: discord-clip-saver-postgres
         environment:
@@ -46,11 +46,11 @@ services:
                 ipv4_address: 172.20.0.10
         restart: unless-stopped
 
-    redis:
+    discord-clip-saver-redis:
         image: redis:7-alpine
         container_name: discord-clip-saver-redis
         command: ["redis-server", "--save", "60", "1", "--loglevel", "warning"]
-        ports:docdock
+        ports:
             - "6379:6379"
         volumes:
             - redis_data:/data
