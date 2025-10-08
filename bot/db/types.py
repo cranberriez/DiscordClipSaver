@@ -22,3 +22,9 @@ class GuildSnapshot:
     name: str
     joined_at: datetime | None
     channels: Tuple[ChannelSnapshot, ...] = ()
+
+@dataclass(slots=True)
+class GuildSettings:
+    id: str
+    settings: dict
+    updated_at: datetime
