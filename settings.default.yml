@@ -1,0 +1,68 @@
+# Discord Clip Save 2 - Settings Defaults
+# ------------------------------------------------------------------------------
+# Conventions:
+# - For GUILD settings, values are concrete (no NULLs); they act as global defaults.
+# - For CHANNEL settings, NULL means "inherit from guild"; set a value to override.
+# - Durations: 0 means "no limit".
+# - clip_keywords_mode: one of [any, all, off].
+# - Arrays: empty list [] means "no items configured".
+# ------------------------------------------------------------------------------
+
+guild_settings_defaults:
+    # =========================
+    # BASIC (what we need now)
+    # =========================
+
+    enabled_by_default: false # If true, new channels inherit "enabled" unless overridden.
+    parse_threads: true # If true, also parse thread messages (subject to depth limit).
+    clip_keywords: [] # Simple keywords to match in messages (case-insensitive contains).
+    clip_keywords_mode: any # 'any' = match if any keyword appears; 'all' = require all; 'off' = ignore keywords.
+    min_video_duration_sec: 0 # Minimum duration (seconds) to accept; 0 to accept any length.
+    min_reactions: 0 # Minimum total reactions required to accept a message/clip.
+    tz: "UTC" # Guild-timezone context for schedules and date math (e.g., "America/Los_Angeles").
+    schedule_cron: "@continuous" # When the bot should run jobs by default (e.g., "@hourly" or "*/5 * * * *").
+
+    # =========================
+    # ADVANCED (nice to have)
+    # =========================
+
+    max_thread_depth: 0 # How deep into thread nesting to parse; 0 disables thread parsing.
+    include_regex: [] # PCRE patterns that MUST match (applied after keywords if not 'off').
+    exclude_regex: [] # PCRE patterns that, if matched, will exclude the message.
+    max_video_duration_sec: 0 # Maximum duration (seconds); 0 means unlimited.
+    allowed_mime_types: [] # Restrict to specific MIME types (e.g., ["video/mp4","video/quicktime"]); empty = allow all.
+    allowed_domains: [] # Restrict to specific link domains (e.g., ["youtube.com","twitch.tv"]); empty = allow all.
+    skip_bot_authors: true # If true, ignore messages authored by bots.
+    lookback_days: -1 # For backfills/initial scans, how many days to look back, -1 = all.
+    rate_limit_per_min: 60 # Safety throttle for API actions within a guild.
+    concurrency_per_guild: 1 # Max concurrent jobs the worker will run for this guild (only supports 1).
+
+channel_settings_defaults:
+    # =========================
+    # BASIC (what we need now)
+    # =========================
+    # Reminder: NULL = inherit from guild
+
+    enabled: null # Override enablement for this channel (true/false) or inherit (null).
+    parse_threads: null # Override thread parsing for this channel or inherit (null).
+    clip_keywords: null # Override keywords list for this channel or inherit (null).
+    clip_keywords_mode: null # Override mode ('any'/'all'/'off') or inherit (null).
+    min_video_duration_sec: null # Override minimum duration in seconds or inherit (null).
+    min_reactions: null # Override minimum reactions or inherit (null).
+
+    # =========================
+    # ADVANCED (nice to have)
+    # =========================
+
+    max_thread_depth: null # Override thread depth for this channel or inherit (null).
+    include_regex: null # Override required-match regex patterns or inherit (null).
+    exclude_regex: null # Override exclude regex patterns or inherit (null).
+    max_video_duration_sec: null # Override maximum duration or inherit (null = unlimited if guild is 0).
+    allowed_mime_types: null # Override allowed MIME types or inherit (null).
+    allowed_domains: null # Override allowed domains or inherit (null).
+    skip_bot_authors: null # Override whether to skip bot-authored messages or inherit (null).
+    lookback_days: null # Override backfill lookback window or inherit (null).
+    rate_limit_per_min: null # Override per-channel throttle or inherit (null).
+    concurrency_per_channel: null # Max concurrent jobs for this channel; null lets worker default to 1.
+    tz: null # Override timezone for channel-level scheduling or inherit (null).
+    schedule_cron: null # Override per-channel schedule or inherit (null).

@@ -1,10 +1,11 @@
 services:
     bot:
         build:
-            context: ./bot
-            dockerfile: Dockerfile
+            context: .
+            dockerfile: ./bot/Dockerfile
         container_name: discord-clip-saver-bot
         env_file:
+            - ./.env.global
             - ./bot/.env
         ports:
             - "8000:8000"
@@ -15,10 +16,11 @@ services:
 
     interface:
         build:
-            context: ./interface
-            dockerfile: Dockerfile
+            context: .
+            dockerfile: ./interface/Dockerfile
         container_name: discord-clip-saver-interface
         env_file:
+            - ./.env.global
             - ./interface/.env
         ports:
             - "3000:3000"
