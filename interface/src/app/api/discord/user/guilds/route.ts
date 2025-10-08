@@ -1,11 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAuthInfo } from "@/lib/auth";
 import { cacheUserScoped } from "@/lib/cache";
-import { filterInvitableGuilds, type PartialGuild } from "@/lib/discord";
+import { filterInvitableGuilds } from "@/lib/discord";
 import { getBotGuildsByIds } from "@/lib/db";
 import { discordFetch } from "@/lib/discordClient";
 import { getBoolParam } from "@/lib/params";
 import { jsonError } from "@/lib/http";
+import type { PartialGuild } from "@/lib/types";
 
 export async function GET(req: NextRequest) {
 	// Auth and token (server-side only)

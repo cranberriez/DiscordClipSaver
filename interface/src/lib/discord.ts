@@ -1,11 +1,5 @@
 import "server-only";
-
-export type PartialGuild = {
-	id: string;
-	name: string;
-	owner?: boolean;
-	permissions?: string | number; // Discord returns stringified int
-};
+import type { PartialGuild } from "@/lib/types";
 
 const ADMINISTRATOR = BigInt(8); // 1 << 3
 const MANAGE_GUILD = BigInt(32); // 1 << 5
