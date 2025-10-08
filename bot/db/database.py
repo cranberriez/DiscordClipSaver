@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import os
-from typing import Iterable, Optional
+from typing import Any, Iterable, Mapping, Optional
 
 from .types import GuildSnapshot
 
@@ -74,3 +74,7 @@ def ensure_guild_settings(guild_id: str, defaults: Optional[dict] = None):
 
 def update_guild_settings(guild_id: str, values: dict) -> None:
     _require_handler().guild_settings.update(guild_id, values)
+
+
+def set_guild_settings(guild_id: str, settings: Mapping[str, Any]):
+    return _require_handler().guild_settings.set(guild_id, dict(settings))

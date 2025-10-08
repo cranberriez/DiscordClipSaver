@@ -4,6 +4,8 @@ Repositories for guild-related Postgres operations.
 
 from __future__ import annotations
 
+import json
+
 from typing import Any, Iterable, Optional
 
 from ..types import GuildSnapshot
@@ -98,6 +100,14 @@ class GuildSettingsRepository:
     returning guild_id, settings, updated_at
     """
 
+    SET_SQL = """
+    update guild_settings
+    set settings = %s::jsonb,
+        updated_at = now()
+    where guild_id = %s
+    returning guild_id, settings, updated_at
+    """
+
     def __init__(self, handler):
         self._handler = handler
 
@@ -112,7 +122,12 @@ class GuildSettingsRepository:
         existing = self.fetch(guild_id)
         if existing:
             return existing
-        return self._handler.execute_one(self.UPSERT_SQL, (guild_id, defaults))
+        payload = json.dumps(defaults, separators=(",", ":"))
+        return self._handler.execute_one(self.UPSERT_SQL, (guild_id, payload))
 
     def update(self, guild_id: str, values: dict):
         return self._handler.execute_one(self.UPDATE_SQL, (values, guild_id))
+
+    def set(self, guild_id: str, settings: dict[str, Any]):
+        payload = json.dumps(settings, separators=(",", ":"))
+        return self._handler.execute_one(self.SET_SQL, (payload, guild_id))
