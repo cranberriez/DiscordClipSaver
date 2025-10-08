@@ -7,30 +7,30 @@ const globalForPg = globalThis as unknown as {
 };
 
 function resolvePoolConfig(): PoolConfig {
-    const connectionString = process.env.DATABASE_URL;
-    if (connectionString) {
-        return { connectionString } satisfies PoolConfig;
-    }
+	const connectionString = process.env.DATABASE_URL;
+	if (connectionString) {
+		return { connectionString } satisfies PoolConfig;
+	}
 
-    const host = process.env.DB_HOST;
-    const user = process.env.DB_USER;
-    const password = process.env.DB_PASSWORD;
-    const database = process.env.DB_NAME;
-    const port = process.env.DB_PORT ? Number(process.env.DB_PORT) : undefined;
+	const host = process.env.DB_HOST;
+	const user = process.env.DB_USER;
+	const password = process.env.DB_PASSWORD;
+	const database = process.env.DB_NAME;
+	const port = process.env.DB_PORT ? Number(process.env.DB_PORT) : undefined;
 
-    if (!host || !user || !password || !database) {
-        throw new Error(
-            "PostgreSQL configuration is missing. Provide DATABASE_URL or DB_HOST, DB_USER, DB_PASSWORD, and DB_NAME environment variables."
-        );
-    }
+	if (!host || !user || !password || !database) {
+		throw new Error(
+			"PostgreSQL configuration is missing. Provide DATABASE_URL or DB_HOST, DB_USER, DB_PASSWORD, and DB_NAME environment variables."
+		);
+	}
 
-    return {
-        host,
-        user,
-        password,
-        database,
-        port,
-    } satisfies PoolConfig;
+	return {
+		host,
+		user,
+		password,
+		database,
+		port,
+	} satisfies PoolConfig;
 }
 
 function createPool(): PoolSingleton {
@@ -93,4 +93,26 @@ export async function getUserByDiscordId(discordUserId: string | bigint): Promis
 		[normalizedDiscordUserId]
 	);
 	return (res.rows?.[0] as UserRow | undefined) ?? null;
+}
+
+export type BotGuildRow = {
+	guild_id: string;
+	name: string;
+	owner_user_id: string | null; // bigint from PG, returned as string by node-postgres
+	joined_at: Date | null;
+	last_seen_at: Date | null;
+};
+
+export async function getBotGuildsByIds(guildIds: string[]): Promise<BotGuildRow[]> {
+	if (guildIds.length === 0) return [];
+	const pool = getPool();
+	const res = await pool.query(
+		`
+			select guild_id, name, owner_user_id, joined_at, last_seen_at
+			from bot_guilds
+			where guild_id = any($1)
+		`,
+		[guildIds]
+	);
+	return res.rows as BotGuildRow[];
 }

@@ -1,22 +1,48 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { getToken } from "next-auth/jwt";
-import { authOptions } from "@/app/api/auth/[...nextauth]/route";
+import { getAuthInfo } from "@/lib/auth";
+import { cacheUserScoped } from "@/lib/cache";
+import { filterInvitableGuilds, type PartialGuild } from "@/lib/discord";
+import { getBotGuildsByIds } from "@/lib/db";
+import { discordFetch } from "@/lib/discordClient";
+import { getBoolParam } from "@/lib/params";
+import { jsonError } from "@/lib/http";
 
 export async function GET(req: NextRequest) {
-	const session = await getServerSession(authOptions);
-	if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-
-	const token = await getToken({ req, secret: process.env.NEXTAUTH_SECRET });
-	const accessToken = (token as typeof token & { accessToken?: string })?.accessToken;
+	// Auth and token (server-side only)
+	let auth;
+	try {
+		auth = await getAuthInfo(req);
+	} catch {
+		return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+	}
+	const { discordUserId, accessToken } = auth;
 	if (!accessToken) return NextResponse.json({ error: "Missing Discord token" }, { status: 401 });
 
-	const res = await fetch("https://discord.com/api/users/@me/guilds", {
-		headers: { Authorization: `Bearer ${accessToken}` },
-		cache: "no-store",
-	});
+	const url = new URL(req.url);
+	const filterParam = url.searchParams.get("filter");
+	const includeDb = getBoolParam(url, "includeDb");
 
-	if (!res.ok) return NextResponse.json({ error: "Failed to fetch guilds" }, { status: res.status });
+	// Fetch with user-scoped cache
+	const ttlMs = 2 * 60 * 1000; // 2 minutes
+	let guilds: PartialGuild[];
+	try {
+		guilds = await cacheUserScoped<PartialGuild[]>(discordUserId, "discord:guilds", ttlMs, () =>
+			discordFetch<PartialGuild[]>("/users/@me/guilds", accessToken)
+		);
+	} catch (err: any) {
+		return jsonError(err, 502);
+	}
 
-	return NextResponse.json(await res.json());
+	// Optional filtering
+	const result = filterParam === "invitable" ? filterInvitableGuilds(guilds) : guilds;
+
+	// Optional DB enrichment
+	if (includeDb) {
+		const ids = result.map((g) => g.id);
+		const rows = await getBotGuildsByIds(ids);
+		return NextResponse.json({ guilds: result, botGuilds: rows });
+	}
+
+	// Backward-compatible default
+	return NextResponse.json(result);
 }
