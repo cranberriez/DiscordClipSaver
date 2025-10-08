@@ -2,7 +2,7 @@ import discord
 
 from api import MESSAGES, StoredMessage
 from logger import logger
-from lib.guild_gather import gather_accessible_guilds_and_channels
+from lib.guild_gather_update import gather_accessible_guilds_and_channels
 import db.database as db
 
 # ----- Discord bot -----
