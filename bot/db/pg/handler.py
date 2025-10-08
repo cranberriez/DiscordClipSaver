@@ -13,7 +13,7 @@ import psycopg
 from psycopg import Connection
 from psycopg.rows import RowFactory, dict_row
 
-from . import guilds
+from . import guilds, users
 
 
 @dataclass
@@ -37,6 +37,7 @@ class PostgresHandler:
         self._config = config or PostgresConfig()
         self._conn: Optional[Connection] = None
         self._row_factory: RowFactory | None = row_factory
+        self.users = users.UsersRepository(self)
         self.guilds = guilds.GuildRepository(self)
         self.guild_settings = guilds.GuildSettingsRepository(self)
 
@@ -76,6 +77,7 @@ class PostgresHandler:
 
         conn = self._ensure_connection()
         with conn.cursor() as cur:
+            self.users.ensure_tables(cur)
             self.guilds.ensure_tables(cur)
             self.guild_settings.ensure_tables(cur)
 

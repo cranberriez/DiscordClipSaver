@@ -20,7 +20,8 @@ class GuildSnapshot:
 
     id: str
     name: str
-    joined_at: datetime | None
+    owner_user_id: int | None = None
+    joined_at: datetime | None = None
     channels: Tuple[ChannelSnapshot, ...] = ()
 
 @dataclass(slots=True)
