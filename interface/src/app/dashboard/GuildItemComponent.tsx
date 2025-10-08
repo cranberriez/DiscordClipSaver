@@ -7,7 +7,7 @@ export function GuildItemComponent({ guild, relation }: { guild: GuildItem; rela
 	return (
 		<li
 			key={id}
-			className="w-md rounded border border-white/40 p-3 flex justify-between"
+			className="rounded border border-white/40 gap-2 p-3 flex justify-between"
 		>
 			<div className="flex flex-col items-start">
 				<p className="font-medium">{name}</p>
@@ -25,12 +25,11 @@ export function GuildItemComponent({ guild, relation }: { guild: GuildItem; rela
 }
 
 function RelationButton({ relation }: { relation: GuildRelation }) {
-	if (relation === "other") return null;
-
 	const relations = {
 		owned: { text: "Edit", link: "#", colorClass: "text-green-500" },
 		invitable: { text: "Add Bot", link: "#", colorClass: "text-blue-500" },
-		unowned: { text: "View", link: "#", colorClass: "text-orange-400" },
+		unowned: { text: "Claim", link: "#", colorClass: "text-orange-400" },
+		other: { text: "View", link: "#", colorClass: "text-blue-200" },
 	};
 
 	return (
