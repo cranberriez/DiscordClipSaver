@@ -30,3 +30,11 @@ export type GuildItem = Guild & {
 
 // Relation of guild to user
 export type GuildRelation = "owned" | "unowned" | "invitable" | "other";
+
+export type InstallIntent = {
+	state: string;
+	user_id: string;
+	guild_id: string;
+	created_at: string;
+	expires_at: string;
+};

@@ -1,5 +1,6 @@
 import "server-only";
 import { Pool, type PoolConfig, type QueryResult } from "pg";
+import { InstallIntent } from "./types";
 
 type PoolSingleton = Pool & { _isInitialized?: boolean };
 const globalForPg = globalThis as unknown as {
@@ -80,9 +81,8 @@ export type UserRow = {
 	last_login_at: Date | null;
 };
 
-export async function getUserByDiscordId(discordUserId: string | bigint): Promise<UserRow | null> {
+export async function getUserByDiscordId(discordUserId: string): Promise<UserRow | null> {
 	const pool = getPool();
-	const normalizedDiscordUserId = typeof discordUserId === "bigint" ? discordUserId.toString() : discordUserId;
 	const res = await pool.query(
 		`
 			select id, discord_user_id, username, global_name, avatar, last_login_at
@@ -90,7 +90,7 @@ export async function getUserByDiscordId(discordUserId: string | bigint): Promis
 			where discord_user_id = $1
 			limit 1
 		`,
-		[normalizedDiscordUserId]
+		[discordUserId]
 	);
 	return (res.rows?.[0] as UserRow | undefined) ?? null;
 }
@@ -115,4 +115,79 @@ export async function getBotGuildsByIds(guildIds: string[]): Promise<BotGuildRow
 		[guildIds]
 	);
 	return res.rows as BotGuildRow[];
+}
+
+export async function getBotGuildById(guildId: string): Promise<BotGuildRow | null> {
+	const pool = getPool();
+	const res = await pool.query(
+		`
+			select guild_id, name, owner_user_id, joined_at, last_seen_at
+			from bot_guilds
+			where guild_id = $1
+			limit 1
+		`,
+		[guildId]
+	);
+	return (res.rows?.[0] as BotGuildRow | undefined) ?? null;
+}
+
+export async function createBotGuild(params: BotGuildRow): Promise<QueryResult> {
+	const pool = getPool();
+	return pool.query(
+		`
+			insert into bot_guilds (guild_id, name, owner_user_id, joined_at, last_seen_at)
+			values ($1, $2, $3, $4, $5)
+		`,
+		[params.guild_id, params.name, params.owner_user_id, params.joined_at, params.last_seen_at]
+	);
+}
+
+export async function setGuildOwnerIfUnclaimed(guildId: string, userId: string): Promise<boolean> {
+	const pool = getPool();
+	try {
+		const res = await pool.query(
+			`
+				update bot_guilds
+				set owner_user_id = $1
+				where guild_id = $2
+			and owner_user_id is null
+		`,
+			[userId, guildId]
+		);
+		return (res.rowCount ?? 0) > 0;
+	} catch (error) {
+		return false;
+	}
+}
+
+export async function consumeInstallIntent(state: string): Promise<InstallIntent | null> {
+	const pool = getPool();
+	const res = await pool.query(
+		`
+            delete from install_intents
+            where state = $1
+            returning state, user_id, guild_id, created_at, expires_at
+        `,
+		[state]
+	);
+
+	return (res.rows?.[0] as InstallIntent | undefined) ?? null;
+}
+
+export async function createInstallIntent(params: {
+	state: string;
+	userId: string;
+	guildId: string;
+	expiresAt: Date;
+}): Promise<InstallIntent> {
+	const pool = getPool();
+	const res = await pool.query(
+		`
+            insert into install_intents (state, user_id, guild_id, created_at, expires_at)
+            values ($1, $2, $3, now(), $4)
+            returning state, user_id, guild_id, created_at, expires_at
+        `,
+		[params.state, params.userId, params.guildId, params.expiresAt]
+	);
+	return res.rows[0] as InstallIntent;
 }

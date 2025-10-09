@@ -13,7 +13,7 @@ class InstallIntentsRepository:
     CREATE_TABLE_SQL = """
     create table if not exists install_intents (
         state text primary key,
-        user_id bigint not null references users(id) on delete cascade,
+        user_id bigint not null references users(discord_user_id) on delete cascade,
         guild_id bigint not null,
         created_at timestamp default current_timestamp,
         expires_at timestamp not null

@@ -18,26 +18,40 @@ export function GuildItemComponent({ guild, relation }: { guild: GuildItem; rela
 			</div>
 			<div className="flex flex-col items-end">
 				<p className="text-xs text-muted-foreground">{relation}</p>
-				<RelationButton relation={relation} />
+				<RelationButton
+					guildId={id}
+					relation={relation}
+				/>
 			</div>
 		</li>
 	);
 }
 
-function RelationButton({ relation }: { relation: GuildRelation }) {
+function RelationButton({ guildId, relation }: { guildId: string; relation: GuildRelation }) {
 	const relations = {
 		owned: { text: "Edit", link: "#", colorClass: "text-green-500" },
-		invitable: { text: "Add Bot", link: "#", colorClass: "text-blue-500" },
+		invitable: { text: "Invite", link: `/api/discord/bot/invite?guildId=${guildId}`, colorClass: "text-blue-500" },
 		unowned: { text: "Claim", link: "#", colorClass: "text-orange-400" },
 		other: { text: "View", link: "#", colorClass: "text-blue-200" },
 	};
 
+	const rel = relations[relation];
+
+	// Use a normal anchor for API routes to force full browser navigation and avoid RSC fetch errors
+	if (relation === "invitable") {
+		return (
+			<a href={rel.link}>
+				<button className={`hover:underline underline-offset-3 text-xs cursor-pointer ${rel.colorClass}`}>
+					{rel.text}
+				</button>
+			</a>
+		);
+	}
+
 	return (
-		<Link href={relations[relation].link}>
-			<button
-				className={`hover:underline underline-offset-3 text-xs cursor-pointer ${relations[relation].colorClass}`}
-			>
-				{relations[relation].text}
+		<Link href={rel.link}>
+			<button className={`hover:underline underline-offset-3 text-xs cursor-pointer ${rel.colorClass}`}>
+				{rel.text}
 			</button>
 		</Link>
 	);
