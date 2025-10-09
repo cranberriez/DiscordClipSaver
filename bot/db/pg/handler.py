@@ -1,5 +1,5 @@
 """
-Postgres handler for table generation and initialization.
+Postgres handler for table generation and initialization (async psycopg3).
 """
 
 from __future__ import annotations
@@ -10,7 +10,7 @@ from dataclasses import dataclass
 from typing import Optional
 
 import psycopg
-from psycopg import Connection
+from psycopg import AsyncConnection
 from psycopg.rows import RowFactory, dict_row
 
 from . import guilds, install_intents, users
@@ -27,7 +27,7 @@ class PostgresConfig:
 
 
 class PostgresHandler:
-    """Thin wrapper around a single psycopg connection and repo helpers."""
+    """Thin wrapper around a single psycopg async connection and repo helpers."""
 
     def __init__(
         self,
@@ -35,7 +35,7 @@ class PostgresHandler:
         row_factory: RowFactory | None = dict_row,
     ):
         self._config = config or PostgresConfig()
-        self._conn: Optional[Connection] = None
+        self._conn: Optional[AsyncConnection] = None
         self._row_factory: RowFactory | None = row_factory
         self.users = users.UsersRepository(self)
         self.guilds = guilds.GuildRepository(self)
@@ -45,62 +45,66 @@ class PostgresHandler:
     # ------------------------------------------------------------------
     # Connection lifecycle
     # ------------------------------------------------------------------
-    def _ensure_connection(self) -> Connection:
+    async def _ensure_connection(self) -> AsyncConnection:
         if self._conn is None:
             if self._config.dsn:
-                self._conn = psycopg.connect(self._config.dsn, autocommit=True)
+                self._conn = await psycopg.AsyncConnection.connect(self._config.dsn, autocommit=False)
             else:
-                self._conn = psycopg.connect(
+                self._conn = await psycopg.AsyncConnection.connect(
                     host=self._config.host,
                     port=self._config.port,
                     user=self._config.user,
                     password=self._config.password,
                     dbname=self._config.database,
-                    autocommit=True,
+                    autocommit=False,
                 )
             if self._row_factory:
                 self._conn.row_factory = self._row_factory
         return self._conn
 
-    def connection(self) -> Connection:
-        return self._ensure_connection()
+    async def connection(self) -> AsyncConnection:
+        return await self._ensure_connection()
 
-    def close(self) -> None:
+    async def close(self) -> None:
         if self._conn is not None:
-            self._conn.close()
+            await self._conn.close()
             self._conn = None
 
     # ------------------------------------------------------------------
     # High-level operations invoked by the facade
     # ------------------------------------------------------------------
-    def initialize(self) -> None:
+    async def initialize(self) -> None:
         """Open the connection and ensure all required tables exist."""
 
-        conn = self._ensure_connection()
-        with conn.cursor() as cur:
-            self.users.ensure_tables(cur)
-            self.guilds.ensure_tables(cur)
-            self.guild_settings.ensure_tables(cur)
-            self.install_intents.ensure_tables(cur)
+        conn = await self._ensure_connection()
+        async with conn.cursor() as cur:
+            await self.users.ensure_tables(cur)
+            await self.guilds.ensure_tables(cur)
+            await self.guild_settings.ensure_tables(cur)
+            await self.install_intents.ensure_tables(cur)
 
-    def execute(self, query: str, params: Optional[tuple] = None):
-        conn = self._ensure_connection()
-        with conn.cursor() as cur:
+    async def execute(self, query: str, params: Optional[tuple] = None):
+        conn = await self._ensure_connection()
+        async with conn.cursor() as cur:
             if params is None:
-                cur.execute(query)
+                await cur.execute(query)
             else:
-                cur.execute(query, params)
+                await cur.execute(query, params)
             if cur.description:
-                return cur.fetchall()
+                return await cur.fetchall()
+            # No result set => likely DML; commit
+            await conn.commit()
             return None
 
-    def execute_one(self, query: str, params: Optional[tuple] = None):
-        conn = self._ensure_connection()
-        with conn.cursor() as cur:
+    async def execute_one(self, query: str, params: Optional[tuple] = None):
+        conn = await self._ensure_connection()
+        async with conn.cursor() as cur:
             if params is None:
-                cur.execute(query)
+                await cur.execute(query)
             else:
-                cur.execute(query, params)
+                await cur.execute(query, params)
             if cur.description:
-                return cur.fetchone()
+                return await cur.fetchone()
+            # No result set => likely DML; commit
+            await conn.commit()
             return None

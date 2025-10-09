@@ -27,10 +27,20 @@ def build_guild_snapshot(guild: discord.Guild) -> GuildSnapshot:
     if hasattr(guild, "me") and guild.me is not None:
         joined_at = getattr(guild.me, "joined_at", None)
 
+    # Normalize icon to a string (URL) or None
+    icon_value = None
+    try:
+        if getattr(guild, "icon", None):
+            icon_attr = guild.icon
+            # discord.py v2+: Asset has .url
+            icon_value = getattr(icon_attr, "url", None) or str(icon_attr)
+    except Exception:
+        icon_value = None
+
     snapshot = GuildSnapshot(
         id=str(guild.id),
         name=guild.name,
-        icon=guild.icon,  # keep as-is to match existing persistence behavior
+        icon=icon_value,
         joined_at=joined_at,  # may be None
         channels=tuple(channel_summaries),
     )

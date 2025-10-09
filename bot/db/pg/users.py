@@ -1,10 +1,10 @@
-"""Repository helpers for the `users` table."""
+"""Repository helpers for the `users` table (async)."""
 
 from __future__ import annotations
 
 
 class UsersRepository:
-    """Schema helpers for the `users` table."""
+    """Schema helpers for the `users` table (async)."""
 
     CREATE_TABLE_SQL = """
     create table if not exists users (
@@ -20,6 +20,6 @@ class UsersRepository:
     def __init__(self, handler):
         self._handler = handler
 
-    def ensure_tables(self, cursor) -> None:
-        cursor.execute(self.CREATE_TABLE_SQL)
+    async def ensure_tables(self, cursor) -> None:
+        await cursor.execute(self.CREATE_TABLE_SQL)
 

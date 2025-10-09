@@ -11,7 +11,7 @@ async def handle_on_guild_remove(bot: discord.Client, guild: discord.Guild) -> N
     guild_id_str = str(guild.id)
 
     # Remove from persistence and in-memory cache
-    db.delete_guilds([guild_id_str])
+    await db.delete_guilds([guild_id_str])
     if guild_id_str in bot.available_guilds:
         del bot.available_guilds[guild_id_str]
 

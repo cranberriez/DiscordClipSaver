@@ -23,7 +23,7 @@ def _extract_settings_field(record: Any) -> Any:
     return getattr(record, "settings", None)
 
 
-def apply_default_settings_for_guilds(guild_snapshots: Iterable[GuildSnapshot]) -> None:
+async def apply_default_settings_for_guilds(guild_snapshots: Iterable[GuildSnapshot]) -> None:
     """Apply default guild settings for guilds lacking stored settings."""
 
     default_settings_path = os.getenv("DEFAULT_SETTINGS_PATH")
@@ -38,9 +38,9 @@ def apply_default_settings_for_guilds(guild_snapshots: Iterable[GuildSnapshot]) 
 
     for snapshot in guild_snapshots:
         guild_id = str(snapshot.id)
-        existing_record = db.get_guild_settings(guild_id)
+        existing_record = await db.get_guild_settings(guild_id)
         if existing_record is None:
-            existing_record = db.ensure_guild_settings(guild_id, defaults={})
+            existing_record = await db.ensure_guild_settings(guild_id, defaults={})
 
         existing_settings = _extract_settings_field(existing_record)
         if isinstance(existing_settings, Mapping) and existing_settings:
@@ -54,7 +54,7 @@ def apply_default_settings_for_guilds(guild_snapshots: Iterable[GuildSnapshot]) 
             continue
 
         try:
-            set_guild_settings_from_yaml(guild_id, settings_path)
+            await set_guild_settings_from_yaml(guild_id, settings_path)
             logger.info(
                 "Applied default guild settings for guild %s using %s",
                 guild_id,

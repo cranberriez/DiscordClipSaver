@@ -1,5 +1,5 @@
 """
-Repositories for guild-related Postgres operations.
+Repositories for guild-related Postgres operations (async psycopg3).
 """
 
 from __future__ import annotations
@@ -12,7 +12,7 @@ from ..types import GuildSnapshot
 
 
 class GuildRepository:
-    """CRUD helpers for the `bot_guilds` table."""
+    """CRUD helpers for the `bot_guilds` table (async)."""
 
     CREATE_TABLE_SQL = """
     create table if not exists bot_guilds (
@@ -49,31 +49,42 @@ class GuildRepository:
     # ------------------------------------------------------------------
     # Schema
     # ------------------------------------------------------------------
-    def ensure_tables(self, cursor) -> None:
-        cursor.execute(self.CREATE_TABLE_SQL)
+    async def ensure_tables(self, cursor) -> None:
+        await cursor.execute(self.CREATE_TABLE_SQL)
 
     # ------------------------------------------------------------------
     # Commands
     # ------------------------------------------------------------------
-    def upsert(self, *, guild_id: str, name: str, icon: str, owner_user_id: Optional[int] = None, joined_at: Optional[str] = None) -> None:
-        self._handler.execute(self.UPSERT_GUILD_SQL, (guild_id, name, icon, owner_user_id, joined_at))
+    async def upsert(self, *, guild_id: str, name: str, icon: Optional[str], owner_user_id: Optional[int] = None, joined_at: Optional[str] = None) -> None:
+        await self._handler.execute(self.UPSERT_GUILD_SQL, (guild_id, name, icon, owner_user_id, joined_at))
 
-    def delete_many(self, guild_ids: Iterable[str]) -> None:
+    async def delete_many(self, guild_ids: Iterable[str]) -> None:
         guild_ids = list(guild_ids)
         if not guild_ids:
             return
-        self._handler.execute(self.DELETE_GUILDS_SQL, (guild_ids,))
+        await self._handler.execute(self.DELETE_GUILDS_SQL, (guild_ids,))
 
-    def touch_last_seen(self, guild_id: str) -> None:
-        self._handler.execute(self.TOUCH_GUILD_SQL, (guild_id,))
+    async def touch_last_seen(self, guild_id: str) -> None:
+        await self._handler.execute(self.TOUCH_GUILD_SQL, (guild_id,))
 
-    def upsert_many(self, guilds: Iterable[GuildSnapshot]) -> None:
-        for guild in guilds:
-            self.upsert(guild_id=guild.id, name=guild.name, icon=guild.icon, owner_user_id=guild.owner_user_id, joined_at=guild.joined_at)
+    async def upsert_many(self, guilds: Iterable[GuildSnapshot]) -> None:
+        """Batch upsert guilds using executemany to reduce Python overhead.
+
+        Wrapped in a transaction for atomicity and fewer commits.
+        """
+        params = [
+            (g.id, g.name, g.icon, g.owner_user_id, g.joined_at) for g in guilds
+        ]
+        if not params:
+            return
+        conn = await self._handler.connection()
+        async with conn.transaction():
+            async with conn.cursor() as cur:
+                await cur.executemany(self.UPSERT_GUILD_SQL, params)
 
 
 class GuildSettingsRepository:
-    """Helpers for the `guild_settings` table."""
+    """Helpers for the `guild_settings` table (async)."""
 
     CREATE_TABLE_SQL = """
     create table if not exists guild_settings (
@@ -115,23 +126,29 @@ class GuildSettingsRepository:
     def __init__(self, handler):
         self._handler = handler
 
-    def ensure_tables(self, cursor) -> None:
-        cursor.execute(self.CREATE_TABLE_SQL)
+    async def ensure_tables(self, cursor) -> None:
+        await cursor.execute(self.CREATE_TABLE_SQL)
 
-    def fetch(self, guild_id: str) -> Optional[tuple[Any, ...]]:
-        return self._handler.execute_one(self.FETCH_SQL, (guild_id,))
+    async def fetch(self, guild_id: str) -> Optional[tuple[Any, ...]]:
+        return await self._handler.execute_one(self.FETCH_SQL, (guild_id,))
 
-    def ensure(self, guild_id: str, defaults: Optional[dict] = None):
+    async def ensure(self, guild_id: str, defaults: Optional[dict] = None):
         defaults = defaults or {}
-        existing = self.fetch(guild_id)
+        existing = await self.fetch(guild_id)
         if existing:
             return existing
         payload = json.dumps(defaults, separators=(",", ":"))
-        return self._handler.execute_one(self.UPSERT_SQL, (guild_id, payload))
+        return await self._handler.execute_one(self.UPSERT_SQL, (guild_id, payload))
 
-    def update(self, guild_id: str, values: dict):
-        return self._handler.execute_one(self.UPDATE_SQL, (values, guild_id))
+    async def set_many(self, guilds: Iterable[tuple[str, dict[str, Any]]]) -> None:
+        """Batch set guilds using executemany to reduce Python overhead.
 
-    def set(self, guild_id: str, settings: dict[str, Any]):
-        payload = json.dumps(settings, separators=(",", ":"))
-        return self._handler.execute_one(self.SET_SQL, (payload, guild_id))
+        Note: Connection currently runs with autocommit; this will not wrap in a single
+        transaction yet but still reduces round-trips between Python and libpq.
+        """
+        params = list(guilds)
+        if not params:
+            return
+        conn = await self._handler.connection()
+        async with conn.cursor() as cur:
+            await cur.executemany(self.SET_SQL, params)

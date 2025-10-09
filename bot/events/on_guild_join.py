@@ -14,7 +14,7 @@ async def handle_on_guild_join(bot: discord.Client, guild: discord.Guild) -> Non
 
     # Update in-memory cache and persistence
     bot.available_guilds[str(guild.id)] = snapshot
-    db.upsert_guilds([snapshot])
-    apply_default_settings_for_guilds([snapshot])
+    await db.upsert_guilds([snapshot])
+    await apply_default_settings_for_guilds([snapshot])
 
     logger.info("Joined guild: %s (%s)", guild.name, guild.id)

@@ -30,14 +30,14 @@ async def get_guild_settings(guild_id: int) -> GuildSettings:
     guild_id_str = str(guild_id)
 
     try:
-        record = db.get_guild_settings(guild_id_str)
+        record = await db.get_guild_settings(guild_id_str)
     except Exception:  # pragma: no cover - defensive logging
         logger.exception("Failed fetching guild settings for guild %s", guild_id_str)
         raise
 
     if record is None:
         try:
-            record = db.ensure_guild_settings(guild_id_str, defaults={})
+            record = await db.ensure_guild_settings(guild_id_str, defaults={})
         except Exception:  # pragma: no cover - defensive logging
             logger.exception("Failed ensuring default guild settings for guild %s", guild_id_str)
             raise
@@ -75,7 +75,7 @@ async def get_guild_settings(guild_id: int) -> GuildSettings:
         updated_at=updated_at,
     )
 
-def set_guild_settings_from_yaml(
+async def set_guild_settings_from_yaml(
     guild_id: str | int,
     yaml_source: str | Path | None = None,
     *,
@@ -120,5 +120,5 @@ def set_guild_settings_from_yaml(
         raise ValueError("Guild settings payload must be a mapping/dictionary.")
 
     settings_dict: dict[str, Any] = dict(data)
-    db.set_guild_settings(str(guild_id), settings_dict)
+    await db.set_guild_settings(str(guild_id), settings_dict)
     return settings_dict

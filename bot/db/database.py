@@ -1,4 +1,4 @@
-"""Top-level database helpers that proxy to the configured DB handler."""
+"""Top-level async database helpers that proxy to the configured DB handler."""
 
 from __future__ import annotations
 
@@ -24,10 +24,10 @@ def _require_handler():
     return _handler
 
 
-def init_db() -> None:
+async def init_db() -> None:
     """Ensure the database is ready for use (connect + create tables)."""
 
-    _require_handler().initialize()
+    await _require_handler().initialize()
 
 
 def configure_from_env() -> None:
@@ -48,41 +48,43 @@ def get_handler():
     return _require_handler()
 
 
-def upsert_guild(*, guild_id: str, name: str, icon: str, joined_at=None) -> None:
-    _require_handler().guilds.upsert(guild_id=guild_id, name=name, icon=icon, joined_at=joined_at)
+async def upsert_guild(*, guild_id: str, name: str, icon: str | None, owner_user_id: int | None = None, joined_at=None) -> None:
+    await _require_handler().guilds.upsert(
+        guild_id=guild_id, name=name, icon=icon, owner_user_id=owner_user_id, joined_at=joined_at
+    )
 
 
-def upsert_guilds(guilds: Iterable[GuildSnapshot]) -> None:
-    _require_handler().guilds.upsert_many(guilds)
+async def upsert_guilds(guilds: Iterable[GuildSnapshot]) -> None:
+    await _require_handler().guilds.upsert_many(guilds)
 
 
-def delete_guilds(guild_ids: list[str]) -> None:
-    _require_handler().guilds.delete_many(guild_ids)
+async def delete_guilds(guild_ids: list[str]) -> None:
+    await _require_handler().guilds.delete_many(guild_ids)
 
 
-def touch_guild(guild_id: str) -> None:
-    _require_handler().guilds.touch_last_seen(guild_id)
+async def touch_guild(guild_id: str) -> None:
+    await _require_handler().guilds.touch_last_seen(guild_id)
 
 
-def get_guild_settings(guild_id: str):
-    return _require_handler().guild_settings.fetch(guild_id)
+async def get_guild_settings(guild_id: str):
+    return await _require_handler().guild_settings.fetch(guild_id)
 
 
-def ensure_guild_settings(guild_id: str, defaults: Optional[dict] = None):
-    return _require_handler().guild_settings.ensure(guild_id, defaults=defaults)
+async def ensure_guild_settings(guild_id: str, defaults: Optional[dict] = None):
+    return await _require_handler().guild_settings.ensure(guild_id, defaults=defaults)
 
 
-def update_guild_settings(guild_id: str, values: dict) -> None:
-    _require_handler().guild_settings.update(guild_id, values)
+async def update_guild_settings(guild_id: str, values: dict) -> None:
+    await _require_handler().guild_settings.update(guild_id, values)
 
 
-def set_guild_settings(guild_id: str, settings: Mapping[str, Any]):
-    return _require_handler().guild_settings.set(guild_id, dict(settings))
+async def set_guild_settings(guild_id: str, settings: Mapping[str, Any]):
+    await _require_handler().guild_settings.set(guild_id, dict(settings))
 
 
-def purge_expired_install_intents(grace_seconds: int = 300) -> int:
+async def purge_expired_install_intents(grace_seconds: int = 300) -> int:
     """Delete expired rows from `install_intents` using a grace window.
 
     Returns the number of deleted rows.
     """
-    return _require_handler().install_intents.purge_expired(grace_seconds=grace_seconds)
+    return await _require_handler().install_intents.purge_expired(grace_seconds=grace_seconds)

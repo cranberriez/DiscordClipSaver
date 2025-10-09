@@ -7,10 +7,10 @@ from logger import logger
 from db import database
 
 
-def purge_install_intents_job(grace_seconds: int = 300) -> None:
+async def purge_install_intents_job(grace_seconds: int = 300) -> None:
     """Delete expired install intents with a grace period for UI convenience."""
     try:
-        deleted = database.purge_expired_install_intents(grace_seconds=grace_seconds)
+        deleted = await database.purge_expired_install_intents(grace_seconds=grace_seconds)
         if deleted:
             logger.info("purge_install_intents: deleted=%d grace_seconds=%d", deleted, grace_seconds)
         else:
