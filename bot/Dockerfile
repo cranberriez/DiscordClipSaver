@@ -1,24 +1,26 @@
 # Use an official Python runtime as a parent image
-FROM python:3.10-slim
+FROM python:3.13-slim
 
 # Set the working directory in the container
 WORKDIR /app
 
-# Copy the requirements file into the container
-COPY requirements.txt .
+# Copy the bot-specific requirements into the container (build context is repo root)
+COPY bot/requirements.txt ./requirements.txt
 
 # Install any needed packages specified in requirements.txt
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy the rest of the application code into the container
-COPY . .
+# Copy the bot source code into the container
+COPY bot/ /app/bot/
+
+# Copy the project root default settings into the image so the container is self-contained
+COPY settings.default.yml /app/settings.default.yml
 
 # Make port 8000 available to the world outside this container
 EXPOSE 8000
 
-# Define environment variable from .env file
-# The BOT_TOKEN will be passed in during the 'docker run' command
-ENV BOT_TOKEN=$BOT_TOKEN
+# Default settings path inside the image (can be overridden at runtime via env)
+ENV DEFAULT_SETTINGS_PATH=/app/settings.default.yml
 
 # Run main.py when the container launches
-CMD ["python", "main.py"]
+CMD ["python", "bot/main.py"]

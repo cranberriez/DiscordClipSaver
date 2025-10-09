@@ -13,6 +13,9 @@ services:
             - discord-clip-saver-postgres
             - discord-clip-saver-redis
         restart: unless-stopped
+        volumes:
+            # Optional: mount local settings file for rapid iteration without rebuilding image
+            - ./settings.default.yml:/app/settings.default.yml:ro
 
     interface:
         build:
@@ -29,6 +32,9 @@ services:
             - discord-clip-saver-postgres
             - discord-clip-saver-redis
         restart: unless-stopped
+        volumes:
+            # Optional: mount local settings file to the same in-container path used by the image
+            - ./settings.default.yml:/app/settings.default.yml:ro
 
     discord-clip-saver-postgres:
         image: postgres:16-alpine
