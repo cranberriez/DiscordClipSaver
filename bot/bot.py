@@ -14,6 +14,7 @@ bot.state = BotState()
 @bot.event
 async def on_ready():
     await guild_service.sync_guilds(bot)
+    
     for guild in bot.guilds:
         await channel_service.sync_channels(bot, guild)
 

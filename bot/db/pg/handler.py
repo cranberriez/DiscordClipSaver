@@ -79,13 +79,14 @@ class PostgresHandler:
         """Open the connection and ensure all required tables exist."""
 
         conn = await self._ensure_connection()
-        async with conn.cursor() as cur:
-            await self.users.ensure_tables(cur)
-            await self.guilds.ensure_tables(cur)
-            await self.guild_settings.ensure_tables(cur)
-            await self.channels.ensure_tables(cur)
-            await self.install_intents.ensure_tables(cur)
-            await self.channel_scan_runs.ensure_tables(cur)
+        async with conn.transaction():
+            async with conn.cursor() as cur:
+                await self.users.ensure_tables(cur)
+                await self.guilds.ensure_tables(cur)
+                await self.guild_settings.ensure_tables(cur)
+                await self.channels.ensure_tables(cur)
+                await self.install_intents.ensure_tables(cur)
+                await self.channel_scan_runs.ensure_tables(cur)
 
     async def execute(self, query: str, params: Optional[tuple] = None):
         conn = await self._ensure_connection()
