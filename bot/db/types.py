@@ -20,7 +20,7 @@ class GuildSnapshot:
 
     id: str
     name: str
-    icon: str
+    icon: str | None = None
     owner_user_id: int | None = None
     joined_at: datetime | None = None
     channels: Tuple[ChannelSnapshot, ...] = ()

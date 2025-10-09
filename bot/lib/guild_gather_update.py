@@ -2,8 +2,9 @@ from typing import Iterable
 
 from discord import Client
 
-from db.types import ChannelSnapshot, GuildSnapshot
+from db.types import GuildSnapshot
 from logger import logger
+from .guild_snapshot import build_guild_snapshot
 
 
 async def gather_accessible_guilds_and_channels(bot: Client) -> Iterable[GuildSnapshot]:
@@ -12,27 +13,7 @@ async def gather_accessible_guilds_and_channels(bot: Client) -> Iterable[GuildSn
     snapshots: list[GuildSnapshot] = []
 
     for guild in bot.guilds:
-        channel_summaries: list[ChannelSnapshot] = []
-        for channel in guild.channels:
-            channel_summaries.append(
-                ChannelSnapshot(
-                    id=str(channel.id),
-                    name=getattr(channel, "name", str(channel)),
-                    type=channel.__class__.__name__,
-                )
-            )
-
-        joined_at = None
-        if hasattr(guild, "me") and guild.me is not None:
-            joined_at = getattr(guild.me, "joined_at", None)
-
-        snapshot = GuildSnapshot(
-            id=str(guild.id),
-            name=guild.name,
-            icon=guild.icon,
-            joined_at=joined_at,
-            channels=tuple(channel_summaries),
-        )
+        snapshot = build_guild_snapshot(guild)
         snapshots.append(snapshot)
 
     bot.available_guilds = {snap.id: snap for snap in snapshots}
