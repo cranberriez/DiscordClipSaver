@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import os
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
-
+from lib.global_config import globalConfig
 from .purge_intents import schedule_purge_install_intents
 
 
@@ -12,8 +12,8 @@ def start_scheduler_and_jobs() -> AsyncIOScheduler:
     Returns the started scheduler instance.
     """
     # Configure jobs from environment
-    purge_cron = os.getenv("PURGE_INTENTS_CRON", "* * * * *")  # default: every minute
-    grace = int(os.getenv("PURGE_INTENTS_GRACE_SECONDS", "300"))
+    purge_cron = globalConfig.get("database_settings_defaults", "install_intent_purge_cron")
+    grace = globalConfig.get("database_settings_defaults", "install_intent_purge_grace_seconds")
 
     scheduler = AsyncIOScheduler()
 

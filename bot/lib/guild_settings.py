@@ -12,6 +12,7 @@ from db.types import GuildSettings
 from logger import logger
 
 from .yaml_to_json import yaml_to_json
+from .global_config import globalConfig
 
 def _as_mapping(record: Any) -> dict[str, Any]:
     if record is None:
@@ -76,12 +77,12 @@ async def get_guild_settings(guild_id: int) -> GuildSettings:
 
 def set_guild_settings_from_yaml(
     guild_id: str | int,
-    yaml_source: str | Path,
+    yaml_source: str | Path | None = None,
     *,
     settings_key: str = "guild_settings_defaults",
 ) -> dict[str, Any]:
     """
-    Update guild settings from YAML using the database `set_guild_settings` helper.
+    Update guild settings using a YAML payload or the shared global configuration.
 
     Parameters
     ----------
@@ -89,6 +90,7 @@ def set_guild_settings_from_yaml(
         Guild identifier (coerced to string) used for persistence.
     yaml_source:
         YAML content or path to a YAML file containing settings.
+        If None, uses the shared `globalConfig` that is loaded once per process.
     settings_key:
         Optional top-level key to select from the YAML payload before persisting.
         Defaults to "guild_settings_defaults".
@@ -99,8 +101,12 @@ def set_guild_settings_from_yaml(
         The settings dictionary that was persisted.
     """
 
-    json_payload = yaml_to_json(yaml_source)
-    data = json.loads(json_payload)
+    if yaml_source is None:
+        # Use globally loaded config to avoid re-reading YAML multiple times.
+        data = globalConfig.get()
+    else:
+        json_payload = yaml_to_json(yaml_source)
+        data = json.loads(json_payload)
 
     if settings_key:
         if not isinstance(data, Mapping):
