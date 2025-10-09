@@ -13,8 +13,8 @@ guild_settings_defaults:
     # BASIC (what we need now)
     # =========================
 
-    enabled_by_default: false # If true, new channels inherit "enabled" unless overridden.
-    parse_threads: true # If true, also parse thread messages (subject to depth limit).
+    enabled_by_default: false # If true, new CHANNELS inherit "enabled" unless overridden. Guilds are always enabled.
+    parse_threads: false # If true, also parse thread messages (subject to depth limit).
     clip_keywords: [] # Simple keywords to match in messages (case-insensitive contains).
     clip_keywords_mode: any # 'any' = match if any keyword appears; 'all' = require all; 'off' = ignore keywords.
     min_video_duration_sec: 0 # Minimum duration (seconds) to accept; 0 to accept any length.
@@ -66,3 +66,11 @@ channel_settings_defaults:
     concurrency_per_channel: null # Max concurrent jobs for this channel; null lets worker default to 1.
     tz: null # Override timezone for channel-level scheduling or inherit (null).
     schedule_cron: null # Override per-channel schedule or inherit (null).
+
+database_settings_defaults:
+    # =========================
+    # BASIC (what we need now)
+    # =========================
+
+    install_intent_expire_time: 60 # How long (seconds) an install intent is valid before expiration.
+    install_intent_purge_cron: "*/5 * * * *" # How often (cron) to purge expired install intents. Currently 5 minutes, minimum is 5 minutes.
