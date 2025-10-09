@@ -13,7 +13,7 @@ import psycopg
 from psycopg import AsyncConnection
 from psycopg.rows import RowFactory, dict_row
 
-from . import guilds, install_intents, users
+from . import guilds, install_intents, users, channels
 
 
 @dataclass
@@ -41,6 +41,8 @@ class PostgresHandler:
         self.guilds = guilds.GuildRepository(self)
         self.guild_settings = guilds.GuildSettingsRepository(self)
         self.install_intents = install_intents.InstallIntentsRepository(self)
+        self.channels = channels.ChannelsRepository(self)
+        self.channel_scan_runs = channels.ChannelScanRunsRepository(self)
 
     # ------------------------------------------------------------------
     # Connection lifecycle
@@ -81,7 +83,9 @@ class PostgresHandler:
             await self.users.ensure_tables(cur)
             await self.guilds.ensure_tables(cur)
             await self.guild_settings.ensure_tables(cur)
+            await self.channels.ensure_tables(cur)
             await self.install_intents.ensure_tables(cur)
+            await self.channel_scan_runs.ensure_tables(cur)
 
     async def execute(self, query: str, params: Optional[tuple] = None):
         conn = await self._ensure_connection()

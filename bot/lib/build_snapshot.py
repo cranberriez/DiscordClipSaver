@@ -13,15 +13,6 @@ def build_guild_snapshot(guild: discord.Guild) -> GuildSnapshot:
     Note: `guild.icon` may be None or an Asset depending on discord.py version.
     We persist whatever the caller is already using elsewhere to keep behavior consistent.
     """
-    channel_summaries: list[ChannelSnapshot] = []
-    for channel in guild.channels:
-        channel_summaries.append(
-            ChannelSnapshot(
-                id=str(channel.id),
-                name=getattr(channel, "name", str(channel)),
-                type=channel.__class__.__name__,
-            )
-        )
 
     joined_at: Optional[object] = None
     if hasattr(guild, "me") and guild.me is not None:
@@ -41,7 +32,18 @@ def build_guild_snapshot(guild: discord.Guild) -> GuildSnapshot:
         id=str(guild.id),
         name=guild.name,
         icon=icon_value,
-        joined_at=joined_at,  # may be None
-        channels=tuple(channel_summaries),
+        joined_at=joined_at  # may be None
     )
     return snapshot
+
+def build_channel_snapshot(channel: discord.abc.GuildChannel) -> ChannelSnapshot:
+    """Build a `ChannelSnapshot` from a single Discord channel."""
+    channel_type = getattr(channel, "type", None)
+    type_value = getattr(channel_type, "name", None) or str(channel_type or "0")
+
+    return ChannelSnapshot(
+        id=str(getattr(channel, "id", "")),
+        name=getattr(channel, "name", "unknown"),
+        type=type_value,
+        is_nsfw=getattr(channel, "nsfw", False)
+    )

@@ -46,7 +46,7 @@ class GuildService:
         snapshot = next((s for s in snapshots if s.id == str(guild.id)), None)
         if snapshot is None:
             # Fallback: minimal snapshot if not present (unlikely)
-            snapshot = GuildSnapshot(id=str(guild.id), name=guild.name, icon=None, joined_at=None, channels=())
+            snapshot = GuildSnapshot(id=str(guild.id), name=guild.name, icon=None, joined_at=None)
         await db.upsert_guilds([snapshot])
 
         _ensure_state(bot)

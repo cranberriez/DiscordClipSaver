@@ -12,6 +12,7 @@ class ChannelSnapshot:
     id: str
     name: str
     type: str
+    is_nsfw: bool = False
 
 
 @dataclass(slots=True)
