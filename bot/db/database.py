@@ -48,7 +48,7 @@ def get_handler():
     return _require_handler()
 
 
-async def upsert_guild(*, guild_id: str, name: str, icon: str | None, owner_user_id: int | None = None, joined_at=None) -> None:
+async def upsert_guild(*, guild_id: str, name: str, icon: str | None, owner_user_id: str | None = None, joined_at=None) -> None:
     await _require_handler().guilds.upsert(
         guild_id=guild_id, name=name, icon=icon, owner_user_id=owner_user_id, joined_at=joined_at
     )
@@ -79,7 +79,7 @@ async def update_guild_settings(guild_id: str, values: dict) -> None:
 
 
 async def set_guild_settings(guild_id: str, settings: Mapping[str, Any]):
-    await _require_handler().guild_settings.set(guild_id, dict(settings))
+    await _require_handler().guild_settings.set_one(guild_id, dict(settings))
 
 
 async def purge_expired_install_intents(grace_seconds: int = 300) -> int:

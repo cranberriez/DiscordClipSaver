@@ -152,3 +152,13 @@ class GuildSettingsRepository:
         conn = await self._handler.connection()
         async with conn.cursor() as cur:
             await cur.executemany(self.SET_SQL, params)
+
+    async def update(self, guild_id: str, values: dict[str, Any]):
+        """Merge JSON fields into existing settings for a guild (partial update)."""
+        payload = json.dumps(values, separators=(",", ":"))
+        return await self._handler.execute_one(self.UPDATE_SQL, (payload, guild_id))
+
+    async def set_one(self, guild_id: str, settings: dict[str, Any]):
+        """Replace the entire settings JSON for a guild (full overwrite)."""
+        payload = json.dumps(settings, separators=(",", ":"))
+        return await self._handler.execute_one(self.SET_SQL, (payload, guild_id))

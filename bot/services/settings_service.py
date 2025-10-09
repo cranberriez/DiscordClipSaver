@@ -54,12 +54,12 @@ class SettingsService:
             node = node[key]
         return node
 
-    async def get_guild_settings(self, guild_id: int) -> GuildSettings:
+    async def get_guild_settings(self, guild_id: str) -> GuildSettings:
         return await db.get_guild_settings(str(guild_id))  # type: ignore[return-value]
 
     async def set_guild_settings_from_yaml(
         self,
-        guild_id: str | int,
+        guild_id: str,
         yaml_source: str | Path | None = None,
         *,
         settings_key: str = "guild_settings_defaults",

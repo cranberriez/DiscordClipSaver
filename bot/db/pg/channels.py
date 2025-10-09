@@ -1,11 +1,8 @@
 # Base channels table and related information
 """
--- 1) You can keep snowflakes as BIGINT in Postgres, but in the app
---    ALWAYS treat them as strings to avoid JS Number precision issues.
-
 CREATE TABLE channels (
-  channel_id           BIGINT PRIMARY KEY,               -- Discord snowflake
-  guild_id             BIGINT NOT NULL REFERENCES guilds(guild_id) ON DELETE CASCADE,
+  channel_id           TEXT PRIMARY KEY,               -- Discord snowflake
+  guild_id             TEXT NOT NULL REFERENCES guilds(guild_id) ON DELETE CASCADE,
 
   -- Basic metadata (helps your admin UI without calling Discord every time)
   name                 TEXT,
@@ -14,7 +11,7 @@ CREATE TABLE channels (
 
   -- Bot read state
   is_reading           BOOLEAN NOT NULL DEFAULT FALSE,   -- whether the bot should actively read/ingest this channel
-  last_message_id      BIGINT,                           -- your resume cursor: use 'after:last_message_id'
+  last_message_id      TEXT,                           -- your resume cursor: use 'after:last_message_id'
   last_scanned_at      TIMESTAMPTZ,                      -- when we last finished a scan pass
   last_activity_at     TIMESTAMPTZ,                      -- optional: from message events or decoded snowflake ts
 
@@ -58,9 +55,9 @@ CREATE TYPE scan_status AS ENUM ('queued','running','succeeded','failed','cancel
 
 CREATE TABLE channel_scan_runs (
   id                 UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  channel_id         BIGINT NOT NULL REFERENCES channels(channel_id) ON DELETE CASCADE,
-  after_message_id   BIGINT,                 -- set from channels.last_message_id when enqueued
-  before_message_id  BIGINT,                 -- rarely used; for backfills
+  channel_id         TEXT NOT NULL REFERENCES channels(channel_id) ON DELETE CASCADE,
+  after_message_id   TEXT,                 -- set from channels.last_message_id when enqueued
+  before_message_id  TEXT,                 -- rarely used; for backfills
   status             scan_status NOT NULL DEFAULT 'queued',
   messages_scanned   BIGINT NOT NULL DEFAULT 0,
   messages_matched   BIGINT NOT NULL DEFAULT 0, -- clips or candidates found
