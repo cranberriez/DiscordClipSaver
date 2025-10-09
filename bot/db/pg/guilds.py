@@ -18,6 +18,7 @@ class GuildRepository:
     create table if not exists bot_guilds (
         guild_id text primary key,
         name text not null,
+        icon text,
         owner_user_id bigint references users(discord_user_id) on delete set null,
         joined_at timestamptz default now(),
         last_seen_at timestamptz default now()
@@ -25,10 +26,12 @@ class GuildRepository:
     """
 
     UPSERT_GUILD_SQL = """
-    insert into bot_guilds (guild_id, name, owner_user_id, joined_at, last_seen_at)
-    values (%s, %s, %s, coalesce(%s, now()), now())
+    insert into bot_guilds (guild_id, name, icon, owner_user_id, joined_at, last_seen_at)
+    values (%s, %s, %s, %s, coalesce(%s, now()), now())
     on conflict (guild_id) do update
       set name = excluded.name,
+          icon = excluded.icon,
+          owner_user_id = excluded.owner_user_id,
           last_seen_at = now();
     """
 
@@ -52,8 +55,8 @@ class GuildRepository:
     # ------------------------------------------------------------------
     # Commands
     # ------------------------------------------------------------------
-    def upsert(self, *, guild_id: str, name: str, owner_user_id: Optional[int] = None, joined_at: Optional[str] = None) -> None:
-        self._handler.execute(self.UPSERT_GUILD_SQL, (guild_id, name, owner_user_id, joined_at))
+    def upsert(self, *, guild_id: str, name: str, icon: str, owner_user_id: Optional[int] = None, joined_at: Optional[str] = None) -> None:
+        self._handler.execute(self.UPSERT_GUILD_SQL, (guild_id, name, icon, owner_user_id, joined_at))
 
     def delete_many(self, guild_ids: Iterable[str]) -> None:
         guild_ids = list(guild_ids)
@@ -66,7 +69,7 @@ class GuildRepository:
 
     def upsert_many(self, guilds: Iterable[GuildSnapshot]) -> None:
         for guild in guilds:
-            self.upsert(guild_id=guild.id, name=guild.name, owner_user_id=guild.owner_user_id, joined_at=guild.joined_at)
+            self.upsert(guild_id=guild.id, name=guild.name, icon=guild.icon, owner_user_id=guild.owner_user_id, joined_at=guild.joined_at)
 
 
 class GuildSettingsRepository:

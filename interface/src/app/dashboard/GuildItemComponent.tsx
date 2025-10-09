@@ -7,8 +7,14 @@ export function GuildItemComponent({ guild, relation }: { guild: GuildItem; rela
 	return (
 		<li
 			key={id}
-			className="rounded border border-white/40 gap-2 p-3 flex justify-between"
+			className="rounded border border-white/40 gap-4 p-3 flex"
 		>
+			<div className="flex items-center gap-2">
+				<DiscordIcon
+					guildId={id}
+					imageId={guild.icon || ""}
+				/>
+			</div>
 			<div className="flex flex-col items-start">
 				<p className="font-medium">{name}</p>
 				<p className="text-xs text-muted-foreground">
@@ -16,7 +22,7 @@ export function GuildItemComponent({ guild, relation }: { guild: GuildItem; rela
 					{db ? ` (owner: ${db.owner_user_id})` : ""}
 				</p>
 			</div>
-			<div className="flex flex-col items-end">
+			<div className="flex flex-col ml-auto">
 				<p className="text-xs text-muted-foreground">{relation}</p>
 				<RelationButton
 					guildId={id}
@@ -54,5 +60,17 @@ function RelationButton({ guildId, relation }: { guildId: string; relation: Guil
 				{rel.text}
 			</button>
 		</Link>
+	);
+}
+
+function DiscordIcon({ guildId, imageId }: { guildId: string; imageId: string | null }) {
+	return (
+		<div className="w-16 h-16 rounded-xl overflow-hidden">
+			{imageId ? (
+				<img src={`https://cdn.discordapp.com/icons/${guildId}/${imageId}.png?size=64`} />
+			) : (
+				<img src="https://cdn.discordapp.com/embed/avatars/0.png?size=64" />
+			)}
+		</div>
 	);
 }

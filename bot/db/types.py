@@ -20,12 +20,15 @@ class GuildSnapshot:
 
     id: str
     name: str
+    icon: str
     owner_user_id: int | None = None
     joined_at: datetime | None = None
     channels: Tuple[ChannelSnapshot, ...] = ()
 
 @dataclass(slots=True)
 class GuildSettings:
+    """Minimal representation of a Discord guild settings for persistence."""
+
     id: str
     settings: dict
     updated_at: datetime

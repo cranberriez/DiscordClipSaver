@@ -48,8 +48,8 @@ def get_handler():
     return _require_handler()
 
 
-def upsert_guild(*, guild_id: str, name: str, joined_at=None) -> None:
-    _require_handler().guilds.upsert(guild_id=guild_id, name=name, joined_at=joined_at)
+def upsert_guild(*, guild_id: str, name: str, icon: str, joined_at=None) -> None:
+    _require_handler().guilds.upsert(guild_id=guild_id, name=name, icon=icon, joined_at=joined_at)
 
 
 def upsert_guilds(guilds: Iterable[GuildSnapshot]) -> None:

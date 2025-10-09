@@ -44,6 +44,7 @@ async def on_guild_join(guild: discord.Guild):
     snapshot = GuildSnapshot(
         id=str(guild.id),
         name=guild.name,
+        icon=guild.icon,
         joined_at=joined_at,
         channels=tuple(channel_summaries),
     )

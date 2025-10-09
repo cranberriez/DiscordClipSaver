@@ -29,6 +29,7 @@ async def gather_accessible_guilds_and_channels(bot: Client) -> Iterable[GuildSn
         snapshot = GuildSnapshot(
             id=str(guild.id),
             name=guild.name,
+            icon=guild.icon,
             joined_at=joined_at,
             channels=tuple(channel_summaries),
         )
