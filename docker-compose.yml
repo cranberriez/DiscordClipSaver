@@ -3,15 +3,15 @@ services:
         build:
             context: .
             dockerfile: ./bot/Dockerfile
-        container_name: discord-clip-saver-bot
+        container_name: dcs-bot
         env_file:
-            - ./.env.global
             - ./bot/.env
+            - ./.env.global
         ports:
             - "8000:8000"
         depends_on:
-            - discord-clip-saver-postgres
-            - discord-clip-saver-redis
+            - dcs-postgres
+            - dcs-redis
         restart: unless-stopped
         volumes:
             # Optional: mount local settings file for rapid iteration without rebuilding image
@@ -21,24 +21,24 @@ services:
         build:
             context: .
             dockerfile: ./interface/Dockerfile
-        container_name: discord-clip-saver-interface
+        container_name: dcs-interface
         env_file:
-            - ./.env.global
             - ./interface/.env
+            - ./.env.global
         ports:
             - "3000:3000"
         depends_on:
             - bot
-            - discord-clip-saver-postgres
-            - discord-clip-saver-redis
+            - dcs-postgres
+            - dcs-redis
         restart: unless-stopped
         volumes:
             # Optional: mount local settings file to the same in-container path used by the image
             - ./settings.default.yml:/app/settings.default.yml:ro
 
-    discord-clip-saver-postgres:
+    dcs-postgres:
         image: postgres:16-alpine
-        container_name: discord-clip-saver-postgres
+        container_name: dcs-postgres
         environment:
             POSTGRES_USER: ${POSTGRES_USER:-discord}
             POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-discord}
@@ -52,9 +52,9 @@ services:
                 ipv4_address: 172.20.0.10
         restart: unless-stopped
 
-    discord-clip-saver-redis:
+    dcs-redis:
         image: redis:7-alpine
-        container_name: discord-clip-saver-redis
+        container_name: dcs-redis
         command: ["redis-server", "--save", "60", "1", "--loglevel", "warning"]
         ports:
             - "6379:6379"
