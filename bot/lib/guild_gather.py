@@ -16,10 +16,4 @@ async def gather_guilds(bot: Client) -> Iterable[GuildSnapshot]:
         snapshot = build_guild_snapshot(guild)
         snapshots.append(snapshot)
 
-    if snapshots:
-        guild_names = ", ".join(snapshot.name for snapshot in snapshots)
-        logger.info("Accessible guilds: %s", guild_names)
-    else:
-        logger.info("No accessible guilds found for the bot.")
-
     return snapshots

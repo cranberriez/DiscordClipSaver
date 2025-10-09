@@ -4,6 +4,7 @@
 import asyncio
 from contextlib import suppress
 import os
+import sys
 
 import uvicorn
 from dotenv import load_dotenv
@@ -57,6 +58,10 @@ async def main():
 
 if __name__ == "__main__":
     try:
+        # On Windows, psycopg async requires a SelectorEventLoop.
+        # Switch the event loop policy before creating the loop.
+        if os.name == "nt":
+            asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
         asyncio.run(main())
     except KeyboardInterrupt:
         pass
