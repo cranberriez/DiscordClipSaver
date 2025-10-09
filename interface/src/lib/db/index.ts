@@ -1,5 +1,5 @@
 import "server-only";
-import { Pool, type PoolConfig } from "pg";
+import { Pool, type PoolConfig, type QueryResult, type QueryResultRow } from "pg";
 
 type PoolSingleton = Pool & { _isInitialized?: boolean };
 const globalForPg = globalThis as unknown as {
@@ -39,11 +39,43 @@ function createPool(): PoolSingleton {
 	return pool;
 }
 
+function assertServerRuntime() {
+	if (typeof window !== "undefined") throw new Error("DB access attempted in browser");
+	if (process.env.NEXT_RUNTIME === "edge") throw new Error("DB not available in Edge runtime");
+}
+
 export function getPool(): Pool {
+	assertServerRuntime();
 	if (!globalForPg.pgPool || !globalForPg.pgPool._isInitialized) {
 		globalForPg.pgPool = createPool();
 	}
 	return globalForPg.pgPool;
+}
+
+// Convenience wrapper following node-postgres project structure guide
+export async function query<T extends QueryResultRow = QueryResultRow>(
+	text: string,
+	params?: any[]
+): Promise<QueryResult<T>> {
+	try {
+		return await getPool().query<T>(text, params);
+	} catch (err: unknown) {
+		const anyErr = err as { code?: string } | undefined;
+		if (anyErr?.code === "ECONNREFUSED") {
+			// Small, targeted handler: log and rethrow a clearer error while preserving code
+			console.error("[DB] Connection refused (ECONNREFUSED). Is PostgreSQL running and reachable?");
+			const wrapped = new Error(
+				"Database connection refused (ECONNREFUSED). Ensure PostgreSQL is running and reachable."
+			) as Error & {
+				code?: string;
+				cause?: unknown;
+			};
+			wrapped.code = "ECONNREFUSED";
+			wrapped.cause = err;
+			throw wrapped;
+		}
+		throw err as Error;
+	}
 }
 
 // Repository exports
