@@ -3,12 +3,9 @@
 from __future__ import annotations
 
 import os
-from datetime import datetime
-from typing import Any, Iterable, Mapping, Optional
+from typing import Iterable, Mapping, Optional
 
 from .types import GuildSnapshot
-
-PairingRecord = Mapping[str, Any]
 
 
 _handler = None
@@ -38,7 +35,7 @@ def configure_from_env() -> None:
 
     db_type = (os.getenv("DB_TYPE") or os.getenv("DATABASE_TYPE") or "postgres").lower()
     if db_type != "postgres":
-        raise ValueError(f"Unsupported DB_TYPE '{db_type}'. Only 'postgres' is currently supported.")
+        raise ValueError(f"Unsupported DB TYPE '{db_type}'. Only 'postgres' is currently supported.")
 
     from .pg.handler import PostgresHandler  # Local import to avoid circular deps
 
@@ -81,19 +78,3 @@ def update_guild_settings(guild_id: str, values: dict) -> None:
 
 def set_guild_settings(guild_id: str, settings: Mapping[str, Any]):
     return _require_handler().guild_settings.set(guild_id, dict(settings))
-
-
-def upsert_pairing(*, code: str, guild_id: str, expires_at: datetime) -> PairingRecord | None:
-    return _require_handler().pairing.upsert(code=code, guild_id=guild_id, expires_at=expires_at)
-
-
-def get_pairing(guild_id: str) -> PairingRecord | None:
-    return _require_handler().pairing.fetch_by_guild(guild_id)
-
-
-def delete_pairing_by_code(code: str) -> PairingRecord | None:
-    return _require_handler().pairing.delete_by_code(code)
-
-
-def delete_pairing_by_guild(guild_id: str) -> PairingRecord | None:
-    return _require_handler().pairing.delete_by_guild(guild_id)

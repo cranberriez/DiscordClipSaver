@@ -13,7 +13,7 @@ import psycopg
 from psycopg import Connection
 from psycopg.rows import RowFactory, dict_row
 
-from . import guilds, pairing, users
+from . import guilds, install_intents, users
 
 
 @dataclass
@@ -40,7 +40,7 @@ class PostgresHandler:
         self.users = users.UsersRepository(self)
         self.guilds = guilds.GuildRepository(self)
         self.guild_settings = guilds.GuildSettingsRepository(self)
-        self.pairing = pairing.PairingRepository(self)
+        self.install_intents = install_intents.InstallIntentsRepository(self)
 
     # ------------------------------------------------------------------
     # Connection lifecycle
@@ -81,7 +81,7 @@ class PostgresHandler:
             self.users.ensure_tables(cur)
             self.guilds.ensure_tables(cur)
             self.guild_settings.ensure_tables(cur)
-            self.pairing.ensure_tables(cur)
+            self.install_intents.ensure_tables(cur)
 
     def execute(self, query: str, params: Optional[tuple] = None):
         conn = self._ensure_connection()
