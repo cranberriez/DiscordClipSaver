@@ -1,30 +1,75 @@
-# Channel Queries
+# Base channels table and related information
 """
--- Upsert channel
-insert into bot_channels (channel_id, guild_id, name, type, last_seen_at)
-values ($1, $2, $3, $4, now())
-on conflict (channel_id) do update
-  set name = excluded.name,
-      type = excluded.type,
-      last_seen_at = now();
+-- 1) You can keep snowflakes as BIGINT in Postgres, but in the app
+--    ALWAYS treat them as strings to avoid JS Number precision issues.
 
--- Remove channels not seen in latest discovery pass for a guild
-delete from bot_channels
-where guild_id = $1 and channel_id <> all($2::text[]);
+CREATE TABLE channels (
+  channel_id           BIGINT PRIMARY KEY,               -- Discord snowflake
+  guild_id             BIGINT NOT NULL REFERENCES guilds(guild_id) ON DELETE CASCADE,
+
+  -- Basic metadata (helps your admin UI without calling Discord every time)
+  name                 TEXT,
+  type                 SMALLINT,                         -- 0=text, 2=voice, 5=announcements, 13=stage, 15=forum, etc.
+  is_nsfw              BOOLEAN DEFAULT FALSE,
+
+  -- Bot read state
+  is_reading           BOOLEAN NOT NULL DEFAULT FALSE,   -- whether the bot should actively read/ingest this channel
+  last_message_id      BIGINT,                           -- your resume cursor: use 'after:last_message_id'
+  last_scanned_at      TIMESTAMPTZ,                      -- when we last finished a scan pass
+  last_activity_at     TIMESTAMPTZ,                      -- optional: from message events or decoded snowflake ts
+
+  -- Counters (cheap health telemetry; don't rely for analytics)
+  message_count        BIGINT NOT NULL DEFAULT 0,        -- increment on ingest if you want a quick stat
+
+  -- Bulk settings for the bot (jsonb for GIN indexing if useful later)
+  settings             JSONB NOT NULL DEFAULT '{}'::jsonb,
+
+  created_at           TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at           TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+-- Update updated_at automatically
+CREATE OR REPLACE FUNCTION set_updated_at()
+RETURNS TRIGGER AS $$
+BEGIN
+  NEW.updated_at = NOW();
+  RETURN NEW;
+END; $$ LANGUAGE plpgsql;
+
+CREATE TRIGGER trg_channels_updated_at
+BEFORE UPDATE ON channels
+FOR EACH ROW EXECUTE FUNCTION set_updated_at();
+
+-- Helpful indexes
+CREATE INDEX idx_channels_guild ON channels(guild_id);
+CREATE INDEX idx_channels_isreading ON channels(is_reading) WHERE is_reading = TRUE;
+CREATE INDEX idx_channels_last_message_id ON channels(last_message_id);
+-- If you'll query settings by key frequently, add a GIN:
+-- CREATE INDEX idx_channels_settings_gin ON channels USING GIN (settings);
+
+-- Optional: fast "active work queue" for the bot
+CREATE INDEX idx_channels_work ON channels(guild_id, is_reading, last_scanned_at);
 """
 
 
-
-# Channel Settings (implement all but 'enabled' later)
+# 
 """
--- Example: get effective settings for all channels in a guild
-select
-  c.channel_id,
-  coalesce(cs.enabled, false) as enabled,
-  coalesce(cs.keywords, gs.clip_keywords) as keywords,
-  coalesce(cs.min_video_duration_seconds, 0) as min_video_duration_seconds
-from bot_channels c
-left join channel_settings cs on cs.channel_id = c.channel_id
-left join guild_settings   gs on gs.guild_id   = c.guild_id
-where c.guild_id = $1;
+CREATE TYPE scan_status AS ENUM ('queued','running','succeeded','failed','canceled');
+
+CREATE TABLE channel_scan_runs (
+  id                 UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  channel_id         BIGINT NOT NULL REFERENCES channels(channel_id) ON DELETE CASCADE,
+  after_message_id   BIGINT,                 -- set from channels.last_message_id when enqueued
+  before_message_id  BIGINT,                 -- rarely used; for backfills
+  status             scan_status NOT NULL DEFAULT 'queued',
+  messages_scanned   BIGINT NOT NULL DEFAULT 0,
+  messages_matched   BIGINT NOT NULL DEFAULT 0, -- clips or candidates found
+  error_message      TEXT,
+  started_at         TIMESTAMPTZ,
+  finished_at        TIMESTAMPTZ,
+  created_at         TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX idx_scan_runs_channel ON channel_scan_runs(channel_id, created_at DESC);
+
 """

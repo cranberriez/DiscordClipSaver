@@ -9,7 +9,7 @@ class UsersRepository:
     CREATE_TABLE_SQL = """
     create table if not exists users (
         id serial primary key,
-        discord_user_id bigint unique not null,
+        discord_user_id text unique not null,
         username text,
         global_name text,
         avatar text,

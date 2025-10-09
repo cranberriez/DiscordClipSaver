@@ -19,7 +19,7 @@ class GuildRepository:
         guild_id text primary key,
         name text not null,
         icon text,
-        owner_user_id bigint references users(discord_user_id) on delete set null,
+        owner_user_id text references users(discord_user_id) on delete set null,
         joined_at timestamptz default now(),
         last_seen_at timestamptz default now()
     );
@@ -55,7 +55,7 @@ class GuildRepository:
     # ------------------------------------------------------------------
     # Commands
     # ------------------------------------------------------------------
-    async def upsert(self, *, guild_id: str, name: str, icon: Optional[str], owner_user_id: Optional[int] = None, joined_at: Optional[str] = None) -> None:
+    async def upsert(self, *, guild_id: str, name: str, icon: Optional[str], owner_user_id: Optional[str] = None, joined_at: Optional[str] = None) -> None:
         await self._handler.execute(self.UPSERT_GUILD_SQL, (guild_id, name, icon, owner_user_id, joined_at))
 
     async def delete_many(self, guild_ids: Iterable[str]) -> None:

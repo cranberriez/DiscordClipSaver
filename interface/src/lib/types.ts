@@ -18,7 +18,7 @@ export type PartialGuild = Guild;
 export type DBGuild = {
 	guild_id: string;
 	name: string;
-	owner_user_id: string | null; // bigint from PG comes back as string
+	owner_user_id: string | null;
 	joined_at: string | null; // treat dates as ISO strings at the edge
 	last_seen_at: string | null;
 };
