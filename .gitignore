@@ -1,2 +1,7 @@
+# Environment
 .env
 .env.global
+
+# Windsurf
+.windsurf/
+.windsurfrules

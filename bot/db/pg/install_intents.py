@@ -25,3 +25,20 @@ class InstallIntentsRepository:
 
     def ensure_tables(self, cursor) -> None:
         cursor.execute(self.CREATE_TABLE_SQL)
+
+    def purge_expired(self, grace_seconds: int = 300) -> int:
+        """Delete rows whose `expires_at` is older than now minus the grace period.
+
+        Returns the number of deleted rows.
+        """
+        conn = self._handler.connection()
+        with conn.cursor() as cur:
+            # Use a parameterized interval to avoid SQL injection and keep it portable
+            cur.execute(
+                """
+                delete from install_intents
+                where expires_at <= (current_timestamp - (interval '1 second' * %s))
+                """,
+                (grace_seconds,),
+            )
+            return cur.rowcount

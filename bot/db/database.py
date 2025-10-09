@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import os
-from typing import Iterable, Mapping, Optional
+from typing import Iterable, Mapping, Optional, Any
 
 from .types import GuildSnapshot
 
@@ -78,3 +78,11 @@ def update_guild_settings(guild_id: str, values: dict) -> None:
 
 def set_guild_settings(guild_id: str, settings: Mapping[str, Any]):
     return _require_handler().guild_settings.set(guild_id, dict(settings))
+
+
+def purge_expired_install_intents(grace_seconds: int = 300) -> int:
+    """Delete expired rows from `install_intents` using a grace window.
+
+    Returns the number of deleted rows.
+    """
+    return _require_handler().install_intents.purge_expired(grace_seconds=grace_seconds)

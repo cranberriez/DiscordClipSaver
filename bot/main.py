@@ -11,6 +11,7 @@ from dotenv import load_dotenv
 from api import api
 from bot import bot
 from db import database
+from jobs import start_scheduler_and_jobs
 
 load_dotenv()
 database.configure_from_env()
@@ -24,6 +25,9 @@ async def main():
 
     api_task = asyncio.create_task(server.serve())
 
+    # Start a single scheduler and register all jobs in one place
+    scheduler = start_scheduler_and_jobs()
+
     # Start the Discord bot (replace with your token)
     TOKEN = os.getenv("BOT_TOKEN")
     bot_task = asyncio.create_task(bot.start(TOKEN))
@@ -35,6 +39,9 @@ async def main():
         with suppress(asyncio.CancelledError):
             await bot_task
     finally:
+        # Stop scheduler
+        with suppress(Exception):
+            scheduler.shutdown(wait=False)
         if not bot.is_closed():
             await bot.close()
 
