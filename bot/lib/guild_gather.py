@@ -4,10 +4,10 @@ from discord import Client
 
 from db.types import GuildSnapshot
 from logger import logger
-from .guild_snapshot import build_guild_snapshot
+from .build_snapshot import build_guild_snapshot
 
 
-async def gather_accessible_guilds_and_channels(bot: Client) -> Iterable[GuildSnapshot]:
+async def gather_guilds(bot: Client) -> Iterable[GuildSnapshot]:
     """Capture the guild/channel snapshot for the current bot session."""
 
     snapshots: list[GuildSnapshot] = []
@@ -15,8 +15,6 @@ async def gather_accessible_guilds_and_channels(bot: Client) -> Iterable[GuildSn
     for guild in bot.guilds:
         snapshot = build_guild_snapshot(guild)
         snapshots.append(snapshot)
-
-    bot.available_guilds = {snap.id: snap for snap in snapshots}
 
     if snapshots:
         guild_names = ", ".join(snapshot.name for snapshot in snapshots)
