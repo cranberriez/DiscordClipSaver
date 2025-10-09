@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import json
 from collections.abc import Mapping
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
@@ -49,7 +49,7 @@ async def get_guild_settings(guild_id: int) -> GuildSettings:
         data = {
             "guild_id": guild_id_str,
             "settings": {},
-            "updated_at": datetime.now(datetime.timezone.utc),
+            "updated_at": datetime.now(timezone.utc),
         }
 
     settings_value = data.get("settings") or {}
@@ -67,7 +67,7 @@ async def get_guild_settings(guild_id: int) -> GuildSettings:
     updated_at = data.get("updated_at")
     if not isinstance(updated_at, datetime):
         logger.warning("Invalid updated_at for guild %s; using current time", guild_id_str)
-        updated_at = datetime.now(datetime.timezone.utc)
+        updated_at = datetime.now(timezone.utc)
 
     return GuildSettings(
         id=guild_id_str,

@@ -73,5 +73,5 @@ database_settings_defaults:
     # =========================
 
     install_intent_expire_time: 3600 # How long (seconds) an install intent is valid before expiration.
-    install_intent_purge_cron: "*/5 * * * *" # How often (cron) to purge expired install intents. Currently 5 minutes, minimum is 5 minutes.
+    install_intent_purge_cron: "*/30 * * * *" # How often (cron) to purge expired install intents. Currently 5 minutes, minimum is 5 minutes.
     install_intent_purge_grace_seconds: 300 # How long (seconds) to wait after expiration before purging an install intent. (For UI convenience)

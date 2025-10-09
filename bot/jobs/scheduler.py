@@ -12,8 +12,8 @@ def start_scheduler_and_jobs() -> AsyncIOScheduler:
     Returns the started scheduler instance.
     """
     # Configure jobs from environment
-    purge_cron = globalConfig.get("database_settings_defaults", "install_intent_purge_cron")
-    grace = globalConfig.get("database_settings_defaults", "install_intent_purge_grace_seconds")
+    purge_cron = globalConfig.get("database_settings_defaults", "install_intent_purge_cron", default="*/30 * * * *")
+    grace = globalConfig.get("database_settings_defaults", "install_intent_purge_grace_seconds", default=360)
 
     scheduler = AsyncIOScheduler()
 
