@@ -12,7 +12,7 @@ from dotenv import load_dotenv
 from api import api
 from bot import bot
 from db import database
-from jobs import start_scheduler_and_jobs
+from schedules import start_scheduler_and_jobs
 
 load_dotenv()
 database.configure_from_env()
