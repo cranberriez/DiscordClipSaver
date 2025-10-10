@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import datetime
-from typing import Tuple
+from typing import Tuple, Optional, Dict, Any
 
 
 @dataclass(slots=True)
@@ -13,6 +13,8 @@ class ChannelSnapshot:
     name: str
     type: str
     is_nsfw: bool = False
+    # Channel-specific settings overrides (partial). Merged into defaults server-side.
+    settings_overrides: Optional[Dict[str, Any]] = None
 
 
 @dataclass(slots=True)

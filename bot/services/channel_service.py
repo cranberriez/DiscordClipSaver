@@ -8,18 +8,23 @@ import db.database as db
 from db.types import ChannelSnapshot
 from .settings_service import SettingsService
 from lib.channel_gather import gather_channels
+from . import bot_state_service as bot_state
 
 class ChannelService:
-    """Ircgestrates channel discovery/sync and join/remove flows."""
+    """Orchestrates channel discovery/sync and join/remove flows."""
     def __init__(self, settings_service: SettingsService) -> None:
         self._settings = settings_service
 
     async def sync_channels(self, bot: discord.Client, guild: discord.Guild) -> List[ChannelSnapshot]:
-        print("syncing channels")
-        snapshots = list(await gather_channels(bot, guild))
+        async with bot_state.status_scope(bot, "sync:channels"):
+            snapshots = list(await gather_channels(bot, guild))
 
-        for channel in snapshots:
-            print(f"{channel.name} : {channel.type}")
+            for channel in snapshots:
+                print(f"{channel.name} : {channel.type}")
+
+            # Persist in batch
+            await self.upsert_for_guild(guild.id, snapshots)
+
 
         return snapshots
 
@@ -50,7 +55,8 @@ class ChannelService:
         await db.update_channel_progress(channel_id, last_seen_message_id, ingested_count)
 
     # -----------------------------
-    # Scan runs
+    # Scan runs - TODO: move to scan service
+    # Used for tracking progress for scans of messages for video files
     # -----------------------------
     async def enqueue_scan(self, channel_id: str) -> Optional[str]:
         """Enqueue a scan run if channel is in reading mode; returns run id or None."""

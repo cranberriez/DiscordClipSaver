@@ -63,13 +63,22 @@ class ChannelsRepository:
     ]
 
     UPSERT_SQL = """
-    insert into bot_channels (channel_id, guild_id, name, type, is_nsfw)
-    values (%s, %s, %s, %s, coalesce(%s, false))
+    insert into bot_channels (channel_id, guild_id, name, type, is_nsfw, settings)
+    values (
+        %s, %s, %s, %s,
+        coalesce(%s, false),
+        coalesce(%s::jsonb, '{}'::jsonb)
+    )
     on conflict (channel_id) do update set
         guild_id = excluded.guild_id,
         name = excluded.name,
         type = excluded.type,
         is_nsfw = excluded.is_nsfw,
+        -- For channels, settings represent OVERRIDES only; merge into existing
+        settings = case
+            when excluded.settings is null or excluded.settings = '{}'::jsonb then bot_channels.settings
+            else bot_channels.settings || excluded.settings
+        end,
         updated_at = now();
     """
 
@@ -157,11 +166,23 @@ class ChannelsRepository:
         name: Optional[str],
         type: Optional[str],
         is_nsfw: Optional[bool] = None,
+        settings_overrides: Optional[dict[str, Any]] = None,
     ) -> None:
-        await self._handler.execute(self.UPSERT_SQL, (channel_id, guild_id, name, type, is_nsfw))
+        payload = None
+        if settings_overrides is not None:
+            payload = json.dumps(settings_overrides, separators=(",", ":"))
+        await self._handler.execute(
+            self.UPSERT_SQL,
+            (channel_id, guild_id, name, type, is_nsfw, payload),
+        )
 
     async def upsert_many_for_guild(self, guild_id: str, channels: Iterable[ChannelSnapshot]) -> None:
-        params = [(c.id, guild_id, c.name, c.type, c.is_nsfw) for c in channels]
+        params = []
+        for c in channels:
+            payload = None
+            if getattr(c, "settings_overrides", None) is not None:
+                payload = json.dumps(c.settings_overrides, separators=(",", ":"))
+            params.append((c.id, guild_id, c.name, c.type, c.is_nsfw, payload))
         if not params:
             return
         conn = await self._handler.connection()

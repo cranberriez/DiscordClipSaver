@@ -9,6 +9,7 @@ from db.types import GuildSnapshot
 from logger import logger
 from lib.guild_gather import gather_guilds
 from .state import BotState
+from . import bot_state_service as bot_state
 from .settings_service import SettingsService
 
 
@@ -20,17 +21,17 @@ class GuildService:
 
     async def sync_guilds(self, bot: discord.Client) -> List[GuildSnapshot]:
         """Discover current guilds, persist them in batch, update bot state, ensure defaults."""
-        snapshots = list(await gather_guilds(bot))
+        async with bot_state.status_scope(bot, "sync:guilds"):
+            snapshots = list(await gather_guilds(bot))
 
-        # Persist in batch
-        await db.upsert_guilds(snapshots)
+            # Persist in batch
+            await db.upsert_guilds(snapshots)
 
-        # Update bot state
-        _ensure_state(bot)
-        bot.state.available_guilds = {snap.id: snap for snap in snapshots}  # type: ignore[attr-defined]
+            # Update bot state (centralized)
+            bot_state.set_guilds(bot, snapshots)
 
-        # Ensure settings defaults where missing
-        await self._settings.ensure_defaults_for_guilds([snap.id for snap in snapshots])
+            # Ensure settings defaults where missing
+            await self._settings.ensure_defaults_for_guilds([snap.id for snap in snapshots])
 
         if snapshots:
             guild_names = ", ".join(s.name for s in snapshots)
@@ -49,8 +50,8 @@ class GuildService:
             snapshot = GuildSnapshot(id=str(guild.id), name=guild.name, icon=None, joined_at=None)
         await db.upsert_guilds([snapshot])
 
-        _ensure_state(bot)
-        bot.state.available_guilds[snapshot.id] = snapshot  # type: ignore[attr-defined]
+        # Update centralized state
+        bot_state.add_or_update_guild(bot, snapshot)
 
         await self._settings.ensure_defaults_for_guilds([snapshot.id])
         logger.info("Joined guild: %s (%s)", guild.name, guild.id)
@@ -58,13 +59,7 @@ class GuildService:
     async def on_guild_remove(self, bot: discord.Client, guild: discord.Guild) -> None:
         gid = str(guild.id)
         await db.delete_guilds([gid])
-
-        if hasattr(bot, "state") and bot.state and gid in bot.state.available_guilds:  # type: ignore[attr-defined]
-            del bot.state.available_guilds[gid]  # type: ignore[attr-defined]
+        # Update centralized state
+        bot_state.remove_guild(bot, gid)
         logger.info("Removed from guild: %s (%s)", guild.name, guild.id)
 
-
-def _ensure_state(bot: discord.Client) -> None:
-    """Attach a BotState if missing (idempotent)."""
-    if not hasattr(bot, "state") or bot.state is None:  # type: ignore[attr-defined]
-        bot.state = BotState()  # type: ignore[attr-defined]
