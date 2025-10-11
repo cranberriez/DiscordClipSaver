@@ -2,10 +2,10 @@ services:
     bot:
         build:
             context: .
-            dockerfile: ./bot/Dockerfile
+            dockerfile: ./python/bot/Dockerfile
         container_name: dcs-bot
         env_file:
-            - ./bot/.env
+            - ./python/bot/.env
             - ./.env.global
         ports:
             - "8000:8000"

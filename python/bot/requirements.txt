@@ -31,3 +31,7 @@ watchfiles==1.1.0
 websockets==15.0.1
 yarl==1.22.0
 APScheduler==3.10.4
+
+# Shared module (editable install for development)
+# Install with: pip install -e ../shared
+-e ../shared
