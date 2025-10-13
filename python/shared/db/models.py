@@ -30,8 +30,8 @@ class User(Model):
     username = fields.CharField(max_length=32)
     discriminator = fields.CharField(max_length=4)
     avatar_url = fields.TextField(null=True)
-    access_token = fields.TextField()
-    refresh_token = fields.TextField(null=True)
+    # Note: OAuth tokens are NOT stored here. NextAuth manages session securely.
+    # The bot acts as itself (via bot token), not on behalf of users.
     created_at = fields.DatetimeField(auto_now_add=True)
     updated_at = fields.DatetimeField(auto_now=True)
 
@@ -42,16 +42,20 @@ class Guild(Model):
     owner = fields.ForeignKeyField("models.User", related_name="owned_guilds")
     name = fields.CharField(max_length=100)
     icon_url = fields.TextField(null=True)
+    message_scan_enabled = fields.BooleanField(default=True)  # Master toggle for message scanning
+    last_message_scan_at = fields.DatetimeField(null=True)
     created_at = fields.DatetimeField(auto_now_add=True)
     updated_at = fields.DatetimeField(auto_now=True)
 
 
 class GuildSettings(Model):
-    """Guild-level configuration"""
+    """Guild-level settings configuration (JSON store)"""
     id = fields.IntField(pk=True)
     guild = fields.OneToOneField("models.Guild", related_name="settings")
-    scan_enabled = fields.BooleanField(default=True)  # Master toggle for guild
-    last_message_scan_at = fields.DatetimeField(null=True)
+    # Default settings applied to all channels unless overridden
+    default_channel_settings = fields.JSONField(null=True)
+    # Guild-level settings (expandable for future features)
+    settings = fields.JSONField(null=True)
     created_at = fields.DatetimeField(auto_now_add=True)
     updated_at = fields.DatetimeField(auto_now=True)
 
@@ -65,19 +69,31 @@ class Channel(Model):
     position = fields.IntField(default=0)
     parent_id = fields.TextField(null=True)  # Parent category ID if nested
     topic = fields.TextField(null=True)
+    nsfw = fields.BooleanField(default=False)  # Whether channel is marked NSFW
+    message_scan_enabled = fields.BooleanField(default=True)  # Override for guild default
+    last_channel_sync_at = fields.DatetimeField(null=True)
+    next_allowed_channel_sync_at = fields.DatetimeField(null=True)
+    channel_sync_cooldown_level = fields.IntField(default=0)
     deleted_at = fields.DatetimeField(null=True)  # Soft delete
     created_at = fields.DatetimeField(auto_now_add=True)
     updated_at = fields.DatetimeField(auto_now=True)
 
 
 class ChannelSettings(Model):
-    """Channel-level configuration (overrides guild defaults)"""
+    """Channel-level settings configuration (JSON store) - Row optional, only if overrides exist"""
     id = fields.IntField(pk=True)
     channel = fields.OneToOneField("models.Channel", related_name="settings")
-    scan_enabled = fields.BooleanField(default=True)
-    last_channel_sync_at = fields.DatetimeField(null=True)
-    next_allowed_channel_sync_at = fields.DatetimeField(null=True)
-    channel_sync_cooldown_level = fields.IntField(default=0)
+    # Override settings (null means use guild defaults)
+    settings = fields.JSONField(
+        null=True,
+        default=None
+    )
+    # Example structure if overrides exist:
+    # {
+    #     "allowed_mime_types": ["video/mp4"],
+    #     "match_regex": "clip.*",
+    #     "scan_mode": "bidirectional"
+    # }
     created_at = fields.DatetimeField(auto_now_add=True)
     updated_at = fields.DatetimeField(auto_now=True)
 
