@@ -5,13 +5,15 @@ FROM python:3.13-slim
 WORKDIR /app
 
 # Copy the bot-specific requirements into the container (build context is repo root)
-COPY bot/requirements.txt ./requirements.txt
+COPY python/bot/requirements.txt /app/python/bot/requirements.txt
 
-# Install any needed packages specified in requirements.txt
+# Install any needed packages specified in requirements.txt (run from the requirements' directory)
+WORKDIR /app/python/bot
 RUN pip install --no-cache-dir -r requirements.txt
+WORKDIR /app
 
 # Copy the bot source code into the container
-COPY bot/ /app/bot/
+COPY python/bot/ /app/bot/
 
 # Copy the project root default settings into the image so the container is self-contained
 COPY settings.default.yml /app/settings.default.yml
