@@ -12,13 +12,13 @@ RUN pip install --no-cache-dir -r /app/requirements.txt
 # Copy source code
 COPY python/bot/ /app/bot/
 COPY python/shared/ /app/shared/
-COPY settings.default.yml /app/settings.default.yml
+COPY settings.default.jsonc /app/settings.default.jsonc
 
 # Optional: ensure import path
 ENV PYTHONPATH=/app
 
 # App config
-ENV DEFAULT_SETTINGS_PATH=/app/settings.default.yml
+ENV DEFAULT_SETTINGS_PATH=/app/settings.default.jsonc
 EXPOSE 8000
 
 # Run as a module so package-relative imports work

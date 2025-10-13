@@ -1,0 +1,50 @@
+{
+    // Discord Clip Save 2 - Settings Defaults
+    // ------------------------------------------------------------------------------
+    // Conventions:
+    // - For GUILD settings, values are concrete (no NULLs); they act as global defaults.
+    // - For CHANNEL settings, values are inherited defaults for channels, channels can override.
+    // - Durations: 0 means "no limit".
+    // - Arrays: empty list [] means "no items configured".
+    // ------------------------------------------------------------------------------
+
+    "guild_settings_defaults": {
+        // =========================
+        // BASIC
+        // =========================
+
+        "enabled_by_default": false, // If true, new CHANNELS inherit "enabled" unless overridden. Guilds are always enabled.
+        "parse_threads": false, // If true, also parse thread messages (subject to depth limit).
+        "tz": "UTC", // Guild-timezone context for schedules and date math (e.g., "America/Los_Angeles").
+        "schedule_cron": "@continuous" // When the bot should run jobs by default (e.g., "@hourly" or "*/5 * * * *").
+    },
+
+    "channel_settings_defaults": {
+        // =========================
+        // BASIC
+        // =========================
+
+        "is_enabled": true, // mirrors is_reading; UI can toggle both together
+        "scan_mode": "forward", // "forward" = use after:last_message_id; "backfill" = use before
+        "max_messages_per_pass": 1000,
+        "debounce_ms": 250, // throttle in-memory updates for hot channels
+        "include_threads": false, // for forum/threaded channels, treat parent only unless true
+
+        // Matching
+        "accept_video": true,
+        "min_video_seconds": 0,
+        "mime_allowlist": ["video/mp4", "video/quicktime", "video/webm"],
+        "text_include_regex": null, // e.g. "clip|timestamp"
+        "text_exclude_regex": null
+    },
+
+    "database_settings_defaults": {
+        // =========================
+        // BASIC
+        // =========================
+
+        "install_intent_expire_time": 3600, // How long (seconds) an install intent is valid before expiration.
+        "install_intent_purge_cron": "*/30 * * * *", // How often (cron) to purge expired install intents. Currently 5 minutes, minimum is 5 minutes.
+        "install_intent_purge_grace_seconds": 300 // How long (seconds) to wait after expiration before purging an install intent. (For UI convenience)
+    }
+}
