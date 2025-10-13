@@ -40,15 +40,16 @@ class Guild(Model):
     owner = fields.ForeignKeyField("models.User", related_name="owned_guilds", null=True)
     name = fields.CharField(max_length=100)
     icon_url = fields.TextField(null=True)
-    message_scan_enabled = fields.BooleanField(default=True)  # Master toggle for message scanning
+    message_scan_enabled = fields.BooleanField(default=False)  # Master toggle for message scanning
     last_message_scan_at = fields.DatetimeField(null=True)
     created_at = fields.DatetimeField(auto_now_add=True)
     updated_at = fields.DatetimeField(auto_now=True)
+    deleted_at = fields.DatetimeField(null=True)
 
 
 class GuildSettings(Model):
     """Guild-level settings configuration (JSON store)"""
-    id = fields.IntField(pk=True)
+    id = fields.IntField(auto_increment=True, pk=True)
     guild = fields.OneToOneField("models.Guild", related_name="settings")
     # Default settings applied to all channels unless overridden
     default_channel_settings = fields.JSONField(null=True)
@@ -56,6 +57,7 @@ class GuildSettings(Model):
     settings = fields.JSONField(null=True)
     created_at = fields.DatetimeField(auto_now_add=True)
     updated_at = fields.DatetimeField(auto_now=True)
+    deleted_at = fields.DatetimeField(null=True)
 
 
 class Channel(Model):
@@ -79,7 +81,7 @@ class Channel(Model):
 
 class ChannelSettings(Model):
     """Channel-level settings configuration (JSON store) - Row optional, only if overrides exist"""
-    id = fields.IntField(pk=True)
+    id = fields.IntField(auto_increment=True, pk=True)
     channel = fields.OneToOneField("models.Channel", related_name="settings")
     # Override settings (null means use guild defaults)
     settings = fields.JSONField(
@@ -88,11 +90,13 @@ class ChannelSettings(Model):
     )
     created_at = fields.DatetimeField(auto_now_add=True)
     updated_at = fields.DatetimeField(auto_now=True)
+    deleted_at = fields.DatetimeField(null=True)
 
 
 class ChannelScanStatus(Model):
     """Tracks message scanning progress for a channel"""
-    id = fields.IntField(pk=True)
+    id = fields.IntField(auto_increment=True, pk=True)
+    guild = fields.ForeignKeyField("models.Guild", related_name="scan_status")
     channel = fields.OneToOneField("models.Channel", related_name="scan_status")
     status = fields.CharEnumField(ScanStatus, default=ScanStatus.QUEUED)
     # Message ID tracking for bidirectional scanning
@@ -109,8 +113,8 @@ class ChannelScanStatus(Model):
 class Message(Model):
     """Discord message containing video attachments"""
     id = fields.TextField(pk=True)  # Discord message snowflake
-    channel = fields.ForeignKeyField("models.Channel", related_name="messages")
     guild = fields.ForeignKeyField("models.Guild", related_name="messages")
+    channel = fields.ForeignKeyField("models.Channel", related_name="messages")
     author_id = fields.TextField()  # Discord user snowflake
     content = fields.TextField(null=True)
     timestamp = fields.DatetimeField()  # Discord message timestamp
@@ -123,8 +127,8 @@ class Clip(Model):
     """Individual video attachment extracted from a message"""
     id = fields.TextField(pk=True)  # Generated hash: md5(message_id + channel_id + filename + timestamp)
     message = fields.ForeignKeyField("models.Message", related_name="clips")
-    channel = fields.ForeignKeyField("models.Channel", related_name="clips")
     guild = fields.ForeignKeyField("models.Guild", related_name="clips")
+    channel = fields.ForeignKeyField("models.Channel", related_name="clips")
     filename = fields.CharField(max_length=255)
     file_size = fields.BigIntField()  # Bytes
     mime_type = fields.CharField(max_length=50)
@@ -154,6 +158,7 @@ class Thumbnail(Model):
     mime_type = fields.CharField(max_length=20, default="image/webp")
     created_at = fields.DatetimeField(auto_now_add=True)
     updated_at = fields.DatetimeField(auto_now=True)
+    deleted_at = fields.DatetimeField(null=True)
 
 
 class FailedThumbnail(Model):

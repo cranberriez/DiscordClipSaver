@@ -25,6 +25,7 @@ async def upsert_guilds(snapshots: Iterable[Any]) -> None:
             },
         )
         if not created:
+
             # Update changed fields
             update_needed = False
             if obj.name != name:
@@ -33,6 +34,9 @@ async def upsert_guilds(snapshots: Iterable[Any]) -> None:
             if obj.icon_url != icon:
                 obj.icon_url = icon
                 update_needed = True
+            if obj.deleted_at is not None:
+                obj.deleted_at = None
+                update_needed = True
             if update_needed:
                 await obj.save()
 
@@ -40,4 +44,10 @@ async def upsert_guilds(snapshots: Iterable[Any]) -> None:
 async def delete_guilds(guild_ids: Iterable[str]) -> int:
     """Delete guilds by id. Returns number of rows deleted."""
     ids = [str(gid) for gid in guild_ids]
-    return await Guild.filter(id__in=ids).delete()
+    return await Guild.filter(id__in=ids).update(deleted_at=datetime.now())
+
+async def delete_single_guild(guild_id: str) -> int:
+    return await Guild.filter(id=str(guild_id)).update(deleted_at=datetime.now())
+
+async def get_guilds() -> List[Guild]:
+    return await Guild.filter().order_by("name", "id")

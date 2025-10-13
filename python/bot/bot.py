@@ -8,6 +8,8 @@ intents.message_content = True
 
 bot = discord.Client(intents=intents)
 
+
+# --- Bot Events ---
 @bot.event
 async def on_ready():
     await guild_service.sync_guilds(bot)
@@ -16,18 +18,41 @@ async def on_ready():
         await channel_service.sync_channels(bot, guild)
 
 
+# --- Guild Events ---
 @bot.event
 async def on_guild_join(guild: discord.Guild):
-    await guild_service.on_guild_join(bot, guild)
-    # TODO: Sync channels
+    await guild_service.on_guild_join(guild)
+    await channel_service.sync_channels(bot, guild)
+
+
+@bot.event
+async def on_guild_update(guild: discord.Guild):
+    await guild_service.on_guild_update(guild)
 
 
 @bot.event
 async def on_guild_remove(guild: discord.Guild):
-    await guild_service.on_guild_remove(bot, guild)
-    # TODO: REMOVE related channels
+    await guild_service.on_guild_remove(guild)
+    await channel_service.remove_channels(guild)
 
 
+# --- Channel Events ---
+@bot.event
+async def on_guild_channel_create(channel: discord.ChannelType):
+    await channel_service.on_channel_crup(channel.guild)
+
+
+@bot.event
+async def on_guild_channel_update(channel: discord.ChannelType):
+    await channel_service.on_channel_crup(channel.guild)
+
+
+@bot.event
+async def on_guild_channel_delete(channel: discord.ChannelType):
+    await channel_service.on_channel_delete(channel.guild)
+
+
+# --- Message Events ---
 @bot.event
 async def on_message(message: discord.Message):
     # Ignore the bot’s own messages
@@ -37,5 +62,3 @@ async def on_message(message: discord.Message):
     logger.info("[%s] %s: %s", message.id, message.author, message.content)
 
     # TODO: Handle messages from previously unknown channels, fetch single channel and add
-
-# TODO: Sync Channels on Channel Add, Update, Remove

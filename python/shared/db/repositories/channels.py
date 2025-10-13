@@ -38,6 +38,9 @@ async def upsert_channels_for_guild(guild_id: str, snapshots: Iterable[Any]) -> 
             },
         )
         if not created:
+            # Unsoft delete
+            obj.deleted_at = None
+
             update_needed = False
             if obj.guild_id != guild.id:
                 obj.guild = guild
@@ -51,14 +54,21 @@ async def upsert_channels_for_guild(guild_id: str, snapshots: Iterable[Any]) -> 
             if obj.nsfw != nsfw:
                 obj.nsfw = nsfw
                 update_needed = True
+            if obj.deleted_at is not None:
+                obj.deleted_at = None
+                update_needed = True
             if update_needed:
                 await obj.save()
 
 
-async def delete_channels(channel_ids: Iterable[str]) -> int:
+async def delete_channels(guild_id: str, channel_ids: Iterable[str]) -> int:
     """Delete channels by IDs. Returns number of rows deleted."""
     ids = [str(cid) for cid in channel_ids]
-    return await Channel.filter(id__in=ids).delete()
+    return await Channel.filter(guild_id=str(guild_id), id__in=ids).update(deleted_at=datetime.now())
+
+
+async def delete_single_channel(guild_id: str, channel_id: str) -> int:
+    return await Channel.filter(guild_id=str(guild_id), id=str(channel_id)).update(deleted_at=datetime.now())
 
 
 async def get_channels_by_guild(guild_id: str) -> List[Channel]:
