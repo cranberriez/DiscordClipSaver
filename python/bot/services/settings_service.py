@@ -21,9 +21,13 @@ class SettingsService:
 
     def __init__(self, yaml_source: str | Path | None = None) -> None:
         if yaml_source is None:
-            # bot/services/settings_service.py -> project_root/settings.default.yml
-            repo_root = Path(__file__).resolve().parents[2]
-            yaml_source = repo_root / "settings.default.yml"
+            override = os.getenv("DEFAULT_SETTINGS_PATH")
+            if override:
+                yaml_source = Path(os.path.expanduser(os.path.expandvars(override)))
+            else:
+                # bot/services/settings_service.py -> project_root/settings.default.yml
+                repo_root = Path(__file__).resolve().parents[3]
+                yaml_source = repo_root / "settings.default.yml"
         self._yaml_source: str | Path = yaml_source
         self._config: dict[str, Any] = {}
         self.reload_config()
