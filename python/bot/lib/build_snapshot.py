@@ -4,7 +4,7 @@ from typing import Optional
 
 import discord
 
-from db.types import ChannelSnapshot, GuildSnapshot
+from bot.lib.types import ChannelSnapshot, GuildSnapshot
 
 
 def build_guild_snapshot(guild: discord.Guild) -> GuildSnapshot:

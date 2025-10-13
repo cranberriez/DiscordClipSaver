@@ -1,5 +1,4 @@
 import discord
-from bot.services.state import BotState
 from bot.services.container import guild_service, channel_service
 from bot.logger import logger
 
@@ -8,8 +7,6 @@ intents = discord.Intents.default()
 intents.message_content = True
 
 bot = discord.Client(intents=intents)
-bot.state = BotState()
-
 
 @bot.event
 async def on_ready():

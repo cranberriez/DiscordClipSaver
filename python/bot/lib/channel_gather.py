@@ -2,7 +2,7 @@ from typing import Iterable
 
 from discord import Client, Guild
 
-from db.types import ChannelSnapshot
+from bot.lib.types import ChannelSnapshot
 from .build_snapshot import build_channel_snapshot
 
 
