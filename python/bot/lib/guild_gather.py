@@ -2,8 +2,7 @@ from typing import Iterable
 
 from discord import Client
 
-from db.types import GuildSnapshot
-from logger import logger
+from shared.db.types import GuildSnapshot
 from .build_snapshot import build_guild_snapshot
 
 

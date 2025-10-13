@@ -2,8 +2,8 @@ from __future__ import annotations
 
 import os
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
-from .purge_intents import schedule_purge_install_intents
-from services.container import settings_service
+from bot.schedules.purge_intents import schedule_purge_install_intents
+from bot.services.container import settings_service
 
 
 def start_scheduler_and_jobs() -> AsyncIOScheduler:

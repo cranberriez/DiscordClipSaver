@@ -1,28 +1,25 @@
-# Use an official Python runtime as a parent image
 FROM python:3.13-slim
 
-# Set the working directory in the container
+# Optional: install system dependencies if needed for your DB/driver
+# RUN apt-get update && apt-get install -y build-essential libpq-dev && rm -rf /var/lib/apt/lists/*
+
 WORKDIR /app
 
-# Copy the bot-specific requirements into the container (build context is repo root)
-COPY python/bot/requirements.txt /app/python/bot/requirements.txt
+# Install Python dependencies (leverage caching)
+COPY python/bot/requirements.txt /app/requirements.txt
+RUN pip install --no-cache-dir -r /app/requirements.txt
 
-# Install any needed packages specified in requirements.txt (run from the requirements' directory)
-WORKDIR /app/python/bot
-RUN pip install --no-cache-dir -r requirements.txt
-WORKDIR /app
-
-# Copy the bot source code into the container
+# Copy source code
 COPY python/bot/ /app/bot/
-
-# Copy the project root default settings into the image so the container is self-contained
+COPY python/shared/ /app/shared/
 COPY settings.default.yml /app/settings.default.yml
 
-# Make port 8000 available to the world outside this container
+# Optional: ensure import path
+ENV PYTHONPATH=/app
+
+# App config
+ENV DEFAULT_SETTINGS_PATH=/app/settings.default.yml
 EXPOSE 8000
 
-# Default settings path inside the image (can be overridden at runtime via env)
-ENV DEFAULT_SETTINGS_PATH=/app/settings.default.yml
-
-# Run main.py when the container launches
-CMD ["python", "bot/main.py"]
+# Run as a module so package-relative imports work
+CMD ["python", "-m", "bot.main"]

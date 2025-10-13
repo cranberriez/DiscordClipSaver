@@ -3,14 +3,14 @@ from __future__ import annotations
 
 from typing import Any
 
-from logger import logger
-from db import database
+from bot.logger import logger
+from shared.db.repositories.install_intents import purge_expired_install_intents
 
 
 async def purge_install_intents_job(grace_seconds: int = 300) -> None:
     """Delete expired install intents with a grace period for UI convenience."""
     try:
-        deleted = await database.purge_expired_install_intents(grace_seconds=grace_seconds)
+        deleted = await purge_expired_install_intents(grace_seconds=grace_seconds)
         if deleted:
             logger.info("purge_install_intents: deleted=%d grace_seconds=%d", deleted, grace_seconds)
         else:

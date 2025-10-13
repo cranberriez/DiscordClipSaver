@@ -1,26 +1,21 @@
-# app.py  (Python 3.10+)
-# pip install discord.py fastapi uvicorn[standard]
-
 import asyncio
 from contextlib import suppress
 import os
-import sys
 
 import uvicorn
 from dotenv import load_dotenv
 
-from api import api
-from bot import bot
-from db import database
-from schedules import start_scheduler_and_jobs
+from bot.api import api
+from bot.bot import bot as discord_bot
+from shared.db.utils import init_db, close_db
+from bot.schedules.scheduler import start_scheduler_and_jobs
 
 load_dotenv()
-database.configure_from_env()
 
 # ----- Run both: API server + Discord bot -----
 async def main():
     # Initialize database (async)
-    await database.init_db()
+    await init_db(generate_schemas=True)
     # Start FastAPI (uvicorn) in the background
     config = uvicorn.Config(api, host="0.0.0.0", port=8000, loop="asyncio", log_level="info")
     server = uvicorn.Server(config)
@@ -34,7 +29,7 @@ async def main():
     TOKEN = os.getenv("BOT_TOKEN")
     if not TOKEN:
         raise RuntimeError("BOT_TOKEN not set in environment")
-    bot_task = asyncio.create_task(bot.start(TOKEN))
+    bot_task = asyncio.create_task(discord_bot.start(TOKEN))
 
     try:
         await bot_task
@@ -46,8 +41,8 @@ async def main():
         # Stop scheduler
         with suppress(Exception):
             scheduler.shutdown(wait=False)
-        if not bot.is_closed():
-            await bot.close()
+        if not discord_bot.is_closed():
+            await discord_bot.close()
 
         # If the bot stops, also stop the API server
         if not server.should_exit:
@@ -55,6 +50,10 @@ async def main():
 
         with suppress(asyncio.CancelledError):
             await api_task
+
+        # Close database connections
+        with suppress(Exception):
+            await close_db()
 
 if __name__ == "__main__":
     try:

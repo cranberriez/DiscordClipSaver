@@ -30,8 +30,6 @@ class User(Model):
     username = fields.CharField(max_length=32)
     discriminator = fields.CharField(max_length=4)
     avatar_url = fields.TextField(null=True)
-    # Note: OAuth tokens are NOT stored here. NextAuth manages session securely.
-    # The bot acts as itself (via bot token), not on behalf of users.
     created_at = fields.DatetimeField(auto_now_add=True)
     updated_at = fields.DatetimeField(auto_now=True)
 
@@ -39,7 +37,7 @@ class User(Model):
 class Guild(Model):
     """Discord guild (server)"""
     id = fields.TextField(pk=True)  # Discord guild snowflake
-    owner = fields.ForeignKeyField("models.User", related_name="owned_guilds")
+    owner = fields.ForeignKeyField("models.User", related_name="owned_guilds", null=True)
     name = fields.CharField(max_length=100)
     icon_url = fields.TextField(null=True)
     message_scan_enabled = fields.BooleanField(default=True)  # Master toggle for message scanning
@@ -88,12 +86,6 @@ class ChannelSettings(Model):
         null=True,
         default=None
     )
-    # Example structure if overrides exist:
-    # {
-    #     "allowed_mime_types": ["video/mp4"],
-    #     "match_regex": "clip.*",
-    #     "scan_mode": "bidirectional"
-    # }
     created_at = fields.DatetimeField(auto_now_add=True)
     updated_at = fields.DatetimeField(auto_now=True)
 

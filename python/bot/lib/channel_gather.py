@@ -12,7 +12,6 @@ async def gather_channels(bot: Client, guild: Guild) -> Iterable[ChannelSnapshot
     snapshots: list[ChannelSnapshot] = []
 
     for channel in guild.channels:
-        print(channel.name)
         snapshot = build_channel_snapshot(channel)
         snapshots.append(snapshot)
 

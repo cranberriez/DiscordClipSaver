@@ -1,7 +1,7 @@
 import discord
-from services.state import BotState
-from services.container import guild_service, channel_service
-from logger import logger
+from bot.services.state import BotState
+from bot.services.container import guild_service, channel_service
+from bot.logger import logger
 
 # ----- Discord bot -----
 intents = discord.Intents.default()
@@ -22,7 +22,7 @@ async def on_ready():
 @bot.event
 async def on_guild_join(guild: discord.Guild):
     await guild_service.on_guild_join(bot, guild)
-    # await channel_service.sync_channels(bot, guild)
+    # TODO: Sync channels
 
 
 @bot.event
@@ -41,4 +41,4 @@ async def on_message(message: discord.Message):
 
     # TODO: Handle messages from previously unknown channels, fetch single channel and add
 
-# TODO: Additional sync logic (if needed) for more complex guild updates
+# TODO: Sync Channels on Channel Add, Update, Remove
