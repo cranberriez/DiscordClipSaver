@@ -5,6 +5,7 @@ from typing import Iterable, Any, Optional
 from tortoise.expressions import Q
 
 from shared.db.models import Guild
+from datetime import datetime
 
 
 async def upsert_guilds(snapshots: Iterable[Any]) -> None:

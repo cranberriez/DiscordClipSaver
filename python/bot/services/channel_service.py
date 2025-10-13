@@ -23,7 +23,7 @@ class ChannelService:
         await db_upsert_channels_for_guild(str(guild.id), snapshots)
 
     async def remove_channels(self, guild: discord.Guild) -> None:
-        await db_delete_channels_for_guild(str(guild.id))
+        await db_delete_channels_for_guild(str(guild.id), [str(channel.id) for channel in guild.channels])
 
     async def on_channel_delete(self, guild: discord.Guild, channel: discord.abc.GuildChannel) -> None:
         await db_delete_channel_for_guild(str(guild.id), str(channel.id))

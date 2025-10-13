@@ -5,10 +5,12 @@ import os
 import uvicorn
 from dotenv import load_dotenv
 
+
 from bot.api import api
 from bot.bot import bot as discord_bot
-from shared.db.utils import init_db, close_db
 from bot.schedules.scheduler import start_scheduler_and_jobs
+
+from shared.db.utils import init_db, close_db
 
 load_dotenv()
 

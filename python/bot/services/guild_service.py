@@ -26,6 +26,11 @@ class GuildService:
 
         if snapshots:
             guild_names = ", ".join(s.name for s in snapshots)
+           
+            for guild in snapshots:
+                await db_upsert_guild_settings(str(guild.id), self._settings.get_config("guild_settings_defaults"), self._settings.get_config("channel_settings_defaults"))
+                logger.info("Synced guild settings for guild: %s (%s)", guild.name, guild.id)
+
             logger.info("Accessible guilds: %s", guild_names)
         else:
             logger.info("No accessible guilds found for the bot.")

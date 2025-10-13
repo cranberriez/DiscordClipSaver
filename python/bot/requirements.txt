@@ -4,7 +4,6 @@ uvicorn[standard]
 pydantic
 python-dotenv
 APScheduler
-PyYAML
 aiohttp
 audioop-lts
 psycopg-binary
