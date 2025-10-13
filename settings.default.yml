@@ -2,9 +2,8 @@
 # ------------------------------------------------------------------------------
 # Conventions:
 # - For GUILD settings, values are concrete (no NULLs); they act as global defaults.
-# - For CHANNEL settings, NULL means "inherit from guild"; set a value to override.
+# - For CHANNEL settings, values are inherited defaults for channels, channels can override.
 # - Durations: 0 means "no limit".
-# - clip_keywords_mode: one of [any, all, off].
 # - Arrays: empty list [] means "no items configured".
 # ------------------------------------------------------------------------------
 
@@ -28,27 +27,13 @@ channel_settings_defaults:
     max_messages_per_pass: 1000
     debounce_ms: 250 # throttle in-memory updates for hot channels
     include_threads: false # for forum/threaded channels, treat parent only unless true
-    match:
-        accept_video: true
-        min_video_seconds: 0
-        mime_allowlist: ["video/mp4", "video/quicktime", "video/webm"]
-        text_include_regex: null # e.g. "clip|timestamp"
-        text_exclude_regex: null
 
-    # =========================
-    # ADVANCED
-    # =========================
-
-    backoff:
-        initial_ms: 500
-        max_ms: 30000
-        multiplier: 2.0
-    safety:
-        max_concurrent_scans: 2 # per guild guardrail
-        rate_limit_window_ms: 1000
-    observability:
-        log_level: "info" # "debug" for one-off troubleshooting
-        emit_metrics: true
+    # Matching
+    accept_video: true
+    min_video_seconds: 0
+    mime_allowlist: ["video/mp4", "video/quicktime", "video/webm"]
+    text_include_regex: null # e.g. "clip|timestamp"
+    text_exclude_regex: null
 
 database_settings_defaults:
     # =========================
