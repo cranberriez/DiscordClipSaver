@@ -1,162 +1,190 @@
-"""Tortoise ORM models for Discord Clip Saver database."""
-
-from __future__ import annotations
-
+"""
+Tortoise ORM Models for Discord Clip Scraper
+"""
+from tortoise import fields, Model
+from tortoise.contrib.postgres.fields import ArrayField
 from datetime import datetime
 from enum import Enum
-from typing import Optional
-
-from tortoise import fields
-from tortoise.models import Model
 
 
 class ScanStatus(str, Enum):
-    """Enum for channel scan run status."""
+    """Status of message scanning for a channel"""
     QUEUED = "queued"
     RUNNING = "running"
     SUCCEEDED = "succeeded"
     FAILED = "failed"
-    CANCELED = "canceled"
+    CANCELLED = "cancelled"
+
+
+class ChannelType(str, Enum):
+    """Discord channel types"""
+    TEXT = "text"
+    VOICE = "voice"
+    CATEGORY = "category"
+    FORUM = "forum"
 
 
 class User(Model):
-    """Discord user model."""
-    
-    discord_user_id = fields.CharField(max_length=255, pk=True)
-    username = fields.CharField(max_length=255, null=True)
-    discriminator = fields.CharField(max_length=10, null=True)
-    avatar = fields.CharField(max_length=255, null=True)
+    """Discord user who owns/manages the bot setup"""
+    id = fields.TextField(pk=True)  # Discord user snowflake
+    username = fields.CharField(max_length=32)
+    discriminator = fields.CharField(max_length=4)
+    avatar_url = fields.TextField(null=True)
+    access_token = fields.TextField()
+    refresh_token = fields.TextField(null=True)
     created_at = fields.DatetimeField(auto_now_add=True)
     updated_at = fields.DatetimeField(auto_now=True)
-    
-    # Reverse relations
-    owned_guilds: fields.ReverseRelation["Guild"]
-    
-    class Meta:
-        table = "users"
-        
-    def __str__(self):
-        return f"User({self.discord_user_id}, {self.username})"
 
 
 class Guild(Model):
-    """Discord guild (server) model."""
-    
-    guild_id = fields.CharField(max_length=255, pk=True)
-    name = fields.CharField(max_length=255)
-    icon = fields.CharField(max_length=255, null=True)
-    owner_user_id = fields.ForeignKeyField(
-        "models.User",
-        related_name="owned_guilds",
-        null=True,
-        on_delete=fields.SET_NULL,
-        db_column="owner_user_id",
-    )
-    joined_at = fields.DatetimeField(null=True)
-    last_seen_at = fields.DatetimeField(auto_now_add=True)
-    
-    # Reverse relations
-    channels: fields.ReverseRelation["Channel"]
-    settings: fields.ReverseRelation["GuildSettings"]
-    
-    class Meta:
-        table = "bot_guilds"
-        
-    def __str__(self):
-        return f"Guild({self.guild_id}, {self.name})"
+    """Discord guild (server)"""
+    id = fields.TextField(pk=True)  # Discord guild snowflake
+    owner = fields.ForeignKeyField("models.User", related_name="owned_guilds")
+    name = fields.CharField(max_length=100)
+    icon_url = fields.TextField(null=True)
+    created_at = fields.DatetimeField(auto_now_add=True)
+    updated_at = fields.DatetimeField(auto_now=True)
 
 
 class GuildSettings(Model):
-    """Guild settings model."""
-    
-    guild_id = fields.CharField(max_length=255, pk=True)
-    settings = fields.JSONField(default=dict)
+    """Guild-level configuration"""
+    id = fields.IntField(pk=True)
+    guild = fields.OneToOneField("models.Guild", related_name="settings")
+    scan_enabled = fields.BooleanField(default=True)  # Master toggle for guild
+    last_message_scan_at = fields.DatetimeField(null=True)
+    created_at = fields.DatetimeField(auto_now_add=True)
     updated_at = fields.DatetimeField(auto_now=True)
-    
-    class Meta:
-        table = "guild_settings"
-        
-    def __str__(self):
-        return f"GuildSettings({self.guild_id})"
 
 
 class Channel(Model):
-    """Discord channel model."""
-    
-    channel_id = fields.CharField(max_length=255, pk=True)
-    guild = fields.ForeignKeyField(
-        "models.Guild",
-        related_name="channels",
-        on_delete=fields.CASCADE,
-        db_column="guild_id",
-    )
-    name = fields.CharField(max_length=255, null=True)
-    type = fields.CharField(max_length=50, null=True)
-    is_nsfw = fields.BooleanField(default=False)
-    
-    # Bot read state
-    is_reading = fields.BooleanField(default=False)
-    last_message_id = fields.CharField(max_length=255, null=True)
-    last_scanned_at = fields.DatetimeField(null=True)
-    last_activity_at = fields.DatetimeField(null=True)
-    
-    # Counters
-    message_count = fields.BigIntField(default=0)
-    
-    # Settings (channel-specific overrides)
-    settings = fields.JSONField(default=dict)
-    
+    """Discord channel"""
+    id = fields.TextField(pk=True)  # Discord channel snowflake
+    guild = fields.ForeignKeyField("models.Guild", related_name="channels")
+    name = fields.CharField(max_length=100)
+    type = fields.CharEnumField(ChannelType, default=ChannelType.TEXT)
+    position = fields.IntField(default=0)
+    parent_id = fields.TextField(null=True)  # Parent category ID if nested
+    topic = fields.TextField(null=True)
+    deleted_at = fields.DatetimeField(null=True)  # Soft delete
     created_at = fields.DatetimeField(auto_now_add=True)
     updated_at = fields.DatetimeField(auto_now=True)
-    
-    # Reverse relations
-    scan_runs: fields.ReverseRelation["ChannelScanRun"]
-    
-    class Meta:
-        table = "bot_channels"
-        
-    def __str__(self):
-        return f"Channel({self.channel_id}, {self.name})"
 
 
-class ChannelScanRun(Model):
-    """Channel scan run model."""
-    
-    id = fields.UUIDField(pk=True)
-    channel = fields.ForeignKeyField(
-        "models.Channel",
-        related_name="scan_runs",
-        on_delete=fields.CASCADE,
-        db_column="channel_id",
-    )
-    after_message_id = fields.CharField(max_length=255, null=True)
-    before_message_id = fields.CharField(max_length=255, null=True)
-    status = fields.CharEnumField(ScanStatus, default=ScanStatus.QUEUED)
-    messages_scanned = fields.BigIntField(default=0)
-    messages_matched = fields.BigIntField(default=0)
-    error_message = fields.TextField(null=True)
-    started_at = fields.DatetimeField(null=True)
-    finished_at = fields.DatetimeField(null=True)
+class ChannelSettings(Model):
+    """Channel-level configuration (overrides guild defaults)"""
+    id = fields.IntField(pk=True)
+    channel = fields.OneToOneField("models.Channel", related_name="settings")
+    scan_enabled = fields.BooleanField(default=True)
+    last_channel_sync_at = fields.DatetimeField(null=True)
+    next_allowed_channel_sync_at = fields.DatetimeField(null=True)
+    channel_sync_cooldown_level = fields.IntField(default=0)
     created_at = fields.DatetimeField(auto_now_add=True)
-    
-    class Meta:
-        table = "bot_channel_scan_runs"
-        
-    def __str__(self):
-        return f"ChannelScanRun({self.id}, {self.status})"
+    updated_at = fields.DatetimeField(auto_now=True)
+
+
+class ChannelScanStatus(Model):
+    """Tracks message scanning progress for a channel"""
+    id = fields.IntField(pk=True)
+    channel = fields.OneToOneField("models.Channel", related_name="scan_status")
+    status = fields.CharEnumField(ScanStatus, default=ScanStatus.QUEUED)
+    # Message ID tracking for bidirectional scanning
+    forward_message_id = fields.TextField(null=True)  # Most recent scanned going forward
+    backward_message_id = fields.TextField(null=True)  # Oldest scanned going backward
+    # Scanning progress
+    message_count = fields.IntField(default=0)  # Count of messages with clips
+    total_messages_scanned = fields.IntField(default=0)  # Total messages examined
+    error_message = fields.TextField(null=True)
+    created_at = fields.DatetimeField(auto_now_add=True)
+    updated_at = fields.DatetimeField(auto_now=True)
+
+
+class Message(Model):
+    """Discord message containing video attachments"""
+    id = fields.TextField(pk=True)  # Discord message snowflake
+    channel = fields.ForeignKeyField("models.Channel", related_name="messages")
+    guild = fields.ForeignKeyField("models.Guild", related_name="messages")
+    author_id = fields.TextField()  # Discord user snowflake
+    content = fields.TextField(null=True)
+    timestamp = fields.DatetimeField()  # Discord message timestamp
+    deleted_at = fields.DatetimeField(null=True)  # Soft delete when message removed from Discord
+    created_at = fields.DatetimeField(auto_now_add=True)
+    updated_at = fields.DatetimeField(auto_now=True)
+
+
+class Clip(Model):
+    """Individual video attachment extracted from a message"""
+    id = fields.TextField(pk=True)  # Generated hash: md5(message_id + channel_id + filename + timestamp)
+    message = fields.ForeignKeyField("models.Message", related_name="clips")
+    channel = fields.ForeignKeyField("models.Channel", related_name="clips")
+    guild = fields.ForeignKeyField("models.Guild", related_name="clips")
+    filename = fields.CharField(max_length=255)
+    file_size = fields.BigIntField()  # Bytes
+    mime_type = fields.CharField(max_length=50)
+    duration = fields.FloatField(null=True)  # Seconds (if extracted)
+    resolution = fields.CharField(max_length=20, null=True)  # e.g., "1920x1080"
+    # Discord CDN URL (expires after ~24 hours)
+    cdn_url = fields.TextField()
+    expires_at = fields.DatetimeField()  # When CDN URL expires
+    # Processing status
+    thumbnail_status = fields.CharField(
+        max_length=20,
+        default="pending"
+    )  # pending, processing, completed, failed
+    deleted_at = fields.DatetimeField(null=True)  # Soft delete when message removed
+    created_at = fields.DatetimeField(auto_now_add=True)
+    updated_at = fields.DatetimeField(auto_now=True)
+
+
+class Thumbnail(Model):
+    """Generated thumbnail for a clip"""
+    id = fields.TextField(pk=True)  # UUID
+    clip = fields.OneToOneField("models.Clip", related_name="thumbnail")
+    storage_path = fields.TextField()  # Local path or cloud bucket path
+    width = fields.IntField()
+    height = fields.IntField()
+    file_size = fields.BigIntField()  # Bytes
+    mime_type = fields.CharField(max_length=20, default="image/webp")
+    created_at = fields.DatetimeField(auto_now_add=True)
+    updated_at = fields.DatetimeField(auto_now=True)
+
+
+class FailedThumbnail(Model):
+    """Track failed thumbnail generation for retry logic"""
+    id = fields.TextField(pk=True)  # UUID
+    clip = fields.ForeignKeyField("models.Clip", related_name="failed_thumbnails")
+    error_message = fields.TextField()
+    retry_count = fields.IntField(default=0)
+    last_attempted_at = fields.DatetimeField(null=True)
+    next_retry_at = fields.DatetimeField()  # When to next attempt
+    created_at = fields.DatetimeField(auto_now_add=True)
+    updated_at = fields.DatetimeField(auto_now=True)
 
 
 class InstallIntent(Model):
-    """Install intent model for OAuth flow."""
-    
-    state = fields.CharField(max_length=255, pk=True)
-    guild_id = fields.CharField(max_length=255, null=True)
-    user_id = fields.CharField(max_length=255, null=True)
+    """Short-lived OAuth state for bot installation"""
+    id = fields.TextField(pk=True)  # State parameter value
+    user_id = fields.TextField()  # Discord user snowflake
+    guild_id = fields.TextField(null=True)  # Target guild if known
+    state = fields.TextField()  # OAuth state for verification
     expires_at = fields.DatetimeField()
     created_at = fields.DatetimeField(auto_now_add=True)
-    
-    class Meta:
-        table = "install_intents"
-        
-    def __str__(self):
-        return f"InstallIntent({self.state})"
+
+
+# Optional: Job tracking table for monitoring and debugging
+class Job(Model):
+    """Track queued and processed jobs for monitoring"""
+    id = fields.TextField(pk=True)  # UUID from Redis job
+    type = fields.CharField(max_length=50)  # batch, message, rescan, thumbnail_retry
+    guild_id = fields.TextField()
+    channel_id = fields.TextField()
+    status = fields.CharField(
+        max_length=20,
+        default="pending"
+    )  # pending, processing, completed, failed
+    result = fields.JSONField(null=True)  # Result from worker
+    error = fields.TextField(null=True)
+    claimed_by_worker = fields.TextField(null=True)  # Worker identifier
+    claimed_at = fields.DatetimeField(null=True)
+    completed_at = fields.DatetimeField(null=True)
+    created_at = fields.DatetimeField(auto_now_add=True)
+    updated_at = fields.DatetimeField(auto_now=True)

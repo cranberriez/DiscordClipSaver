@@ -1,35 +1,7 @@
-"""Database module using Tortoise ORM."""
+from tortoise import Model, fields
 
-from .config import init_db, close_db, get_config
-from .models import (
-    User,
-    Guild,
-    GuildSettings,
-    Channel,
-    ChannelScanRun,
-    InstallIntent,
-    ScanStatus,
-)
-from .types import ChannelSnapshot, GuildSnapshot, GuildSettings as GuildSettingsType
-from . import repositories
-
+# Re-export common Tortoise symbols for convenient imports
 __all__ = [
-    # Config functions
-    "init_db",
-    "close_db",
-    "get_config",
-    # Models
-    "User",
-    "Guild",
-    "GuildSettings",
-    "Channel",
-    "ChannelScanRun",
-    "InstallIntent",
-    "ScanStatus",
-    # Types
-    "ChannelSnapshot",
-    "GuildSnapshot",
-    "GuildSettingsType",
-    # Repository module
-    "repositories",
+    "Model",
+    "fields",
 ]
