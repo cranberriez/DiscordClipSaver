@@ -13,5 +13,5 @@ export function canInviteBot(g: DiscordGuild): boolean {
 }
 
 export function filterInvitableGuilds(guilds: DiscordGuild[]): DiscordGuild[] {
-    return guilds.filter((g) => canInviteBot(g));
+    return guilds.filter(g => canInviteBot(g));
 }

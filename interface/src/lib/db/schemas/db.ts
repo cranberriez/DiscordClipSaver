@@ -6,10 +6,10 @@ import type { ChannelSettingsTable } from "./channel_settings.kysely";
 import type { InstallIntentTable } from "./install_intents.kysely";
 
 export interface DB {
-  user: UserTable;
-  guild: GuildTable;
-  guild_settings: GuildSettingsTable;
-  channel: ChannelTable;
-  channel_settings: ChannelSettingsTable;
-  install_intent: InstallIntentTable;
+    user: UserTable;
+    guild: GuildTable;
+    guild_settings: GuildSettingsTable;
+    channel: ChannelTable;
+    channel_settings: ChannelSettingsTable;
+    install_intent: InstallIntentTable;
 }
