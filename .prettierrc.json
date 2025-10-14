@@ -13,5 +13,13 @@
     "endOfLine": "auto",
     "proseWrap": "preserve",
     "htmlWhitespaceSensitivity": "css",
-    "embeddedLanguageFormatting": "auto"
+    "embeddedLanguageFormatting": "auto",
+    "overrides": [
+        {
+            "files": ["*.json", "*.jsonc"],
+            "options": {
+                "trailingComma": "none"
+            }
+        }
+    ]
 }

@@ -15,7 +15,7 @@ services:
         restart: unless-stopped
         volumes:
             # Optional: mount local settings file for rapid iteration without rebuilding image
-            - ./settings.default.yml:/app/settings.default.yml:ro
+            - ./settings.default.json:/app/settings.default.json:ro
 
     interface:
         build:
@@ -34,7 +34,7 @@ services:
         restart: unless-stopped
         volumes:
             # Optional: mount local settings file to the same in-container path used by the image
-            - ./settings.default.yml:/app/settings.default.yml:ro
+            - ./settings.default.json:/app/settings.default.json:ro
 
     dcs-postgres:
         image: postgres:16-alpine

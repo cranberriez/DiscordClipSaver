@@ -8,3 +8,8 @@ export {
     getSingleGuildById,
     setGuildOwnerIfUnclaimed,
 } from "./queries/guilds";
+export {
+    getGuildSettings,
+    upsertGuildSettings,
+    deleteGuildSettings,
+} from "./queries/guild_settings";

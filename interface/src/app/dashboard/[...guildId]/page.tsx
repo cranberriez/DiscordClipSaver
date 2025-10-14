@@ -4,6 +4,8 @@ import { getChannelsByGuildId } from "@/lib/db/queries/channels";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import ChannelsList from "./ChannelsList";
+import GuildTabs from "./GuildTabs";
+import DynamicSettingsForm from "./DynamicSettingsForm";
 
 type PageProps = {
     params: Promise<{ guildId: string[] }>;
@@ -139,14 +141,40 @@ export default async function GuildPage({ params }: PageProps) {
                     </div>
                 )}
 
-                <ChannelsList channels={channels} />
-
-                <div className="mt-6 p-4 bg-white/5 rounded-lg">
-                    <h2 className="text-xl font-semibold mb-2">Raw Data</h2>
-                    <pre className="text-xs overflow-auto">
-                        {JSON.stringify(guild, null, 2)}
-                    </pre>
-                </div>
+                <GuildTabs
+                    tabs={[
+                        {
+                            id: "overview",
+                            label: "Overview",
+                            content: (
+                                <ChannelsList
+                                    channels={channels}
+                                    guildId={guild.id}
+                                />
+                            ),
+                        },
+                        {
+                            id: "settings",
+                            label: "Settings",
+                            content: <DynamicSettingsForm guildId={guild.id} />,
+                        },
+                        {
+                            id: "debug",
+                            label: "Debug",
+                            content: (
+                                <div className="p-4 bg-white/5 rounded-lg">
+                                    <h2 className="text-xl font-semibold mb-2">
+                                        Raw Data
+                                    </h2>
+                                    <pre className="text-xs overflow-auto">
+                                        {JSON.stringify(guild, null, 2)}
+                                    </pre>
+                                </div>
+                            ),
+                        },
+                    ]}
+                    defaultTab="overview"
+                />
             </div>
         </div>
     );
