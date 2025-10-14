@@ -33,6 +33,9 @@ class User(Model):
     created_at = fields.DatetimeField(auto_now_add=True)
     updated_at = fields.DatetimeField(auto_now=True)
 
+    class Meta:
+        table="user"
+
 
 class Guild(Model):
     """Discord guild (server)"""
@@ -46,6 +49,9 @@ class Guild(Model):
     updated_at = fields.DatetimeField(auto_now=True)
     deleted_at = fields.DatetimeField(null=True)
 
+    class Meta:
+        table="guild"
+
 
 class GuildSettings(Model):
     """Guild-level settings configuration (JSON store)"""
@@ -58,6 +64,9 @@ class GuildSettings(Model):
     created_at = fields.DatetimeField(auto_now_add=True)
     updated_at = fields.DatetimeField(auto_now=True)
     deleted_at = fields.DatetimeField(null=True)
+
+    class Meta:
+        table="guild_settings"
 
 
 class Channel(Model):
@@ -80,6 +89,7 @@ class Channel(Model):
 
     class Meta:
         unique_together=("guild", "id")
+        table="channel"
 
 
 class ChannelSettings(Model):
@@ -114,6 +124,7 @@ class ChannelScanStatus(Model):
 
     class Meta:
         unique_together=("guild", "channel")
+        table="channel_scan_status"
 
 
 class Message(Model):
@@ -128,6 +139,8 @@ class Message(Model):
     created_at = fields.DatetimeField(auto_now_add=True)
     updated_at = fields.DatetimeField(auto_now=True)
 
+    class Meta:
+        table="message"
 
 class Clip(Model):
     """Individual video attachment extracted from a message"""
@@ -152,6 +165,8 @@ class Clip(Model):
     created_at = fields.DatetimeField(auto_now_add=True)
     updated_at = fields.DatetimeField(auto_now=True)
 
+    class Meta:
+        table="clip"
 
 class Thumbnail(Model):
     """Generated thumbnail for a clip"""
@@ -178,15 +193,20 @@ class FailedThumbnail(Model):
     created_at = fields.DatetimeField(auto_now_add=True)
     updated_at = fields.DatetimeField(auto_now=True)
 
+    class Meta:
+        table="failed_thumbnail"
 
 class InstallIntent(Model):
     """Short-lived OAuth state for bot installation"""
     id = fields.IntField(auto_increment=True, pk=True)  # auto id
-    user = fields.ForeignKeyField("models.User", related_name="install_intents_user", indexable=True)  # Discord user snowflake
-    guild = fields.ForeignKeyField("models.Guild", related_name="install_intents_guild", null=True)  # Target guild if known
+    user = fields.CharField(max_length=64, indexable=True)  # Discord user snowflake (no FK, just ID)
+    guild = fields.CharField(max_length=64)  # Target guild if known (no FK, just ID)
     state = fields.TextField()  # OAuth state for verification
     expires_at = fields.DatetimeField()
     created_at = fields.DatetimeField(auto_now_add=True)
+
+    class Meta:
+        table="install_intent"
 
 
 # Optional: Job tracking table for monitoring and debugging
@@ -207,3 +227,6 @@ class Job(Model):
     completed_at = fields.DatetimeField(null=True)
     created_at = fields.DatetimeField(auto_now_add=True)
     updated_at = fields.DatetimeField(auto_now=True)
+
+    class Meta:
+        table="job"

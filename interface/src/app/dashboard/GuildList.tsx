@@ -41,10 +41,10 @@ export default async function GuildList() {
 
   // Categorize
   const installed: FullGuild[] = items.filter((i) => i.db);
-  const installedNoOwner: FullGuild[] = installed.filter((i) => i.db?.owner == null);
-  const installedOwnedByYou: FullGuild[] = installed.filter((i) => i.db?.owner === currentUserId);
+  const installedNoOwner: FullGuild[] = installed.filter((i) => i.db?.owner_id == null);
+  const installedOwnedByYou: FullGuild[] = installed.filter((i) => i.db?.owner_id === currentUserId);
   const installedOthers: FullGuild[] = installed.filter(
-    (i) => i.db?.owner != null && i.db.owner !== currentUserId
+    (i) => i.db?.owner_id != null && i.db.owner_id !== currentUserId
   );
   const invitable: FullGuild[] = items.filter((i) => !i.db && canInviteBot(i.discord));
   const notInstalled: FullGuild[] = items.filter((i) => !i.db && !canInviteBot(i.discord));

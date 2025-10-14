@@ -2,7 +2,7 @@ import type { ColumnType, Selectable } from "kysely";
 
 export interface GuildTable {
   id: string;
-  owner: ColumnType<string | null, string | null | undefined, string | null | undefined>;
+  owner_id: ColumnType<string | null, string | null | undefined, string | null | undefined>;
   name: string;
   icon_url: ColumnType<string | null, string | null | undefined, string | null | undefined>;
   message_scan_enabled: ColumnType<boolean, boolean | undefined, boolean | undefined>;

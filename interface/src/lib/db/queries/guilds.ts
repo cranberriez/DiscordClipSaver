@@ -8,6 +8,7 @@ export async function getGuildsByIds(guildIds: string[]): Promise<Guild[]> {
         .selectFrom("guild")
         .selectAll()
         .where("id", "in", guildIds)
+        .where("deleted_at", "is", null) // soft-deletion policy
         .execute();
 
     return guilds;
@@ -18,6 +19,7 @@ export async function getSingleGuildById(guildId: string): Promise<Guild | null>
         .selectFrom("guild")
         .selectAll()
         .where("id", "=", guildId)
+        .where("deleted_at", "is", null) // soft-deletion policy
         .executeTakeFirst();
     
     if (!guild) return null;
@@ -28,9 +30,10 @@ export async function getSingleGuildById(guildId: string): Promise<Guild | null>
 export async function setGuildOwnerIfUnclaimed(guildId: string, userId: string): Promise<boolean> {
     const res = await getDb()
         .updateTable("guild")
-        .set({ owner: userId })
+        .set({ owner_id: userId })
         .where("id", "=", guildId)
-        .where("owner", "is", null)
+        .where("owner_id", "is", null)
+        .where("deleted_at", "is", null) // can't claim deleted guilds
         .executeTakeFirst();
     
     const affected = Number((res as { numUpdatedRows?: bigint | number })?.numUpdatedRows ?? 0);

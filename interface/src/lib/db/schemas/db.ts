@@ -1,5 +1,5 @@
 import type { UserTable } from "./user.kysely";
-import type { GuildTable } from "./guildskysely";
+import type { GuildTable } from "./guild.kysely";
 import type { GuildSettingsTable } from "./guild_settings.kysely";
 import type { ChannelTable } from "./channel.kysely";
 import type { ChannelSettingsTable } from "./channel_settings.kysely";

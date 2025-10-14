@@ -5,7 +5,7 @@ import DebugButton from "./debugButton";
 export function GuildItemComponent({ guild, relation }: { guild: FullGuild; relation: GuildRelation }) {
 	const id = guild.discord.id;
 	const name = guild.discord.name ?? guild.db?.name ?? "Unknown";
-	const owner = guild.db?.owner ?? null;
+	const owner = guild.db?.owner_id ?? null;
 	const icon = guild.discord.icon ?? null;
 
 	return (

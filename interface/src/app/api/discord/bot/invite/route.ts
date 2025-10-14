@@ -22,8 +22,8 @@ export async function GET(req: NextRequest) {
 
 	await createInstallIntent({
 		state,
-		user: auth.discordUserId,
-		guild: guildId,
+		user_id: auth.discordUserId,
+		guild_id: guildId,
 		expires_at: expiresAt,
 	});
 

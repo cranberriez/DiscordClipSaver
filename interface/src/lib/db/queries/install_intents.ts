@@ -22,8 +22,8 @@ export async function createInstallIntent(params: NewInstallIntent): Promise<Dat
 		.insertInto("install_intent")
 		.values({
 			state: params.state,
-			user: params.user,
-			guild: params.guild,
+			user_id: params.user_id,
+			guild_id: params.guild_id,
 			expires_at: params.expires_at,
 		})
 		.returning("expires_at")
