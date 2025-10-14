@@ -9,7 +9,7 @@ export async function consumeInstallIntent(params: InstallIntentPartial): Promis
 		.where("state", "=", params.state)
 		// .where("guild_id", "=", params.guild_id)
 		// .where("user_id", "=", params.user_id)
-		.where("expires_at", "<", new Date())
+		.where("expires_at", ">", new Date())
 		.returningAll()
 		.executeTakeFirst();
 	
