@@ -2,7 +2,7 @@ import type { ColumnType, Selectable } from "kysely";
 
 export type ChannelType = "text" | "voice" | "category" | "forum";
 
-export interface ChannelsTable {
+export interface ChannelTable {
   id: string;
   guild_id: string;
   name: string;
@@ -20,4 +20,4 @@ export interface ChannelsTable {
   updated_at: ColumnType<Date, Date | undefined, Date | undefined>;
 }
 
-export type Channel = Selectable<ChannelsTable>;
+export type Channel = Selectable<ChannelTable>;

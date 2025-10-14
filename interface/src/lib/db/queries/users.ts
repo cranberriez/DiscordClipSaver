@@ -14,7 +14,7 @@ export async function upsertUser(params: NewUser): Promise<User> {
 	};
 	
 	return getDb()
-		.insertInto("users")
+		.insertInto("user")
 		.values(newUser)
 		.returningAll()
 		.executeTakeFirstOrThrow(); // it SHOULD return the inserted row, throwing is good :)
@@ -24,7 +24,7 @@ export async function updateUser(params: UserUpdate): Promise<User> {
 	if (!params.id) throw new Error("User ID is required");
 
 	return getDb()
-		.updateTable("users")
+		.updateTable("user")
 		.set(params)
 		.where("id", "=", params.id)
 		.returningAll()
@@ -33,7 +33,7 @@ export async function updateUser(params: UserUpdate): Promise<User> {
 
 export async function getUserByDiscordId(discordUserId: string): Promise<User | null> {
 	const row = await getDb()
-		.selectFrom("users")
+		.selectFrom("user")
 		.selectAll()
 		.where("id", "=", discordUserId)
 		.executeTakeFirst();

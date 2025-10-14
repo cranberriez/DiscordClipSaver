@@ -2,7 +2,7 @@ import type { ColumnType, Insertable, Selectable, Updateable } from "kysely";
 
 export interface GuildSettingsTable {
   id: ColumnType<number, number | undefined, never>;
-  guild_id: string;
+  guild: string;
   default_channel_settings: ColumnType<unknown | null, unknown | null | undefined, unknown | null | undefined>;
   settings: ColumnType<unknown | null, unknown | null | undefined, unknown | null | undefined>;
   created_at: ColumnType<Date, Date | undefined, Date | undefined>;

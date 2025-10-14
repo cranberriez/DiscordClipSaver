@@ -5,7 +5,7 @@ import type { InstallIntent, NewInstallIntent, InstallIntentPartial } from "../t
 
 export async function consumeInstallIntent(params: InstallIntentPartial): Promise<InstallIntent | null> {
 	const intent = await getDb()
-		.deleteFrom("install_intents")
+		.deleteFrom("install_intent")
 		.where("state", "=", params.state)
 		// .where("guild_id", "=", params.guild_id)
 		// .where("user_id", "=", params.user_id)
@@ -19,7 +19,7 @@ export async function consumeInstallIntent(params: InstallIntentPartial): Promis
 
 export async function createInstallIntent(params: NewInstallIntent): Promise<Date> {
 	const newIntent = await getDb()
-		.insertInto("install_intents")
+		.insertInto("install_intent")
 		.values({
 			state: params.state,
 			user: params.user,

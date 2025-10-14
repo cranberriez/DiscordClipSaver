@@ -1,6 +1,6 @@
 import type { ColumnType, Insertable, Selectable, Updateable } from "kysely";
 
-export interface UsersTable {
+export interface UserTable {
   id: string;
   username: string;
   discriminator: string;
@@ -9,6 +9,6 @@ export interface UsersTable {
   updated_at: ColumnType<Date, Date | undefined, Date | undefined>;
 }
 
-export type User = Selectable<UsersTable>;
-export type NewUser = Insertable<UsersTable>;
-export type UserUpdate = Updateable<UsersTable>;
+export type User = Selectable<UserTable>;
+export type NewUser = Insertable<UserTable>;
+export type UserUpdate = Updateable<UserTable>;

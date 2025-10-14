@@ -1,8 +1,8 @@
 import type { ColumnType, Selectable } from "kysely";
 
-export interface GuildsTable {
+export interface GuildTable {
   id: string;
-  owner_id: ColumnType<string | null, string | null | undefined, string | null | undefined>;
+  owner: ColumnType<string | null, string | null | undefined, string | null | undefined>;
   name: string;
   icon_url: ColumnType<string | null, string | null | undefined, string | null | undefined>;
   message_scan_enabled: ColumnType<boolean, boolean | undefined, boolean | undefined>;
@@ -12,4 +12,4 @@ export interface GuildsTable {
   deleted_at: ColumnType<Date | null, Date | null | undefined, Date | null | undefined>;
 }
 
-export type Guild = Selectable<GuildsTable>;
+export type Guild = Selectable<GuildTable>;

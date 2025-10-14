@@ -1,15 +1,15 @@
-import type { UsersTable } from "./users.kysely";
-import type { GuildsTable } from "./guilds.kysely";
+import type { UserTable } from "./user.kysely";
+import type { GuildTable } from "./guildskysely";
 import type { GuildSettingsTable } from "./guild_settings.kysely";
-import type { ChannelsTable } from "./channels.kysely";
+import type { ChannelTable } from "./channel.kysely";
 import type { ChannelSettingsTable } from "./channel_settings.kysely";
-import type { InstallIntentsTable } from "./install_intents.kysely";
+import type { InstallIntentTable } from "./install_intents.kysely";
 
 export interface DB {
-  users: UsersTable;
-  guilds: GuildsTable;
+  user: UserTable;
+  guild: GuildTable;
   guild_settings: GuildSettingsTable;
-  channels: ChannelsTable;
+  channel: ChannelTable;
   channel_settings: ChannelSettingsTable;
-  install_intents: InstallIntentsTable;
+  install_intent: InstallIntentTable;
 }
