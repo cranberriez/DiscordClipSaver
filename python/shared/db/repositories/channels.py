@@ -5,6 +5,7 @@ from typing import Iterable, Any, List
 from tortoise.expressions import Q
 
 from shared.db.models import Channel, Guild, ChannelType
+from datetime import datetime
 
 
 def _to_channel_type(value: str) -> ChannelType:
