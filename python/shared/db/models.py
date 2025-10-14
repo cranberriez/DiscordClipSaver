@@ -79,7 +79,7 @@ class Channel(Model):
     parent_id = fields.CharField(max_length=64, null=True)  # Parent category ID if nested
     topic = fields.TextField(null=True)
     nsfw = fields.BooleanField(default=False)  # Whether channel is marked NSFW
-    message_scan_enabled = fields.BooleanField(default=True)  # Override for guild default
+    message_scan_enabled = fields.BooleanField(default=False)  # Override for guild default
     last_channel_sync_at = fields.DatetimeField(null=True)
     next_allowed_channel_sync_at = fields.DatetimeField(null=True)
     channel_sync_cooldown_level = fields.IntField(default=0)
