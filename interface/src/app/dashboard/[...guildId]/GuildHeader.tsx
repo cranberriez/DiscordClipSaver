@@ -1,0 +1,160 @@
+"use client";
+
+import { useState } from "react";
+
+interface GuildHeaderProps {
+    guildId: string;
+    guildName: string;
+    ownerId: string | null;
+    messageScanEnabled: boolean;
+    lastMessageScanAt: Date | null;
+    createdAt: Date;
+    iconUrl: string | null;
+}
+
+export default function GuildHeader({
+    guildId,
+    guildName,
+    ownerId,
+    messageScanEnabled,
+    lastMessageScanAt,
+    createdAt,
+    iconUrl,
+}: GuildHeaderProps) {
+    const [toggling, setToggling] = useState(false);
+    const [error, setError] = useState<string | null>(null);
+
+    const handleToggle = async () => {
+        const action = messageScanEnabled ? "disable" : "enable";
+        
+        // Confirmation dialog when enabling
+        if (!messageScanEnabled) {
+            const confirmed = confirm(
+                "Are you sure you want to begin scanning messages in this guild for all enabled channels?"
+            );
+            if (!confirmed) return;
+        }
+
+        setToggling(true);
+        setError(null);
+
+        try {
+            const response = await fetch(`/api/guilds/${guildId}/toggle`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ enabled: !messageScanEnabled }),
+            });
+
+            if (!response.ok) {
+                const data = await response.json();
+                throw new Error(data.error || `Failed to ${action} scanning`);
+            }
+
+            // Refresh the page to show updated state
+            window.location.reload();
+        } catch (err) {
+            setError(err instanceof Error ? err.message : "Unknown error");
+        } finally {
+            setToggling(false);
+        }
+    };
+
+    return (
+        <div className="space-y-6">
+            <div>
+                <h1 className="text-3xl font-bold mb-2">{guildName}</h1>
+                <p className="text-sm text-muted-foreground">
+                    Guild ID: {guildId}
+                </p>
+            </div>
+
+            {error && (
+                <div className="p-3 bg-red-500/10 border border-red-500/20 rounded-lg">
+                    <p className="text-red-400 text-sm">{error}</p>
+                </div>
+            )}
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <InfoCard title="Owner" value={ownerId ?? "Unclaimed"} />
+                
+                {/* Message Scanning Card with Toggle */}
+                <div className="p-4 border border-white/20 rounded-lg bg-white/5">
+                    <div className="flex items-center justify-between">
+                        <div>
+                            <h3 className="text-sm font-medium text-muted-foreground mb-1">
+                                Message Scanning
+                            </h3>
+                            <p
+                                className={`text-lg font-semibold ${
+                                    messageScanEnabled
+                                        ? "text-green-500"
+                                        : "text-gray-500"
+                                }`}
+                            >
+                                {messageScanEnabled ? "Enabled" : "Disabled"}
+                            </p>
+                        </div>
+                        <button
+                            onClick={handleToggle}
+                            disabled={toggling}
+                            className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors ${
+                                messageScanEnabled
+                                    ? "bg-red-600 text-white hover:bg-red-700"
+                                    : "bg-green-600 text-white hover:bg-green-700"
+                            } disabled:opacity-50 disabled:cursor-not-allowed`}
+                        >
+                            {toggling
+                                ? "Updating..."
+                                : messageScanEnabled
+                                ? "Turn Off"
+                                : "Turn On"}
+                        </button>
+                    </div>
+                </div>
+
+                <InfoCard
+                    title="Last Message Scan"
+                    value={
+                        lastMessageScanAt
+                            ? new Date(lastMessageScanAt).toLocaleString()
+                            : "Never"
+                    }
+                />
+                <InfoCard
+                    title="Created At"
+                    value={new Date(createdAt).toLocaleString()}
+                />
+            </div>
+
+            {iconUrl && (
+                <div className="mt-6">
+                    <h2 className="text-xl font-semibold mb-2">Guild Icon</h2>
+                    <img
+                        src={iconUrl}
+                        alt={`${guildName} icon`}
+                        className="w-32 h-32 rounded-xl"
+                    />
+                </div>
+            )}
+        </div>
+    );
+}
+
+function InfoCard({
+    title,
+    value,
+    valueClass = "text-white",
+}: {
+    title: string;
+    value: string;
+    valueClass?: string;
+}) {
+    return (
+        <div className="p-4 border border-white/20 rounded-lg bg-white/5">
+            <h3 className="text-sm font-medium text-muted-foreground mb-1">
+                {title}
+            </h3>
+            <p className={`text-lg font-semibold ${valueClass}`}>{value}</p>
+        </div>
+    );
+}

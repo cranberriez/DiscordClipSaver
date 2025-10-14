@@ -6,11 +6,13 @@ import type { Channel } from "@/lib/db/types";
 type ChannelsListProps = {
     channels: Channel[];
     guildId: string;
+    guildScanEnabled: boolean;
 };
 
 export default function ChannelsList({
     channels,
     guildId,
+    guildScanEnabled,
 }: ChannelsListProps) {
     const [bulkUpdating, setBulkUpdating] = useState(false);
     const [error, setError] = useState<string | null>(null);
@@ -49,6 +51,7 @@ export default function ChannelsList({
 
     return (
         <div className="mt-6">
+            {/* Channel Controls */}
             <div className="flex items-center justify-between mb-3">
                 <h2 className="text-xl font-semibold">
                     Channels ({channels.length})
@@ -90,7 +93,11 @@ export default function ChannelsList({
             ) : (
                 <div className="space-y-2">
                     {channels.map(channel => (
-                        <ChannelItem key={channel.id} channel={channel} />
+                        <ChannelItem
+                            key={channel.id}
+                            channel={channel}
+                            guildScanEnabled={guildScanEnabled}
+                        />
                     ))}
                 </div>
             )}
@@ -98,7 +105,13 @@ export default function ChannelsList({
     );
 }
 
-function ChannelItem({ channel }: { channel: Channel }) {
+function ChannelItem({
+    channel,
+    guildScanEnabled,
+}: {
+    channel: Channel;
+    guildScanEnabled: boolean;
+}) {
     return (
         <div
             key={channel.id}
@@ -129,12 +142,16 @@ function ChannelItem({ channel }: { channel: Channel }) {
                 <div className="flex flex-col items-end gap-1">
                     <span
                         className={`text-xs px-2 py-1 rounded ${
-                            channel.message_scan_enabled
+                            !guildScanEnabled && channel.message_scan_enabled
+                                ? "bg-orange-500/20 text-orange-400"
+                                : channel.message_scan_enabled
                                 ? "bg-green-500/20 text-green-400"
                                 : "bg-gray-500/20 text-gray-400"
                         }`}
                     >
-                        {channel.message_scan_enabled
+                        {!guildScanEnabled && channel.message_scan_enabled
+                            ? "Scan: Ready"
+                            : channel.message_scan_enabled
                             ? "Scan: ON"
                             : "Scan: OFF"}
                     </span>

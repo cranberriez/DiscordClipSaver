@@ -133,9 +133,12 @@ export default function DynamicSettingsForm({
             {/* Guild Settings - Generated from metadata */}
             <section className="space-y-4 p-6 border border-white/20 rounded-lg">
                 <h3 className="text-xl font-semibold">Guild Configuration</h3>
+
+                {/* Basic Settings */}
                 <div className="space-y-4">
-                    {Object.entries(guildSettingsMetadata).map(
-                        ([key, meta]) => (
+                    {Object.entries(guildSettingsMetadata)
+                        .filter(([_, meta]) => !meta.advanced)
+                        .map(([key, meta]) => (
                             <SettingField
                                 key={key}
                                 fieldKey={key}
@@ -146,9 +149,44 @@ export default function DynamicSettingsForm({
                                 }
                                 error={getError(`guild.${key}`)}
                             />
-                        )
-                    )}
+                        ))}
                 </div>
+
+                {/* Advanced Settings */}
+                {Object.entries(guildSettingsMetadata).some(
+                    ([_, meta]) => meta.advanced
+                ) && (
+                    <>
+                        <div className="border-t border-white/10 pt-4 mt-6">
+                            <p className="text-sm text-center text-gray-300 uppercase tracking-wider mb-4 -mt-7">
+                                Advanced Settings
+                            </p>
+                            <div className="space-y-4">
+                                {Object.entries(guildSettingsMetadata)
+                                    .filter(([_, meta]) => meta.advanced)
+                                    .map(([key, meta]) => (
+                                        <SettingField
+                                            key={key}
+                                            fieldKey={key}
+                                            metadata={meta}
+                                            value={
+                                                settings?.[
+                                                    key as keyof typeof settings
+                                                ]
+                                            }
+                                            onChange={value =>
+                                                setGuildSetting(
+                                                    key as any,
+                                                    value
+                                                )
+                                            }
+                                            error={getError(`guild.${key}`)}
+                                        />
+                                    ))}
+                            </div>
+                        </div>
+                    </>
+                )}
             </section>
 
             {/* Channel Settings - Generated from metadata */}
@@ -162,9 +200,12 @@ export default function DynamicSettingsForm({
                         default. Individual channels can override these.
                     </p>
                 </div>
+
+                {/* Basic Settings */}
                 <div className="space-y-4">
-                    {Object.entries(channelSettingsMetadata).map(
-                        ([key, meta]) => (
+                    {Object.entries(channelSettingsMetadata)
+                        .filter(([_, meta]) => !meta.advanced)
+                        .map(([key, meta]) => (
                             <SettingField
                                 key={key}
                                 fieldKey={key}
@@ -179,9 +220,44 @@ export default function DynamicSettingsForm({
                                 }
                                 error={getError(`channel.${key}`)}
                             />
-                        )
-                    )}
+                        ))}
                 </div>
+
+                {/* Advanced Settings */}
+                {Object.entries(channelSettingsMetadata).some(
+                    ([_, meta]) => meta.advanced
+                ) && (
+                    <>
+                        <div className="border-t border-white/10 pt-4 mt-6">
+                            <p className="text-sm text-center text-gray-300 uppercase tracking-wider mb-4 -mt-7">
+                                Advanced Settings
+                            </p>
+                            <div className="space-y-4">
+                                {Object.entries(channelSettingsMetadata)
+                                    .filter(([_, meta]) => meta.advanced)
+                                    .map(([key, meta]) => (
+                                        <SettingField
+                                            key={key}
+                                            fieldKey={key}
+                                            metadata={meta}
+                                            value={
+                                                defaultChannelSettings?.[
+                                                    key as keyof typeof defaultChannelSettings
+                                                ]
+                                            }
+                                            onChange={value =>
+                                                setDefaultChannelSetting(
+                                                    key as any,
+                                                    value
+                                                )
+                                            }
+                                            error={getError(`channel.${key}`)}
+                                        />
+                                    ))}
+                            </div>
+                        </div>
+                    </>
+                )}
             </section>
 
             {/* Action Buttons */}

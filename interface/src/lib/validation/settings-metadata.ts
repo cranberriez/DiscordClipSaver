@@ -13,6 +13,7 @@ export interface SettingMetadata {
     min?: number;
     max?: number;
     placeholder?: string;
+    advanced?: boolean; // If true, show in advanced section
 }
 
 export const guildSettingsMetadata: Record<string, SettingMetadata> = {
@@ -22,11 +23,6 @@ export const guildSettingsMetadata: Record<string, SettingMetadata> = {
             "When enabled, newly discovered channels will automatically start scanning for clips",
         type: "boolean",
     },
-    parse_threads: {
-        label: "Parse thread messages",
-        description: "Include messages from threads when scanning for clips",
-        type: "boolean",
-    },
     tz: {
         label: "Timezone",
         description:
@@ -34,12 +30,19 @@ export const guildSettingsMetadata: Record<string, SettingMetadata> = {
         type: "text",
         placeholder: "UTC",
     },
+    parse_threads: {
+        label: "Parse thread messages",
+        description: "Include messages from threads when scanning for clips",
+        type: "boolean",
+        advanced: true,
+    },
     schedule_cron: {
         label: "Schedule (Cron Expression)",
         description:
             "When the bot should run jobs (e.g., @hourly, @continuous, */5 * * * *)",
         type: "text",
         placeholder: "@hourly",
+        advanced: true,
     },
 };
 
@@ -66,6 +69,7 @@ export const channelSettingsMetadata: Record<string, SettingMetadata> = {
         min: 1,
         max: 10000,
         placeholder: "1000",
+        advanced: true,
     },
     debounce_ms: {
         label: "Debounce (milliseconds)",
@@ -74,11 +78,13 @@ export const channelSettingsMetadata: Record<string, SettingMetadata> = {
         min: 0,
         max: 5000,
         placeholder: "250",
+        advanced: true,
     },
     include_threads: {
         label: "Include threads",
         description: "For forum/threaded channels, treat parent only unless true",
         type: "boolean",
+        advanced: true,
     },
     accept_video: {
         label: "Accept video attachments",

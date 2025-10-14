@@ -6,6 +6,7 @@ import Link from "next/link";
 import ChannelsList from "./ChannelsList";
 import GuildTabs from "./GuildTabs";
 import DynamicSettingsForm from "./DynamicSettingsForm";
+import GuildHeader from "./GuildHeader";
 
 type PageProps = {
     params: Promise<{ guildId: string[] }>;
@@ -89,57 +90,15 @@ export default async function GuildPage({ params }: PageProps) {
             </Link>
 
             <div className="mt-4 space-y-6">
-                <div>
-                    <h1 className="text-3xl font-bold mb-2">{guild.name}</h1>
-                    <p className="text-sm text-muted-foreground">
-                        Guild ID: {guild.id}
-                    </p>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <InfoCard
-                        title="Owner"
-                        value={guild.owner_id ?? "Unclaimed"}
-                    />
-                    <InfoCard
-                        title="Message Scanning"
-                        value={
-                            guild.message_scan_enabled ? "Enabled" : "Disabled"
-                        }
-                        valueClass={
-                            guild.message_scan_enabled
-                                ? "text-green-500"
-                                : "text-gray-500"
-                        }
-                    />
-                    <InfoCard
-                        title="Last Message Scan"
-                        value={
-                            guild.last_message_scan_at
-                                ? new Date(
-                                      guild.last_message_scan_at
-                                  ).toLocaleString()
-                                : "Never"
-                        }
-                    />
-                    <InfoCard
-                        title="Created At"
-                        value={new Date(guild.created_at).toLocaleString()}
-                    />
-                </div>
-
-                {guild.icon_url && (
-                    <div className="mt-6">
-                        <h2 className="text-xl font-semibold mb-2">
-                            Guild Icon
-                        </h2>
-                        <img
-                            src={guild.icon_url}
-                            alt={`${guild.name} icon`}
-                            className="w-32 h-32 rounded-xl"
-                        />
-                    </div>
-                )}
+                <GuildHeader
+                    guildId={guild.id}
+                    guildName={guild.name}
+                    ownerId={guild.owner_id}
+                    messageScanEnabled={guild.message_scan_enabled}
+                    lastMessageScanAt={guild.last_message_scan_at}
+                    createdAt={guild.created_at}
+                    iconUrl={guild.icon_url}
+                />
 
                 <GuildTabs
                     tabs={[
@@ -150,6 +109,7 @@ export default async function GuildPage({ params }: PageProps) {
                                 <ChannelsList
                                     channels={channels}
                                     guildId={guild.id}
+                                    guildScanEnabled={guild.message_scan_enabled}
                                 />
                             ),
                         },
@@ -176,23 +136,6 @@ export default async function GuildPage({ params }: PageProps) {
                     defaultTab="overview"
                 />
             </div>
-        </div>
-    );
-}
-
-function InfoCard({
-    title,
-    value,
-    valueClass = "text-white",
-}: {
-    title: string;
-    value: string;
-    valueClass?: string;
-}) {
-    return (
-        <div className="p-4 border border-white/20 rounded-lg">
-            <h3 className="text-sm text-muted-foreground mb-1">{title}</h3>
-            <p className={`text-lg font-medium ${valueClass}`}>{value}</p>
         </div>
     );
 }
