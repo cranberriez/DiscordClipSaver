@@ -5,3 +5,6 @@
 # Windsurf
 .windsurf/
 .windsurfrules
+
+# Vscode
+.vscode/
