@@ -27,12 +27,14 @@ This document outlines the commit message format used in this project.
 ## Guidelines
 
 ### Subject Line
+
 - Use imperative mood ("add feature" not "added feature")
 - Don't capitalize first letter
 - No period at the end
 - Keep under 50 characters when possible
 
 ### Body (Optional)
+
 - Use bullet points with `-` or `*`
 - Explain **what** and **why**, not **how**
 - Wrap at 72 characters
@@ -40,11 +42,13 @@ This document outlines the commit message format used in this project.
 ### Examples
 
 #### Simple commit
+
 ```
 feat: add user authentication
 ```
 
 #### Commit with body
+
 ```
 fix: resolve database connection timeout
 
@@ -54,6 +58,7 @@ fix: resolve database connection timeout
 ```
 
 #### Multiple changes
+
 ```
 feat: implement guild management dashboard
 
@@ -64,6 +69,7 @@ feat: implement guild management dashboard
 ```
 
 #### Breaking changes
+
 ```
 feat: migrate to new API version
 

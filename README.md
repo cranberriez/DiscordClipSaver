@@ -48,5 +48,3 @@ The interface requires the bot to be running to function.
 1. Navigate to the interface folder with `cd /interface`
 2. Install the dependencies with `npm install`
 3. Run the interface with `npm run dev`
-
-

@@ -49,16 +49,21 @@ python example_worker.py
 ## Key Benefits of This Structure
 
 ### ✅ Code Reuse
+
 Both bot and worker can import from `shared.db`:
+
 ```python
 from shared.db import Guild, Channel, repositories
 ```
 
 ### ✅ Single Source of Truth
+
 Database models are defined once in `shared/db/models.py` and used everywhere.
 
 ### ✅ Backward Compatible
+
 The `repositories` module provides the same API as the old psycopg3 implementation:
+
 ```python
 from shared.db import repositories as db
 
@@ -67,7 +72,9 @@ await db.upsert_guild(guild_id="123", name="Test")
 ```
 
 ### ✅ Modern ORM
+
 Use Tortoise ORM for complex queries:
+
 ```python
 from shared.db import Guild
 
@@ -75,6 +82,7 @@ guilds = await Guild.filter(name__icontains="discord").all()
 ```
 
 ### ✅ Type Safety
+
 Tortoise models provide excellent type hints and validation.
 
 ## Environment Variables
@@ -99,14 +107,14 @@ DATABASE_URL=postgres://user:pass@host:port/db
 
 1. **Edit models** in `shared/db/models.py`
 2. **Create migration**:
-   ```bash
-   cd python/shared
-   aerich migrate --name "your_change"
-   ```
+    ```bash
+    cd python/shared
+    aerich migrate --name "your_change"
+    ```
 3. **Apply migration**:
-   ```bash
-   aerich upgrade
-   ```
+    ```bash
+    aerich upgrade
+    ```
 
 ### Adding New Repositories
 
@@ -182,6 +190,7 @@ pytest tests/
 See the [MIGRATION_GUIDE.md](../MIGRATION_GUIDE.md) in the root directory for detailed steps on migrating from the old structure to this new one.
 
 Key changes:
+
 - `from db import database` → `from shared.db import repositories`
 - `from db.types import X` → `from shared.db.types import X`
 - `database.init_db()` → `init_db()`
