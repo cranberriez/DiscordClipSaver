@@ -22,9 +22,9 @@ export async function GET(req: NextRequest) {
 
 	await createInstallIntent({
 		state,
-		userId: auth.discordUserId,
-		guildId,
-		expiresAt,
+		user_id: auth.discordUserId,
+		guild_id: guildId,
+		expires_at: expiresAt,
 	});
 
 	const inviteUrl = buildInviteUrl(guildId, state);

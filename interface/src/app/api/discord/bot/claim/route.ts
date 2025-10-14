@@ -7,7 +7,6 @@ const ME_URL = "https://discord.com/api/v10/users/@me";
 
 export async function GET(req: NextRequest) {
 	const url = new URL(req.url);
-	const code = url.searchParams.get("code");
 	const state = url.searchParams.get("state");
 
 	// If the user denied/cancelled on Discord, an `error` param will be present.
@@ -17,7 +16,7 @@ export async function GET(req: NextRequest) {
 		let guildId: string | null = null;
 		if (state) {
 			try {
-				const intent = await consumeInstallIntent(state);
+				const intent = await consumeInstallIntent({ state });
 				if (intent) {
 					guildId = intent.guild_id;
 				}
@@ -34,12 +33,12 @@ export async function GET(req: NextRequest) {
 		return NextResponse.redirect(redirectUrl);
 	}
 
-	if (!code || !state) {
-		return NextResponse.json({ error: "Missing code/state" }, { status: 400 });
+	if (!state) {
+		return NextResponse.json({ error: "Missing state" }, { status: 400 });
 	}
 
 	// 1) Verify install intent (state)
-	const intent = await consumeInstallIntent(state);
+	const intent = await consumeInstallIntent({state});
 	if (!intent || new Date(intent.expires_at) < new Date()) {
 		return NextResponse.json({ error: "Invalid or expired state" }, { status: 400 });
 	}
@@ -62,21 +61,22 @@ export async function GET(req: NextRequest) {
 
 	// 4) Map Discord user -> your app user (you created this at login)
 	const appUser = await getUserByDiscordId(me.id);
-	if (!appUser || appUser.discord_user_id !== intendedAppUserId) {
+	if (!appUser || appUser.id !== intendedAppUserId) {
 		// The user finishing the flow isn’t the one who initiated it; choose policy
 		return NextResponse.json({ error: "User mismatch" }, { status: 403 });
 	}
 
 	// 5) Claim ownership if unclaimed
-	const claimed = await setGuildOwnerIfUnclaimed(guildId, appUser.discord_user_id);
+	if (!guildId) throw new Error("Guild ID is required");
+	const claimed = await setGuildOwnerIfUnclaimed(guildId, appUser.id);
 	if (!claimed) {
 		// already claimed
-		await consumeInstallIntent(state); // still consume it
+		await consumeInstallIntent({state}); // still consume it
 		return NextResponse.redirect(new URL(`/install?guild=${guildId}&status=already_claimed`, req.url));
 	}
 
 	// 6) Mark intent consumed
-	await consumeInstallIntent(state);
+	await consumeInstallIntent({state});
 
 	// (Optional) You may kick an async check that the bot has joined and update UI later
 	return NextResponse.redirect(new URL(`/install?guild=${guildId}&status=ok`, req.url));

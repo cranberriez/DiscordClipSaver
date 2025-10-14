@@ -1,8 +1,9 @@
-import type { GuildItem, GuildRelation } from "@/lib/types";
+import type { GuildRelation } from "@/lib/types";
+import type { Guild } from "@/lib/db/types";
 import Link from "next/link";
 
-export function GuildItemComponent({ guild, relation }: { guild: GuildItem; relation: GuildRelation }) {
-	const { id, name, db } = guild;
+export function GuildItemComponent({ guild, relation }: { guild: Guild; relation: GuildRelation }) {
+	const { id, name, owner_id } = guild;
 
 	return (
 		<li
@@ -12,14 +13,14 @@ export function GuildItemComponent({ guild, relation }: { guild: GuildItem; rela
 			<div className="flex items-center gap-2">
 				<DiscordIcon
 					guildId={id}
-					imageId={guild.icon || ""}
+					imageId={guild.icon_url || ""}
 				/>
 			</div>
 			<div className="flex flex-col items-start">
 				<p className="font-medium">{name}</p>
 				<p className="text-xs text-muted-foreground">
 					ID: {id}
-					{db ? ` (owner: ${db.owner_user_id})` : ""}
+					{owner_id ? ` (owner: ${owner_id})` : ""}
 				</p>
 			</div>
 			<div className="flex flex-col ml-auto">

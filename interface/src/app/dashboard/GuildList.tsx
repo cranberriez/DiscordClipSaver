@@ -3,7 +3,8 @@ import { cookies } from "next/headers";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import { canInviteBot } from "@/lib/discord";
-import type { Guild, DBGuild, GuildItem, GuildRelation } from "@/lib/types";
+import type { GuildRelation } from "@/lib/types";
+import type { Guild } from "@/lib/db/types";
 import { GuildItemComponent } from "./GuildItemComponent";
 
 const baseUrl = process.env.NEXTAUTH_URL ?? "http://localhost:3000";
@@ -25,22 +26,19 @@ export default async function GuildList() {
 		return <p className="text-sm text-red-500">{message}</p>;
 	}
 
-	const { guilds, botGuilds } = (await res.json()) as {
-		guilds: Guild[];
-		botGuilds: DBGuild[];
-	};
+	const guilds = (await res.json()) as Guild[];
 
 	// Build unified items (GuildItem[]) by merging Discord guilds with optional DB info
-	const installedById = new Map(botGuilds.map((g) => [g.guild_id, g]));
-	const items: GuildItem[] = guilds.map((g) => ({ ...g, db: installedById.get(g.id) ?? undefined }));
+	const installedById = new Map(guilds.map((g) => [g.id, g]));
+	const items: Guild[] = guilds.map((g) => ({ ...g, db: installedById.get(g.id) ?? undefined }));
 	// Categories derived from unified items
-	const invitable: GuildItem[] = items.filter((i) => !i.db && canInviteBot(i));
-	const installedNoOwner: GuildItem[] = items.filter((i) => i.db && i.db.owner_user_id == null);
-	const installedOwnedByYou: GuildItem[] = items.filter((i) => i.db?.owner_user_id === currentUserId);
-	const installedOthers: GuildItem[] = items.filter(
-		(i) => i.db && i.db.owner_user_id != null && i.db.owner_user_id !== currentUserId
+	const invitable: Guild[] = items.filter((i) => !i && canInviteBot(i));
+	const installedNoOwner: Guild[] = items.filter((i) => i && i.owner_id == null);
+	const installedOwnedByYou: Guild[] = items.filter((i) => i?.owner_id === currentUserId);
+	const installedOthers: Guild[] = items.filter(
+		(i) => i && i.owner_id != null && i.owner_id !== currentUserId
 	);
-	const notInstalled: GuildItem[] = items.filter((i) => !i.db);
+	const notInstalled: Guild[] = items.filter((i) => !i);
 
 	return (
 		<div className="space-y-6">
@@ -73,7 +71,7 @@ export default async function GuildList() {
 	);
 }
 
-function Section({ title, items, relation }: { title: string; items: GuildItem[]; relation: GuildRelation }) {
+function Section({ title, items, relation }: { title: string; items: Guild[]; relation: GuildRelation }) {
 	if (items.length === 0) {
 		return (
 			<div>

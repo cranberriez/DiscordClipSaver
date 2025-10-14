@@ -3,7 +3,7 @@ import type { NextAuthOptions } from "next-auth";
 import DiscordProvider from "next-auth/providers/discord";
 import type { DiscordProfile } from "next-auth/providers/discord";
 
-import { upsertUserLogin } from "@/lib/db";
+import { upsertUser } from "@/lib/db";
 
 export const authOptions: NextAuthOptions = {
 	providers: [
@@ -28,11 +28,11 @@ export const authOptions: NextAuthOptions = {
 			}
 
 			try {
-				await upsertUserLogin({
-					discordUserId,
-					username: discordProfile?.username ?? user.name ?? null,
-					globalName: discordProfile?.global_name ?? null,
-					avatar: discordProfile?.avatar ?? user.image ?? null,
+				await upsertUser({
+					id: discordUserId,
+					username: discordProfile?.username ?? user.name ?? "",
+					discriminator: discordProfile?.discriminator ?? "",
+					avatar_url: discordProfile?.avatar ?? user.image ?? "",
 				});
 			} catch (error) {
 				console.error("Failed to upsert Discord user login", error);

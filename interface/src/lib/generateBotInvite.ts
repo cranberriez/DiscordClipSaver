@@ -12,7 +12,6 @@ export function buildInviteUrl(guildId: string, state?: string) {
 		guild_id: guildId,
 		disable_guild_select: "true",
 		redirect_uri: DISCORD_REDIRECT_URI,
-		response_type: "code",
 		// The server should provide a persisted state token (install intent)
 		state: state ?? "",
 	});

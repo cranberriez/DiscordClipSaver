@@ -9,6 +9,7 @@
     "lint": "eslint"
   },
   "dependencies": {
+    "kysely": "^0.28.8",
     "next": "15.5.4",
     "next-auth": "^4.24.11",
     "pg": "^8.16.3",

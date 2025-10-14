@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAuthInfo } from "@/lib/auth";
 import { cacheUserScoped } from "@/lib/cache";
 import { filterInvitableGuilds } from "@/lib/discord";
-import { getBotGuildsByIds } from "@/lib/db";
+import { getGuildsByIds } from "@/lib/db";
 import { discordFetch } from "@/lib/discordClient";
 import { getBoolParam } from "@/lib/params";
 import { jsonError } from "@/lib/http";
@@ -40,8 +40,8 @@ export async function GET(req: NextRequest) {
 	// Optional DB enrichment
 	if (includeDb) {
 		const ids = result.map((g) => g.id);
-		const rows = await getBotGuildsByIds(ids);
-		return NextResponse.json({ guilds: result, botGuilds: rows });
+		const rows = await getGuildsByIds(ids);
+		return NextResponse.json({ guilds: result, dbGuilds: rows });
 	}
 
 	// Backward-compatible default
