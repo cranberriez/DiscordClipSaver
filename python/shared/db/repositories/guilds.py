@@ -22,7 +22,7 @@ async def upsert_guilds(snapshots: Iterable[Any]) -> None:
             id=str(gid),
             defaults={
                 "name": name,
-                "icon_url": icon,
+                "icon_url": icon.url if icon else None,
             },
         )
         if not created:
@@ -32,8 +32,8 @@ async def upsert_guilds(snapshots: Iterable[Any]) -> None:
             if obj.name != name:
                 obj.name = name
                 update_needed = True
-            if obj.icon_url != icon:
-                obj.icon_url = icon
+            if obj.icon_url != (icon.url if icon else None):
+                obj.icon_url = icon.url if icon else None
                 update_needed = True
             if obj.deleted_at is not None:
                 obj.deleted_at = None

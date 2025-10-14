@@ -1,12 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAuthInfo } from "@/lib/auth";
 import { cacheUserScoped } from "@/lib/cache";
-import { filterInvitableGuilds } from "@/lib/discord";
+import { filterInvitableGuilds } from "@/lib/discord/visibility";
 import { getGuildsByIds } from "@/lib/db";
-import { discordFetch } from "@/lib/discordClient";
+import { discordFetch } from "@/lib/discord/discordClient";
 import { getBoolParam } from "@/lib/params";
 import { jsonError } from "@/lib/http";
-import type { PartialGuild } from "@/lib/types";
+import type { DiscordGuild } from "@/lib/discord/types";
 
 export async function GET(req: NextRequest) {
 	// Auth and token (server-side only)
@@ -25,10 +25,10 @@ export async function GET(req: NextRequest) {
 
 	// Fetch with user-scoped cache
 	const ttlMs = 2 * 60 * 1000; // 2 minutes
-	let guilds: PartialGuild[];
+	let guilds: DiscordGuild[];
 	try {
-		guilds = await cacheUserScoped<PartialGuild[]>(discordUserId, "discord:guilds", ttlMs, () =>
-			discordFetch<PartialGuild[]>("/users/@me/guilds", accessToken)
+		guilds = await cacheUserScoped<DiscordGuild[]>(discordUserId, "discord:guilds", ttlMs, () =>
+			discordFetch<DiscordGuild[]>("/users/@me/guilds", accessToken)
 		);
 	} catch (err: any) {
 		return jsonError(err, 502);

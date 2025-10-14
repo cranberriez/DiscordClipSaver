@@ -1,9 +1,12 @@
-import type { GuildRelation } from "@/lib/types";
-import type { Guild } from "@/lib/db/types";
+import type { FullGuild, GuildRelation } from "@/lib/discord/types";
 import Link from "next/link";
+import DebugButton from "./debugButton";
 
-export function GuildItemComponent({ guild, relation }: { guild: Guild; relation: GuildRelation }) {
-	const { id, name, owner_id } = guild;
+export function GuildItemComponent({ guild, relation }: { guild: FullGuild; relation: GuildRelation }) {
+	const id = guild.discord.id;
+	const name = guild.discord.name ?? guild.db?.name ?? "Unknown";
+	const owner = guild.db?.owner ?? null;
+	const icon = guild.discord.icon ?? null;
 
 	return (
 		<li
@@ -13,15 +16,16 @@ export function GuildItemComponent({ guild, relation }: { guild: Guild; relation
 			<div className="flex items-center gap-2">
 				<DiscordIcon
 					guildId={id}
-					imageId={guild.icon_url || ""}
+					iconUrl={icon || ""}
 				/>
 			</div>
 			<div className="flex flex-col items-start">
 				<p className="font-medium">{name}</p>
 				<p className="text-xs text-muted-foreground">
 					ID: {id}
-					{owner_id ? ` (owner: ${owner_id})` : ""}
+					{owner ? ` (owner: ${owner})` : ""}
 				</p>
+				<DebugButton guild={guild} />
 			</div>
 			<div className="flex flex-col ml-auto">
 				<p className="text-xs text-muted-foreground">{relation}</p>
@@ -30,6 +34,7 @@ export function GuildItemComponent({ guild, relation }: { guild: Guild; relation
 					relation={relation}
 				/>
 			</div>
+			
 		</li>
 	);
 }
@@ -64,14 +69,12 @@ function RelationButton({ guildId, relation }: { guildId: string; relation: Guil
 	);
 }
 
-function DiscordIcon({ guildId, imageId }: { guildId: string; imageId: string | null }) {
+function DiscordIcon({ guildId, iconUrl }: { guildId: string; iconUrl: string }) {
+	const realUrl = iconUrl ? `https://cdn.discordapp.com/icons/${guildId}/${iconUrl}.png?size=64` : "https://cdn.discordapp.com/embed/avatars/0.png?size=64";
+
 	return (
 		<div className="w-16 h-16 rounded-xl overflow-hidden">
-			{imageId ? (
-				<img src={`https://cdn.discordapp.com/icons/${guildId}/${imageId}.png?size=64`} />
-			) : (
-				<img src="https://cdn.discordapp.com/embed/avatars/0.png?size=64" />
-			)}
+			<img src={realUrl} />
 		</div>
 	);
 }

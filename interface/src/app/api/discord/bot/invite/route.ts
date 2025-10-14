@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import crypto from "node:crypto";
 import { tryGetAuthInfo } from "@/lib/auth";
 import { createInstallIntent } from "@/lib/db";
-import { buildInviteUrl } from "@/lib/generateBotInvite";
+import { buildInviteUrl } from "@/lib/discord/generateBotInvite";
 
 export async function GET(req: NextRequest) {
 	const url = new URL(req.url);
