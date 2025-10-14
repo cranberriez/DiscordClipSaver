@@ -18,7 +18,7 @@ export async function GET(req: NextRequest) {
 			try {
 				const intent = await consumeInstallIntent({ state });
 				if (intent) {
-					guildId = intent.guild_id;
+					guildId = intent.guild;
 				}
 			} catch {
 				// ignore cleanup failure; still redirect with error details
@@ -42,7 +42,7 @@ export async function GET(req: NextRequest) {
 	if (!intent || new Date(intent.expires_at) < new Date()) {
 		return NextResponse.json({ error: "Invalid or expired state" }, { status: 400 });
 	}
-	const { guild_id: guildId, user_id: intendedAppUserId } = intent;
+	const { guild: guildId, user: intendedAppUserId } = intent;
 
 	// 2) Exchange code for a USER access token
 	const authInfo = await tryGetAuthInfo(req);

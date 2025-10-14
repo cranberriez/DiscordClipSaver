@@ -2,8 +2,8 @@ import type { ColumnType, Generated, Insertable, Selectable, Updateable } from "
 
 export interface InstallIntentsTable {
   id: Generated<number>;
-  user_id: string;
-  guild_id: ColumnType<string | null, string | null | undefined, string | null | undefined>;
+  user: string;
+  guild: string;
   state: string;
   expires_at: Date;
   created_at: ColumnType<Date, Date | undefined, Date | undefined>;

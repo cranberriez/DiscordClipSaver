@@ -52,6 +52,11 @@ async def on_guild_channel_delete(channel: discord.ChannelType):
     await channel_service.on_channel_delete(channel.guild)
 
 
+# --- User Events ---
+
+# TODO: Handle users' joining guilds, leaving guilds, and updating user details (like image and username aka nickname) 
+
+
 # --- Message Events ---
 @bot.event
 async def on_message(message: discord.Message):
@@ -62,3 +67,5 @@ async def on_message(message: discord.Message):
     logger.info("[%s] %s: %s", message.id, message.author, message.content)
 
     # TODO: Handle messages from previously unknown channels, fetch single channel and add
+
+    # TODO: Handle messages from unknown guilds, fetch single guild and add
