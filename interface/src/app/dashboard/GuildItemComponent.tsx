@@ -41,7 +41,7 @@ export function GuildItemComponent({ guild, relation }: { guild: FullGuild; rela
 
 function RelationButton({ guildId, relation }: { guildId: string; relation: GuildRelation }) {
 	const relations = {
-		owned: { text: "Edit", link: "#", colorClass: "text-green-500" },
+		owned: { text: "Edit", link: `/dashboard/${guildId}`, colorClass: "text-green-500" },
 		invitable: { text: "Invite", link: `/api/discord/bot/invite?guildId=${guildId}`, colorClass: "text-blue-500" },
 		unowned: { text: "Claim", link: "#", colorClass: "text-orange-400" },
 		other: { text: "View", link: "#", colorClass: "text-blue-200" },
