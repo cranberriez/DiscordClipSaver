@@ -1,9 +1,20 @@
 "use client";
 
-import { useScanStatuses, useStartScan } from '@/lib/hooks/queries';
+import { useScanStatuses, useStartScan } from "@/lib/hooks/queries";
 import { startMultipleChannelScans } from "@/lib/actions/scan";
 import { useState, useMemo } from "react";
 import type { Channel } from "@/lib/db/types";
+import {
+    Card,
+    CardContent,
+    CardDescription,
+    CardHeader,
+    CardTitle,
+} from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
+import { Info, RefreshCw, Play, ArrowDown, ArrowUp } from "lucide-react";
 
 interface ScansPanelProps {
     guildId: string;
@@ -14,7 +25,12 @@ export function ScansPanel({
     guildId,
     channels: serverChannels,
 }: ScansPanelProps) {
-    const { data: scanStatuses = [], isLoading: loading, error, refetch } = useScanStatuses(guildId);
+    const {
+        data: scanStatuses = [],
+        isLoading: loading,
+        error,
+        refetch,
+    } = useScanStatuses(guildId);
     const startScanMutation = useStartScan(guildId);
     const [selectedChannel, setSelectedChannel] = useState<string>("all");
     const [direction, setDirection] = useState<"backward" | "forward">(
@@ -24,7 +40,7 @@ export function ScansPanel({
 
     // Convert array to map for easier lookup
     const scanStatusMap = useMemo(() => {
-        const map: Record<string, typeof scanStatuses[0]> = {};
+        const map: Record<string, (typeof scanStatuses)[0]> = {};
         scanStatuses.forEach(status => {
             map[status.channel_id] = status;
         });
@@ -95,19 +111,26 @@ export function ScansPanel({
 
     if (loading) {
         return (
-            <div className="p-6 border border-white/20 rounded-lg">
-                <p className="text-gray-400">Loading...</p>
-            </div>
+            <Card>
+                <CardContent className="pt-6">
+                    <p className="text-muted-foreground">Loading...</p>
+                </CardContent>
+            </Card>
         );
     }
 
     if (error) {
         return (
-            <div className="p-6 border border-red-500/20 rounded-lg bg-red-500/5">
-                <p className="text-red-400">
-                    Error: {error instanceof Error ? error.message : 'Failed to load scan statuses'}
-                </p>
-            </div>
+            <Card className="border-destructive/50 bg-destructive/10">
+                <CardContent className="pt-6">
+                    <p className="text-destructive text-sm">
+                        Error:{" "}
+                        {error instanceof Error
+                            ? error.message
+                            : "Failed to load scan statuses"}
+                    </p>
+                </CardContent>
+            </Card>
         );
     }
 
@@ -115,31 +138,37 @@ export function ScansPanel({
     if (channels.length === 0) {
         return (
             <div className="space-y-4">
-                <div className="p-6 border border-yellow-500/20 rounded-lg bg-yellow-500/5">
-                    <h3 className="text-yellow-400 font-semibold mb-2">
-                        No Channels Found
-                    </h3>
-                    <p className="text-sm text-gray-300">
-                        This guild has no channels in the database. The Discord
-                        bot needs to sync channels first.
-                    </p>
-                    <p className="text-sm text-gray-400 mt-2">
-                        Make sure the bot is in the server and has permission to
-                        view channels.
-                    </p>
-                </div>
-                <details className="p-4 border border-white/20 rounded-lg bg-white/5">
-                    <summary className="cursor-pointer text-sm font-medium">
-                        Debug Info
-                    </summary>
-                    <pre className="mt-2 text-xs text-gray-400 overflow-auto">
-                        {JSON.stringify(
-                            { guildId, channels, loading, error },
-                            null,
-                            2
-                        )}
-                    </pre>
-                </details>
+                <Card className="border-yellow-500/50 bg-yellow-500/10">
+                    <CardHeader>
+                        <CardTitle className="text-yellow-600 dark:text-yellow-400">
+                            No Channels Found
+                        </CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-2">
+                        <p className="text-sm">
+                            This guild has no channels in the database. The Discord
+                            bot needs to sync channels first.
+                        </p>
+                        <p className="text-sm text-muted-foreground">
+                            Make sure the bot is in the server and has permission to
+                            view channels.
+                        </p>
+                    </CardContent>
+                </Card>
+                <Card>
+                    <details className="px-6 py-4">
+                        <summary className="cursor-pointer text-sm font-medium">
+                            Debug Info
+                        </summary>
+                        <pre className="mt-2 text-xs text-muted-foreground overflow-auto">
+                            {JSON.stringify(
+                                { guildId, channels, loading, error },
+                                null,
+                                2
+                            )}
+                        </pre>
+                    </details>
+                </Card>
             </div>
         );
     }
@@ -147,75 +176,61 @@ export function ScansPanel({
     return (
         <div className="space-y-6">
             {/* Info Panel */}
-            <div className="p-4 border border-blue-500/20 rounded-lg bg-blue-500/5">
-                <div className="flex items-start gap-3">
-                    <svg
-                        className="w-5 h-5 text-blue-400 mt-0.5"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                    >
-                        <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                        />
-                    </svg>
-                    <div className="flex-1">
-                        <h3 className="text-sm font-semibold text-blue-400 mb-1">
-                            About Scans
-                        </h3>
-                        <p className="text-sm text-gray-300">
-                            Scans process Discord messages to find and save
-                            video clips. Each scan examines messages in a
-                            channel and extracts clips based on your settings.
-                            You can scan individual channels or all channels at
-                            once.
-                        </p>
-                        <div className="mt-2 flex gap-4 text-xs text-gray-400">
-                            <span>
-                                • <strong>{unscannedCount}</strong> unscanned
-                                channels
-                            </span>
-                            <span>
-                                • <strong>{activeScans}</strong> active scans
-                            </span>
+            <Card className="border-blue-500/50 bg-blue-500/10">
+                <CardContent className="pt-6">
+                    <div className="flex items-start gap-3">
+                        <Info className="h-5 w-5 text-blue-600 dark:text-blue-400 mt-0.5 flex-shrink-0" />
+                        <div className="flex-1">
+                            <h3 className="text-sm font-semibold text-blue-600 dark:text-blue-400 mb-1">
+                                About Scans
+                            </h3>
+                            <p className="text-sm">
+                                Scans process Discord messages to find and save
+                                video clips. Each scan examines messages in a
+                                channel and extracts clips based on your settings.
+                                You can scan individual channels or all channels at
+                                once.
+                            </p>
+                            <div className="mt-2 flex gap-4 text-xs text-muted-foreground">
+                                <span>
+                                    • <strong>{unscannedCount}</strong> unscanned
+                                    channels
+                                </span>
+                                <span>
+                                    • <strong>{activeScans}</strong> active scans
+                                </span>
+                            </div>
                         </div>
                     </div>
-                </div>
-            </div>
+                </CardContent>
+            </Card>
 
             {/* Start New Scan Panel */}
-            <div className="p-6 border border-white/20 rounded-lg bg-white/5">
-                <h2 className="text-xl font-bold mb-4">Start New Scan</h2>
-
-                <div className="space-y-4">
+            <Card>
+                <CardHeader>
+                    <CardTitle>Start New Scan</CardTitle>
+                    <CardDescription>
+                        Configure and start a new message scan
+                    </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
                     {/* Channel Selector */}
-                    <div>
-                        <label className="block text-sm font-medium text-gray-300 mb-2">
-                            Channel
-                        </label>
+                    <div className="space-y-2">
+                        <Label htmlFor="channel-select">Channel</Label>
                         <select
+                            id="channel-select"
                             value={selectedChannel}
                             onChange={e => setSelectedChannel(e.target.value)}
-                            className="w-full px-3 py-2 bg-gray-900 border border-white/20 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500 [&>option]:bg-gray-900 [&>option]:text-white [&>optgroup]:bg-gray-800 [&>optgroup]:text-gray-300"
+                            className="w-full px-3 py-2 bg-background border rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-ring [&>option]:bg-background [&>optgroup]:bg-muted"
                         >
-                            <option
-                                value="all"
-                                className="bg-gray-900 text-white"
-                            >
+                            <option value="all">
                                 All Unscanned Channels ({unscannedCount})
                             </option>
-                            <optgroup
-                                label="Individual Channels"
-                                className="bg-gray-800 text-gray-300"
-                            >
+                            <optgroup label="Individual Channels">
                                 {channels.map(ch => (
                                     <option
                                         key={ch.channelId}
                                         value={ch.channelId}
-                                        className="bg-gray-900 text-white"
                                         disabled={!ch.messageScanEnabled}
                                     >
                                         #{ch.channelName}{" "}
@@ -231,190 +246,185 @@ export function ScansPanel({
                     </div>
 
                     {/* Direction Toggle */}
-                    <div>
-                        <label className="block text-sm font-medium text-gray-300 mb-2">
-                            Scan Direction
-                        </label>
+                    <div className="space-y-2">
+                        <Label>Scan Direction</Label>
                         <div className="flex gap-2">
-                            <button
+                            <Button
+                                type="button"
+                                variant={direction === "backward" ? "default" : "outline"}
                                 onClick={() => setDirection("backward")}
-                                className={`flex-1 px-4 py-2 rounded-lg border transition-colors ${
-                                    direction === "backward"
-                                        ? "bg-blue-600 border-blue-600 text-white"
-                                        : "bg-white/5 border-white/20 text-gray-300 hover:bg-white/10"
-                                }`}
+                                className="flex-1"
                             >
-                                <div className="text-sm font-medium">
-                                    Backward
-                                </div>
-                                <div className="text-xs opacity-75">
-                                    Newest → Oldest
-                                </div>
-                            </button>
-                            <button
+                                <ArrowDown className="h-4 w-4" />
+                                Newest First
+                            </Button>
+                            <Button
+                                type="button"
+                                variant={direction === "forward" ? "default" : "outline"}
                                 onClick={() => setDirection("forward")}
-                                className={`flex-1 px-4 py-2 rounded-lg border transition-colors ${
-                                    direction === "forward"
-                                        ? "bg-blue-600 border-blue-600 text-white"
-                                        : "bg-white/5 border-white/20 text-gray-300 hover:bg-white/10"
-                                }`}
+                                className="flex-1"
                             >
-                                <div className="text-sm font-medium">
-                                    Forward
-                                </div>
-                                <div className="text-xs opacity-75">
-                                    Oldest → Newest
-                                </div>
-                            </button>
+                                <ArrowUp className="h-4 w-4" />
+                                Oldest First
+                            </Button>
                         </div>
                     </div>
 
                     {/* Start Button */}
-                    <button
+                    <Button
                         onClick={handleStartSelected}
                         disabled={
                             starting ||
                             (selectedChannel === "all" && unscannedCount === 0)
                         }
-                        className="w-full px-6 py-3 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white font-medium rounded-lg transition-colors"
+                        className="w-full"
+                        size="lg"
                     >
+                        <Play className="h-4 w-4" />
                         {starting
                             ? "Starting..."
                             : selectedChannel === "all"
                             ? `Start Scanning ${unscannedCount} Channels`
                             : "Start Scan"}
-                    </button>
-                </div>
-            </div>
+                    </Button>
+                </CardContent>
+            </Card>
 
             {/* Scan Status Table */}
-            <div className="border border-white/20 rounded-lg overflow-hidden">
-                <div className="flex items-center justify-between p-4 bg-white/5 border-b border-white/10">
-                    <h2 className="text-xl font-bold">Scan Status</h2>
-                    <button
-                        onClick={() => refetch()}
-                        className="px-3 py-1 text-sm border border-white/20 rounded hover:bg-white/5"
-                    >
-                        Refresh
-                    </button>
-                </div>
-
-                <table className="w-full">
-                    <thead className="bg-white/5">
-                        <tr>
-                            <th className="text-left p-3 font-semibold">
-                                Channel
-                            </th>
-                            <th className="text-left p-3 font-semibold">
-                                Status
-                            </th>
-                            <th className="text-right p-3 font-semibold">
-                                Clips
-                            </th>
-                            <th className="text-right p-3 font-semibold">
-                                Scanned
-                            </th>
-                            <th className="text-right p-3 font-semibold">
-                                Actions
-                            </th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {channels.map(channel => (
-                            <tr
-                                key={channel.channelId}
-                                className="border-t border-white/10 hover:bg-white/5"
-                            >
-                                <td className="p-3">
-                                    <div className="flex items-center gap-2">
-                                        <span className="font-mono text-sm">
-                                            #{channel.channelName}
-                                        </span>
-                                        {!channel.messageScanEnabled && (
-                                            <span className="px-2 py-0.5 text-xs rounded bg-red-500/20 text-red-400">
-                                                Disabled
-                                            </span>
-                                        )}
-                                    </div>
-                                </td>
-                                <td className="p-3">
-                                    <StatusBadge status={channel.status} />
-                                </td>
-                                <td className="p-3 text-right text-gray-400">
-                                    {channel.messageCount || "-"}
-                                </td>
-                                <td className="p-3 text-right text-gray-400">
-                                    {channel.totalMessagesScanned || "-"}
-                                </td>
-                                <td className="p-3 text-right">
-                                    <button
-                                        onClick={() =>
-                                            handleStartScan(channel.channelId)
-                                        }
-                                        disabled={
-                                            !channel.messageScanEnabled ||
-                                            startScanMutation.isPending ||
-                                            channel.status === "RUNNING" ||
-                                            channel.status === "PENDING"
-                                        }
-                                        className="px-3 py-1 text-sm bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 disabled:cursor-not-allowed rounded"
-                                        title={
-                                            !channel.messageScanEnabled
-                                                ? "Enable scanning in Overview tab first"
-                                                : ""
-                                        }
-                                    >
-                                        {!channel.messageScanEnabled
-                                            ? "Disabled"
-                                            : startScanMutation.isPending
-                                            ? "Starting..."
-                                            : channel.status === "RUNNING"
-                                            ? "Running..."
-                                            : channel.status === "PENDING"
-                                            ? "Queued..."
-                                            : "Scan"}
-                                    </button>
-                                </td>
-                            </tr>
-                        ))}
-                    </tbody>
-                </table>
-
-                {channels.length === 0 && (
-                    <div className="p-6 text-center text-gray-400">
-                        No channels found
+            <Card className="overflow-hidden">
+                <CardHeader className="border-b">
+                    <div className="flex items-center justify-between">
+                        <CardTitle>Scan Status</CardTitle>
+                        <Button
+                            onClick={() => refetch()}
+                            variant="outline"
+                            size="sm"
+                        >
+                            <RefreshCw className="h-4 w-4" />
+                            Refresh
+                        </Button>
                     </div>
-                )}
-            </div>
+                </CardHeader>
+
+                <div className="overflow-x-auto">
+                    <table className="w-full">
+                        <thead className="bg-muted/50">
+                            <tr>
+                                <th className="text-left p-3 font-semibold text-sm">
+                                    Channel
+                                </th>
+                                <th className="text-left p-3 font-semibold text-sm">
+                                    Status
+                                </th>
+                                <th className="text-right p-3 font-semibold text-sm">
+                                    Clips
+                                </th>
+                                <th className="text-right p-3 font-semibold text-sm">
+                                    Scanned
+                                </th>
+                                <th className="text-right p-3 font-semibold text-sm">
+                                    Actions
+                                </th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {channels.map(channel => (
+                                <tr
+                                    key={channel.channelId}
+                                    className="border-t hover:bg-muted/50"
+                                >
+                                    <td className="p-3">
+                                        <div className="flex items-center gap-2">
+                                            <span className="font-mono text-sm">
+                                                #{channel.channelName}
+                                            </span>
+                                            {!channel.messageScanEnabled && (
+                                                <Badge variant="destructive" className="text-xs">
+                                                    Disabled
+                                                </Badge>
+                                            )}
+                                        </div>
+                                    </td>
+                                    <td className="p-3">
+                                        <StatusBadge status={channel.status} />
+                                    </td>
+                                    <td className="p-3 text-right text-muted-foreground text-sm">
+                                        {channel.messageCount || "-"}
+                                    </td>
+                                    <td className="p-3 text-right text-muted-foreground text-sm">
+                                        {channel.totalMessagesScanned || "-"}
+                                    </td>
+                                    <td className="p-3 text-right">
+                                        <Button
+                                            onClick={() =>
+                                                handleStartScan(channel.channelId)
+                                            }
+                                            disabled={
+                                                !channel.messageScanEnabled ||
+                                                startScanMutation.isPending ||
+                                                channel.status === "RUNNING" ||
+                                                channel.status === "PENDING"
+                                            }
+                                            variant="outline"
+                                            size="sm"
+                                            title={
+                                                !channel.messageScanEnabled
+                                                    ? "Enable scanning in Overview tab first"
+                                                    : ""
+                                            }
+                                        >
+                                            {!channel.messageScanEnabled
+                                                ? "Disabled"
+                                                : startScanMutation.isPending
+                                                ? "Starting..."
+                                                : channel.status === "RUNNING"
+                                                ? "Running..."
+                                                : channel.status === "PENDING"
+                                                ? "Queued..."
+                                                : "Scan"}
+                                        </Button>
+                                    </td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+
+                    {channels.length === 0 && (
+                        <div className="p-6 text-center text-muted-foreground">
+                            No channels found
+                        </div>
+                    )}
+                </div>
+            </Card>
         </div>
     );
 }
 
 function StatusBadge({ status }: { status: string | null }) {
     if (!status) {
-        return (
-            <span className="px-2 py-1 text-xs rounded bg-gray-500/20 text-gray-400">
-                Not scanned
-            </span>
-        );
+        return <Badge variant="outline">Not scanned</Badge>;
     }
 
-    const colors = {
-        PENDING: "bg-yellow-500/20 text-yellow-400",
-        RUNNING: "bg-blue-500/20 text-blue-400",
-        SUCCEEDED: "bg-green-500/20 text-green-400",
-        FAILED: "bg-red-500/20 text-red-400",
-        CANCELLED: "bg-gray-500/20 text-gray-400",
+    const variantMap: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
+        PENDING: "secondary",
+        RUNNING: "default",
+        SUCCEEDED: "outline",
+        FAILED: "destructive",
+        CANCELLED: "outline",
     };
 
+    const colorMap: Record<string, string> = {
+        PENDING: "bg-yellow-500/20 text-yellow-600 dark:text-yellow-400 border-yellow-500/50",
+        RUNNING: "bg-blue-500/20 text-blue-600 dark:text-blue-400 border-blue-500/50",
+        SUCCEEDED: "bg-green-500/20 text-green-600 dark:text-green-400 border-green-500/50",
+    };
+
+    const variant = variantMap[status] || "outline";
+    const customColor = colorMap[status];
+
     return (
-        <span
-            className={`px-2 py-1 text-xs rounded ${
-                colors[status as keyof typeof colors] ||
-                "bg-gray-500/20 text-gray-400"
-            }`}
-        >
+        <Badge variant={variant} className={customColor}>
             {status}
-        </span>
+        </Badge>
     );
 }
