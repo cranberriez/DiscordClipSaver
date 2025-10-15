@@ -3,7 +3,6 @@ Job processor for handling different job types
 """
 import logging
 from typing import Optional
-from worker.redis.redis import BatchScanJob, MessageScanJob, RescanJob, ThumbnailRetryJob
 from worker.discord.bot import WorkerBot
 from worker.discord.get_message_history import get_message_history
 from worker.discord.get_message import get_message

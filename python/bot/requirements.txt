@@ -8,3 +8,4 @@ aiohttp
 audioop-lts
 psycopg-binary
 tortoise-orm[asyncpg]
+redis
