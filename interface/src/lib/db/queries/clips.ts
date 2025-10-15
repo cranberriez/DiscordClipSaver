@@ -1,0 +1,137 @@
+import { getDb } from "../db";
+import type { Clip, Message, Thumbnail } from "../types";
+
+export interface ClipWithMetadata extends Clip {
+    message: Message;
+    thumbnails: Thumbnail[];
+}
+
+/**
+ * Get all clips for a specific channel with message and thumbnail data
+ */
+export async function getClipsByChannelId(
+    channelId: string,
+    limit: number = 50,
+    offset: number = 0
+): Promise<ClipWithMetadata[]> {
+    const clips = await getDb()
+        .selectFrom("clip")
+        .selectAll("clip")
+        .where("clip.channel_id", "=", channelId)
+        .where("clip.deleted_at", "is", null)
+        .orderBy("clip.created_at", "desc")
+        .limit(limit)
+        .offset(offset)
+        .execute();
+
+    // Fetch related messages and thumbnails
+    const clipIds = clips.map((c) => c.id);
+    const messageIds = clips.map((c) => c.message_id);
+
+    const [messages, thumbnails] = await Promise.all([
+        getDb()
+            .selectFrom("message")
+            .selectAll()
+            .where("id", "in", messageIds)
+            .execute(),
+        getDb()
+            .selectFrom("thumbnail")
+            .selectAll()
+            .where("clip_id", "in", clipIds)
+            .where("deleted_at", "is", null)
+            .execute(),
+    ]);
+
+    // Create lookup maps
+    const messageMap = new Map(messages.map((m) => [m.id, m]));
+    const thumbnailMap = new Map<string, Thumbnail[]>();
+    for (const thumb of thumbnails) {
+        if (!thumbnailMap.has(thumb.clip_id)) {
+            thumbnailMap.set(thumb.clip_id, []);
+        }
+        thumbnailMap.get(thumb.clip_id)!.push(thumb);
+    }
+
+    // Combine data
+    return clips.map((clip) => ({
+        ...clip,
+        message: messageMap.get(clip.message_id)!,
+        thumbnails: thumbnailMap.get(clip.id) || [],
+    }));
+}
+
+/**
+ * Get a single clip by ID with full metadata
+ */
+export async function getClipById(clipId: string): Promise<ClipWithMetadata | null> {
+    const clip = await getDb()
+        .selectFrom("clip")
+        .selectAll()
+        .where("id", "=", clipId)
+        .where("deleted_at", "is", null)
+        .executeTakeFirst();
+
+    if (!clip) return null;
+
+    const [message, thumbnails] = await Promise.all([
+        getDb()
+            .selectFrom("message")
+            .selectAll()
+            .where("id", "=", clip.message_id)
+            .executeTakeFirst(),
+        getDb()
+            .selectFrom("thumbnail")
+            .selectAll()
+            .where("clip_id", "=", clipId)
+            .where("deleted_at", "is", null)
+            .execute(),
+    ]);
+
+    if (!message) return null;
+
+    return {
+        ...clip,
+        message,
+        thumbnails,
+    };
+}
+
+/**
+ * Check if a clip's CDN URL has expired
+ */
+export function isClipExpired(clip: Clip): boolean {
+    return new Date(clip.expires_at) < new Date();
+}
+
+/**
+ * Update a clip's CDN URL and expiration
+ */
+export async function updateClipCdnUrl(
+    clipId: string,
+    cdnUrl: string,
+    expiresAt: Date
+): Promise<void> {
+    await getDb()
+        .updateTable("clip")
+        .set({
+            cdn_url: cdnUrl,
+            expires_at: expiresAt,
+            updated_at: new Date(),
+        })
+        .where("id", "=", clipId)
+        .execute();
+}
+
+/**
+ * Get clip count for a channel
+ */
+export async function getClipCountByChannelId(channelId: string): Promise<number> {
+    const result = await getDb()
+        .selectFrom("clip")
+        .select((eb) => eb.fn.count<number>("id").as("count"))
+        .where("channel_id", "=", channelId)
+        .where("deleted_at", "is", null)
+        .executeTakeFirst();
+
+    return result?.count || 0;
+}

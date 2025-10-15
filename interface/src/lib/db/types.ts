@@ -24,3 +24,6 @@ export type {
     NewChannelScanStatus,
     ChannelScanStatusUpdate,
 } from "./schemas/channel_scan_status.kysely";
+export type { Message } from "./schemas/message.kysely";
+export type { Clip } from "./schemas/clip.kysely";
+export type { Thumbnail } from "./schemas/thumbnail.kysely";

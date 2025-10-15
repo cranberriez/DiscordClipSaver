@@ -5,6 +5,9 @@ import type { ChannelTable } from "./channel.kysely";
 import type { ChannelSettingsTable } from "./channel_settings.kysely";
 import type { InstallIntentTable } from "./install_intents.kysely";
 import type { ChannelScanStatusTable } from "./channel_scan_status.kysely";
+import type { MessageTable } from "./message.kysely";
+import type { ClipTable } from "./clip.kysely";
+import type { ThumbnailTable } from "./thumbnail.kysely";
 
 export interface DB {
     user: UserTable;
@@ -14,4 +17,7 @@ export interface DB {
     channel_settings: ChannelSettingsTable;
     install_intent: InstallIntentTable;
     channel_scan_status: ChannelScanStatusTable;
+    message: MessageTable;
+    clip: ClipTable;
+    thumbnail: ThumbnailTable;
 }
