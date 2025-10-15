@@ -13,7 +13,7 @@ async def init_db(generate_schemas: bool = False, config: Optional[Dict[str, Any
         logger.info("Initializing database, tortoise config: %s", tortoise_config)
         await Tortoise.init(config=tortoise_config)
         if generate_schemas:
-            await Tortoise.generate_schemas(safe=True)
+            await Tortoise.generate_schemas(safe=False)
         logger.info("Database initialized successfully, schemas generated: %s, tortoise config: %s", generate_schemas, tortoise_config)
     except Exception as e:
         logger.error(f"Failed to initialize database: {e}")

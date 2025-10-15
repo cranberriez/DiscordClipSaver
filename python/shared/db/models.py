@@ -105,6 +105,9 @@ class ChannelSettings(Model):
     updated_at = fields.DatetimeField(auto_now=True)
     deleted_at = fields.DatetimeField(null=True)
 
+    class Meta:
+        table="channel_settings"
+
 
 class ChannelScanStatus(Model):
     """Tracks message scanning progress for a channel"""
@@ -140,6 +143,7 @@ class Message(Model):
     updated_at = fields.DatetimeField(auto_now=True)
 
     class Meta:
+        unique_together=("guild", "channel", "id")
         table="message"
 
 class Clip(Model):
@@ -153,6 +157,7 @@ class Clip(Model):
     mime_type = fields.CharField(max_length=50)
     duration = fields.FloatField(null=True)  # Seconds (if extracted)
     resolution = fields.CharField(max_length=20, null=True)  # e.g., "1920x1080"
+    settings_hash = fields.CharField(max_length=32, null=True)  # Hash of settings for this clip, used for settings invalidation, 32 char md5 hash
     # Discord CDN URL (expires after ~24 hours)
     cdn_url = fields.TextField()
     expires_at = fields.DatetimeField()  # When CDN URL expires
@@ -166,6 +171,7 @@ class Clip(Model):
     updated_at = fields.DatetimeField(auto_now=True)
 
     class Meta:
+        unique_together=("guild", "channel", "message", "id")
         table="clip"
 
 class Thumbnail(Model):
