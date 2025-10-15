@@ -1,21 +1,20 @@
 import { NextRequest, NextResponse } from "next/server";
-import { tryGetAuthInfo } from "@/lib/auth";
+import { requireGuildAccess } from "@/lib/middleware/auth";
 import {
     getGuildSettings,
     upsertGuildSettings,
-    getSingleGuildById,
 } from "@/lib/db";
 import {
     UpdateGuildSettingsPayloadSchema,
     GuildSettingsSchema,
     DefaultChannelSettingsSchema,
 } from "@/lib/validation/guild-settings.schema";
-import { z } from "zod";
 
 /**
  * GET /api/guilds/[guildId]/settings
  *
  * Retrieve guild settings for a specific guild.
+ * Requires guild ownership.
  */
 export async function GET(
     req: NextRequest,
@@ -23,25 +22,9 @@ export async function GET(
 ) {
     const { guildId } = await params;
 
-    // Verify authentication
-    const authInfo = await tryGetAuthInfo(req);
-    if (!authInfo) {
-        return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    // Verify guild exists and user has access
-    const guild = await getSingleGuildById(guildId);
-    if (!guild) {
-        return NextResponse.json({ error: "Guild not found" }, { status: 404 });
-    }
-
-    // Verify user owns this guild
-    if (guild.owner_id !== authInfo.discordUserId) {
-        return NextResponse.json(
-            { error: "Forbidden: You do not own this guild" },
-            { status: 403 }
-        );
-    }
+    // Verify authentication and ownership
+    const auth = await requireGuildAccess(req, guildId, true);
+    if (auth instanceof NextResponse) return auth;
 
     // Get guild settings
     const settings = await getGuildSettings(guildId);
@@ -65,6 +48,7 @@ export async function GET(
  * PATCH /api/guilds/[guildId]/settings
  *
  * Update guild settings. This performs a partial update (merge) with existing settings.
+ * Requires guild ownership.
  */
 export async function PATCH(
     req: NextRequest,
@@ -72,25 +56,9 @@ export async function PATCH(
 ) {
     const { guildId } = await params;
 
-    // Verify authentication
-    const authInfo = await tryGetAuthInfo(req);
-    if (!authInfo) {
-        return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    // Verify guild exists and user has access
-    const guild = await getSingleGuildById(guildId);
-    if (!guild) {
-        return NextResponse.json({ error: "Guild not found" }, { status: 404 });
-    }
-
-    // Verify user owns this guild
-    if (guild.owner_id !== authInfo.discordUserId) {
-        return NextResponse.json(
-            { error: "Forbidden: You do not own this guild" },
-            { status: 403 }
-        );
-    }
+    // Verify authentication and ownership
+    const auth = await requireGuildAccess(req, guildId, true);
+    if (auth instanceof NextResponse) return auth;
 
     // Parse and validate request body
     let body: unknown;

@@ -1,9 +1,18 @@
 import { NextRequest, NextResponse } from "next/server";
 import crypto from "node:crypto";
-import { tryGetAuthInfo } from "@/lib/auth";
+import { requireAuth } from "@/lib/middleware/auth";
 import { createInstallIntent } from "@/lib/db";
 import { buildInviteUrl } from "@/lib/discord/generateBotInvite";
 
+/**
+ * GET /api/discord/bot/invite
+ * 
+ * Generate a Discord bot invite URL with state tracking.
+ * Creates an install intent that expires in 10 minutes.
+ * 
+ * Query params:
+ * - guildId: The Discord guild ID to invite the bot to
+ */
 export async function GET(req: NextRequest) {
     const url = new URL(req.url);
     const guildId = url.searchParams.get("guildId");
@@ -11,10 +20,9 @@ export async function GET(req: NextRequest) {
         return NextResponse.json({ error: "Missing guildId" }, { status: 400 });
     }
 
-    const auth = await tryGetAuthInfo(req);
-    if (!auth) {
-        return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+    // Verify authentication
+    const auth = await requireAuth(req);
+    if (auth instanceof NextResponse) return auth;
 
     // Generate a cryptographically strong state token
     const state = crypto.randomUUID();

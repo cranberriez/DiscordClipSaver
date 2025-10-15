@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { tryGetAuthInfo } from "@/lib/auth";
-import { getSingleGuildById, updateGuildMessageScanEnabled } from "@/lib/db";
+import { requireGuildAccess } from "@/lib/middleware/auth";
+import { updateGuildMessageScanEnabled } from "@/lib/db";
 import { z } from "zod";
 
 const ToggleSchema = z.object({
@@ -11,6 +11,7 @@ const ToggleSchema = z.object({
  * POST /api/guilds/[guildId]/toggle
  * 
  * Toggle message scanning for the entire guild.
+ * Requires guild ownership.
  */
 export async function POST(
     req: NextRequest,
@@ -18,25 +19,9 @@ export async function POST(
 ) {
     const { guildId } = await params;
 
-    // Verify authentication
-    const authInfo = await tryGetAuthInfo(req);
-    if (!authInfo) {
-        return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    // Verify guild exists and user has access
-    const guild = await getSingleGuildById(guildId);
-    if (!guild) {
-        return NextResponse.json({ error: "Guild not found" }, { status: 404 });
-    }
-
-    // Verify user owns this guild
-    if (guild.owner_id !== authInfo.discordUserId) {
-        return NextResponse.json(
-            { error: "Forbidden: You do not own this guild" },
-            { status: 403 }
-        );
-    }
+    // Verify authentication and ownership
+    const auth = await requireGuildAccess(req, guildId, true);
+    if (auth instanceof NextResponse) return auth;
 
     // Parse and validate request body
     let body: unknown;

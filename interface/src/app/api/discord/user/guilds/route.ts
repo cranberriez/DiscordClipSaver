@@ -1,45 +1,30 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getAuthInfo } from "@/lib/auth";
-import { cacheUserScoped } from "@/lib/cache";
+import { requireAuth } from "@/lib/middleware/auth";
 import { filterInvitableGuilds } from "@/lib/discord/visibility";
 import { getGuildsByIds } from "@/lib/db";
-import { discordFetch } from "@/lib/discord/discordClient";
 import { getBoolParam } from "@/lib/params";
-import { jsonError } from "@/lib/http";
-import type { DiscordGuild } from "@/lib/discord/types";
 
+/**
+ * GET /api/discord/user/guilds
+ * 
+ * Get the authenticated user's Discord guilds.
+ * Guilds are cached for 2 minutes to prevent rate limiting.
+ * 
+ * Query params:
+ * - filter: "invitable" to filter guilds where user can invite bot
+ * - includeDb: "1" to include database guild data
+ */
 export async function GET(req: NextRequest) {
-    // Auth and token (server-side only)
-    let auth;
-    try {
-        auth = await getAuthInfo(req);
-    } catch {
-        return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-    const { discordUserId, accessToken } = auth;
-    if (!accessToken)
-        return NextResponse.json(
-            { error: "Missing Discord token" },
-            { status: 401 }
-        );
+    // Verify authentication and get cached guilds
+    const auth = await requireAuth(req);
+    if (auth instanceof NextResponse) return auth;
 
     const url = new URL(req.url);
     const filterParam = url.searchParams.get("filter");
     const includeDb = getBoolParam(url, "includeDb");
 
-    // Fetch with user-scoped cache
-    const ttlMs = 2 * 60 * 1000; // 2 minutes
-    let guilds: DiscordGuild[];
-    try {
-        guilds = await cacheUserScoped<DiscordGuild[]>(
-            discordUserId,
-            "discord:guilds",
-            ttlMs,
-            () => discordFetch<DiscordGuild[]>("/users/@me/guilds", accessToken)
-        );
-    } catch (err: any) {
-        return jsonError(err, 502);
-    }
+    // auth.userGuilds is already cached (2 minutes TTL)
+    const guilds = auth.userGuilds;
 
     // Optional filtering
     const result =

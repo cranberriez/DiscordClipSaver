@@ -1,11 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
-import { tryGetAuthInfo } from "@/lib/auth";
-import { getSingleGuildById, getChannelsByGuildId } from "@/lib/db";
+import { requireGuildAccess } from "@/lib/middleware/auth";
+import { filterChannelsByPermissions } from "@/lib/middleware/channels";
+import { getChannelsByGuildId } from "@/lib/db";
 
 /**
  * GET /api/guilds/[guildId]/channels
  * 
- * Get all channels for a guild.
+ * Get all channels for a guild that the user has access to.
+ * Channels are filtered based on the user's Discord permissions.
  */
 export async function GET(
     req: NextRequest,
@@ -13,31 +15,21 @@ export async function GET(
 ) {
     const { guildId } = await params;
 
-    // Verify authentication
-    const authInfo = await tryGetAuthInfo(req);
-    if (!authInfo) {
-        return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    // Verify guild exists and user has access
-    const guild = await getSingleGuildById(guildId);
-    if (!guild) {
-        return NextResponse.json({ error: "Guild not found" }, { status: 404 });
-    }
-
-    // Verify user owns this guild
-    if (guild.owner_id !== authInfo.discordUserId) {
-        return NextResponse.json(
-            { error: "Forbidden: You do not own this guild" },
-            { status: 403 }
-        );
-    }
+    // Verify authentication and guild access
+    const auth = await requireGuildAccess(req, guildId);
+    if (auth instanceof NextResponse) return auth;
 
     // Get all channels for this guild
     try {
-        const channels = await getChannelsByGuildId(guildId);
+        const allChannels = await getChannelsByGuildId(guildId);
 
-        return NextResponse.json({ channels });
+        // Filter channels based on user's Discord permissions
+        const visibleChannels = filterChannelsByPermissions(
+            allChannels,
+            auth.discordGuild
+        );
+
+        return NextResponse.json({ channels: visibleChannels });
     } catch (error) {
         console.error("Failed to fetch channels:", error);
         return NextResponse.json(

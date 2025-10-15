@@ -1,14 +1,24 @@
-// app/api/discord/callback/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import {
     getUserByDiscordId,
     setGuildOwnerIfUnclaimed,
     consumeInstallIntent,
 } from "@/lib/db";
-import { tryGetAuthInfo } from "@/lib/auth";
+import { requireAuth } from "@/lib/middleware/auth";
 
 const ME_URL = "https://discord.com/api/v10/users/@me";
 
+/**
+ * GET /api/discord/bot/claim
+ * 
+ * OAuth callback handler for bot installation.
+ * Verifies the install intent and claims guild ownership.
+ * 
+ * Query params:
+ * - state: Install intent state token
+ * - error: OAuth error (if user denied)
+ * - error_description: OAuth error description
+ */
 export async function GET(req: NextRequest) {
     const url = new URL(req.url);
     const state = url.searchParams.get("state");
@@ -51,28 +61,35 @@ export async function GET(req: NextRequest) {
     }
     const { guild, user_id: intendedAppUserId } = intent;
 
-    // 2) Exchange code for a USER access token
-    const authInfo = await tryGetAuthInfo(req);
-    if (!authInfo) {
-        return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+    // 2) Verify authentication and get access token
+    const auth = await requireAuth(req);
+    if (auth instanceof NextResponse) return auth;
 
-    const tok = authInfo.accessToken;
+    const tok = auth.accessToken;
 
-    // 3) Identify the installer user
+    // 3) Identify the installer user (already have Discord ID from auth)
+    // Verify with Discord API to ensure token is valid
     const meRes = await fetch(ME_URL, {
         headers: { Authorization: `Bearer ${tok}` },
     });
     if (!meRes.ok) {
         return NextResponse.json(
-            { error: "Failed to fetch /users/@me" },
+            { error: "Failed to verify Discord user" },
             { status: 400 }
         );
     }
     const me = (await meRes.json()) as { id: string };
 
+    // Verify the Discord ID matches our session
+    if (me.id !== auth.discordUserId) {
+        return NextResponse.json(
+            { error: "Discord user mismatch" },
+            { status: 403 }
+        );
+    }
+
     // 4) Map Discord user -> your app user (you created this at login)
-    const appUser = await getUserByDiscordId(me.id);
+    const appUser = await getUserByDiscordId(auth.discordUserId);
     if (!appUser || appUser.id !== intendedAppUserId) {
         // The user finishing the flow isn’t the one who initiated it; choose policy
         return NextResponse.json({ error: "User mismatch" }, { status: 403 });
