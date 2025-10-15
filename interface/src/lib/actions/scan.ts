@@ -5,7 +5,8 @@
 
 import { startBatchScan } from "../redis/jobs";
 import { getChannelScanStatus } from "../db/queries/scan_status";
-import { getDb } from "../db";
+import { getChannelsByGuildId } from "../db/queries/channels";
+import { getSingleGuildById } from "../db/queries/guilds";
 
 export type ScanResult =
     | { success: true; jobId: string; messageId: string }
@@ -24,18 +25,34 @@ export async function startChannelScan(
     }
 ): Promise<ScanResult> {
     try {
-        // Validate guild and channel exist
-        const db = getDb();
+        console.log("startChannelScan called with:", {
+            guildId,
+            channelId,
+            options,
+        });
 
-        const channel = await db
-            .selectFrom("channel")
-            .select(["id", "name", "message_scan_enabled"])
-            .where("id", "=", channelId)
-            .where("guild_id", "=", guildId)
-            .where("deleted_at", "is", null)
-            .executeTakeFirst();
+        // Validate guild exists
+        const guild = await getSingleGuildById(guildId);
+        if (!guild) {
+            return { success: false, error: "Guild not found" };
+        }
+
+        // Get all channels for this guild
+        const channels = await getChannelsByGuildId(guildId);
+        console.log(
+            "All channels in guild:",
+            channels.map(c => ({ id: c.id, name: c.name }))
+        );
+
+        // Find the specific channel
+        const channel = channels.find(c => c.id === channelId);
+        console.log("Channel query result:", channel);
 
         if (!channel) {
+            console.log("Channel not found - query params:", {
+                channelId,
+                guildId,
+            });
             return { success: false, error: "Channel not found" };
         }
 

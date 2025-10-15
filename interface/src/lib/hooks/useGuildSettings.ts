@@ -5,7 +5,6 @@ import { GuildSettingsBuilder } from "@/lib/settings/guild-settings-builder";
 import {
     fetchGuildSettings,
     updateGuildSettings,
-    type GuildSettingsResponse,
 } from "@/lib/api/guild-settings";
 import type {
     GuildSettings,
@@ -16,22 +15,22 @@ export interface UseGuildSettingsReturn {
     // Current settings (includes pending changes)
     settings: GuildSettings | null;
     defaultChannelSettings: DefaultChannelSettings | null;
-    
+
     // Builder for collecting changes
     builder: GuildSettingsBuilder;
-    
+
     // State
     loading: boolean;
     saving: boolean;
     error: string | null;
     hasChanges: boolean;
-    
+
     // Actions
     refresh: () => Promise<void>;
     save: () => Promise<void>;
     reset: () => void;
     resetToDefaults: () => Promise<void>;
-    
+
     // Convenience setters
     setGuildSetting: <K extends keyof GuildSettings>(
         key: K,
@@ -45,10 +44,10 @@ export interface UseGuildSettingsReturn {
 
 /**
  * React hook for managing guild settings.
- * 
+ *
  * This hook provides a complete interface for fetching, updating, and managing
  * guild settings with built-in state management and error handling.
- * 
+ *
  * @example
  * ```tsx
  * function GuildSettingsPage({ guildId }: { guildId: string }) {
@@ -64,10 +63,10 @@ export interface UseGuildSettingsReturn {
  *     save,
  *     reset,
  *   } = useGuildSettings(guildId);
- * 
+ *
  *   if (loading) return <div>Loading...</div>;
  *   if (error) return <div>Error: {error}</div>;
- * 
+ *
  *   return (
  *     <form onSubmit={(e) => { e.preventDefault(); save(); }}>
  *       <input
@@ -87,17 +86,20 @@ export interface UseGuildSettingsReturn {
  */
 export function useGuildSettings(guildId: string): UseGuildSettingsReturn {
     const [builder] = useState(() => new GuildSettingsBuilder(guildId));
-    
+
     // Server state (original values from database)
-    const [serverSettings, setServerSettings] = useState<GuildSettings | null>(null);
+    const [serverSettings, setServerSettings] = useState<GuildSettings | null>(
+        null
+    );
     const [serverDefaultChannelSettings, setServerDefaultChannelSettings] =
         useState<DefaultChannelSettings | null>(null);
-    
+
     // Working state (server state + pending changes)
-    const [workingSettings, setWorkingSettings] = useState<GuildSettings | null>(null);
+    const [workingSettings, setWorkingSettings] =
+        useState<GuildSettings | null>(null);
     const [workingDefaultChannelSettings, setWorkingDefaultChannelSettings] =
         useState<DefaultChannelSettings | null>(null);
-    
+
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
     const [error, setError] = useState<string | null>(null);
@@ -116,7 +118,9 @@ export function useGuildSettings(guildId: string): UseGuildSettingsReturn {
             builder.clearAll();
             setHasChanges(false);
         } catch (err) {
-            setError(err instanceof Error ? err.message : "Failed to fetch settings");
+            setError(
+                err instanceof Error ? err.message : "Failed to fetch settings"
+            );
         } finally {
             setLoading(false);
         }
@@ -142,7 +146,9 @@ export function useGuildSettings(guildId: string): UseGuildSettingsReturn {
             builder.clearAll();
             setHasChanges(false);
         } catch (err) {
-            setError(err instanceof Error ? err.message : "Failed to save settings");
+            setError(
+                err instanceof Error ? err.message : "Failed to save settings"
+            );
             throw err; // Re-throw so caller can handle if needed
         } finally {
             setSaving(false);
@@ -171,7 +177,11 @@ export function useGuildSettings(guildId: string): UseGuildSettingsReturn {
             builder.clearAll();
             setHasChanges(false);
         } catch (err) {
-            setError(err instanceof Error ? err.message : "Failed to reset to defaults");
+            setError(
+                err instanceof Error
+                    ? err.message
+                    : "Failed to reset to defaults"
+            );
             throw err;
         } finally {
             setSaving(false);
@@ -182,7 +192,9 @@ export function useGuildSettings(guildId: string): UseGuildSettingsReturn {
     const setGuildSetting = useCallback(
         <K extends keyof GuildSettings>(key: K, value: GuildSettings[K]) => {
             builder.setGuildSetting(key, value);
-            setWorkingSettings(prev => ({ ...prev, [key]: value } as GuildSettings));
+            setWorkingSettings(
+                prev => ({ ...prev, [key]: value } as GuildSettings)
+            );
             setHasChanges(true);
         },
         [builder]
@@ -195,7 +207,9 @@ export function useGuildSettings(guildId: string): UseGuildSettingsReturn {
             value: DefaultChannelSettings[K]
         ) => {
             builder.setDefaultChannelSetting(key, value);
-            setWorkingDefaultChannelSettings(prev => ({ ...prev, [key]: value } as DefaultChannelSettings));
+            setWorkingDefaultChannelSettings(
+                prev => ({ ...prev, [key]: value } as DefaultChannelSettings)
+            );
             setHasChanges(true);
         },
         [builder]

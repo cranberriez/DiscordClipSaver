@@ -1,26 +1,70 @@
 "use client";
 
 import { useGuildScanStatuses } from "@/lib/hooks/useScanStatus";
-import { startChannelScan, startMultipleChannelScans } from "@/lib/actions/scan";
-import { useState } from "react";
+import {
+    startChannelScan,
+    startMultipleChannelScans,
+} from "@/lib/actions/scan";
+import { useState, useMemo } from "react";
+import type { Channel } from "@/lib/db/types";
 
 interface ScansPanelProps {
     guildId: string;
+    channels: Channel[];
 }
 
-export function ScansPanel({ guildId }: ScansPanelProps) {
-    const { channels, loading, error, refetch } = useGuildScanStatuses(guildId);
+export function ScansPanel({
+    guildId,
+    channels: serverChannels,
+}: ScansPanelProps) {
+    const { scanStatuses, loading, error, refetch } =
+        useGuildScanStatuses(guildId);
     const [scanning, setScanning] = useState<Record<string, boolean>>({});
     const [selectedChannel, setSelectedChannel] = useState<string>("all");
-    const [direction, setDirection] = useState<"backward" | "forward">("backward");
+    const [direction, setDirection] = useState<"backward" | "forward">(
+        "backward"
+    );
     const [starting, setStarting] = useState(false);
 
-    const unscannedCount = channels.filter(ch => !ch.status).length;
+    // Merge server channels with scan statuses
+    const channels = useMemo(() => {
+        return serverChannels.map(channel => ({
+            channelId: channel.id,
+            channelName: channel.name,
+            messageScanEnabled: channel.message_scan_enabled,
+            status: scanStatuses[channel.id]?.status || null,
+            messageCount: scanStatuses[channel.id]?.message_count || 0,
+            totalMessagesScanned:
+                scanStatuses[channel.id]?.total_messages_scanned || 0,
+            updatedAt: scanStatuses[channel.id]?.updated_at || null,
+        }));
+    }, [serverChannels, scanStatuses]);
+
+    // Debug logging
+    console.log("ScansPanel Debug:", {
+        guildId,
+        serverChannelsLength: serverChannels.length,
+        channelsLength: channels.length,
+        scanStatusesCount: Object.keys(scanStatuses).length,
+        channels,
+        serverChannels: serverChannels.map(ch => ({
+            id: ch.id,
+            name: ch.name,
+            message_scan_enabled: ch.message_scan_enabled,
+        })),
+        loading,
+        error,
+    });
+
+    const unscannedCount = channels.filter(
+        ch => !ch.status && ch.messageScanEnabled
+    ).length;
     const activeScans = channels.filter(
         ch => ch.status === "RUNNING" || ch.status === "PENDING"
     ).length;
 
     const handleStartScan = async (channelId: string) => {
+        console.log("Starting scan for channel:", channelId);
         setScanning(prev => ({ ...prev, [channelId]: true }));
 
         const result = await startChannelScan(guildId, channelId, {
@@ -28,6 +72,8 @@ export function ScansPanel({ guildId }: ScansPanelProps) {
             limit: 100,
             autoContinue: true,
         });
+
+        console.log("Scan result:", result);
 
         if (result.success) {
             setTimeout(() => refetch(), 1000);
@@ -42,8 +88,10 @@ export function ScansPanel({ guildId }: ScansPanelProps) {
         setStarting(true);
 
         if (selectedChannel === "all") {
-            // Scan all unscanned channels
-            const unscanned = channels.filter(ch => !ch.status);
+            // Scan all unscanned channels that have scanning enabled
+            const unscanned = channels.filter(
+                ch => !ch.status && ch.messageScanEnabled
+            );
             const result = await startMultipleChannelScans(
                 guildId,
                 unscanned.map(ch => ch.channelId),
@@ -94,18 +142,28 @@ export function ScansPanel({ guildId }: ScansPanelProps) {
         return (
             <div className="space-y-4">
                 <div className="p-6 border border-yellow-500/20 rounded-lg bg-yellow-500/5">
-                    <h3 className="text-yellow-400 font-semibold mb-2">No Channels Found</h3>
+                    <h3 className="text-yellow-400 font-semibold mb-2">
+                        No Channels Found
+                    </h3>
                     <p className="text-sm text-gray-300">
-                        This guild has no channels in the database. The Discord bot needs to sync channels first.
+                        This guild has no channels in the database. The Discord
+                        bot needs to sync channels first.
                     </p>
                     <p className="text-sm text-gray-400 mt-2">
-                        Make sure the bot is in the server and has permission to view channels.
+                        Make sure the bot is in the server and has permission to
+                        view channels.
                     </p>
                 </div>
                 <details className="p-4 border border-white/20 rounded-lg bg-white/5">
-                    <summary className="cursor-pointer text-sm font-medium">Debug Info</summary>
+                    <summary className="cursor-pointer text-sm font-medium">
+                        Debug Info
+                    </summary>
                     <pre className="mt-2 text-xs text-gray-400 overflow-auto">
-                        {JSON.stringify({ guildId, channels, loading, error }, null, 2)}
+                        {JSON.stringify(
+                            { guildId, channels, loading, error },
+                            null,
+                            2
+                        )}
                     </pre>
                 </details>
             </div>
@@ -117,18 +175,38 @@ export function ScansPanel({ guildId }: ScansPanelProps) {
             {/* Info Panel */}
             <div className="p-4 border border-blue-500/20 rounded-lg bg-blue-500/5">
                 <div className="flex items-start gap-3">
-                    <svg className="w-5 h-5 text-blue-400 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    <svg
+                        className="w-5 h-5 text-blue-400 mt-0.5"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                    >
+                        <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                        />
                     </svg>
                     <div className="flex-1">
-                        <h3 className="text-sm font-semibold text-blue-400 mb-1">About Scans</h3>
+                        <h3 className="text-sm font-semibold text-blue-400 mb-1">
+                            About Scans
+                        </h3>
                         <p className="text-sm text-gray-300">
-                            Scans process Discord messages to find and save video clips. Each scan examines messages in a channel
-                            and extracts clips based on your settings. You can scan individual channels or all channels at once.
+                            Scans process Discord messages to find and save
+                            video clips. Each scan examines messages in a
+                            channel and extracts clips based on your settings.
+                            You can scan individual channels or all channels at
+                            once.
                         </p>
                         <div className="mt-2 flex gap-4 text-xs text-gray-400">
-                            <span>• <strong>{unscannedCount}</strong> unscanned channels</span>
-                            <span>• <strong>{activeScans}</strong> active scans</span>
+                            <span>
+                                • <strong>{unscannedCount}</strong> unscanned
+                                channels
+                            </span>
+                            <span>
+                                • <strong>{activeScans}</strong> active scans
+                            </span>
                         </div>
                     </div>
                 </div>
@@ -147,13 +225,31 @@ export function ScansPanel({ guildId }: ScansPanelProps) {
                         <select
                             value={selectedChannel}
                             onChange={e => setSelectedChannel(e.target.value)}
-                            className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            className="w-full px-3 py-2 bg-gray-900 border border-white/20 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500 [&>option]:bg-gray-900 [&>option]:text-white [&>optgroup]:bg-gray-800 [&>optgroup]:text-gray-300"
                         >
-                            <option value="all">All Unscanned Channels ({unscannedCount})</option>
-                            <optgroup label="Individual Channels">
+                            <option
+                                value="all"
+                                className="bg-gray-900 text-white"
+                            >
+                                All Unscanned Channels ({unscannedCount})
+                            </option>
+                            <optgroup
+                                label="Individual Channels"
+                                className="bg-gray-800 text-gray-300"
+                            >
                                 {channels.map(ch => (
-                                    <option key={ch.channelId} value={ch.channelId}>
-                                        #{ch.channelName} {ch.status ? `(${ch.status})` : "(Not scanned)"}
+                                    <option
+                                        key={ch.channelId}
+                                        value={ch.channelId}
+                                        className="bg-gray-900 text-white"
+                                        disabled={!ch.messageScanEnabled}
+                                    >
+                                        #{ch.channelName}{" "}
+                                        {!ch.messageScanEnabled
+                                            ? "(Disabled)"
+                                            : ch.status
+                                            ? `(${ch.status})`
+                                            : "(Not scanned)"}
                                     </option>
                                 ))}
                             </optgroup>
@@ -174,8 +270,12 @@ export function ScansPanel({ guildId }: ScansPanelProps) {
                                         : "bg-white/5 border-white/20 text-gray-300 hover:bg-white/10"
                                 }`}
                             >
-                                <div className="text-sm font-medium">Backward</div>
-                                <div className="text-xs opacity-75">Newest → Oldest</div>
+                                <div className="text-sm font-medium">
+                                    Backward
+                                </div>
+                                <div className="text-xs opacity-75">
+                                    Newest → Oldest
+                                </div>
                             </button>
                             <button
                                 onClick={() => setDirection("forward")}
@@ -185,8 +285,12 @@ export function ScansPanel({ guildId }: ScansPanelProps) {
                                         : "bg-white/5 border-white/20 text-gray-300 hover:bg-white/10"
                                 }`}
                             >
-                                <div className="text-sm font-medium">Forward</div>
-                                <div className="text-xs opacity-75">Oldest → Newest</div>
+                                <div className="text-sm font-medium">
+                                    Forward
+                                </div>
+                                <div className="text-xs opacity-75">
+                                    Oldest → Newest
+                                </div>
                             </button>
                         </div>
                     </div>
@@ -194,7 +298,10 @@ export function ScansPanel({ guildId }: ScansPanelProps) {
                     {/* Start Button */}
                     <button
                         onClick={handleStartSelected}
-                        disabled={starting || (selectedChannel === "all" && unscannedCount === 0)}
+                        disabled={
+                            starting ||
+                            (selectedChannel === "all" && unscannedCount === 0)
+                        }
                         className="w-full px-6 py-3 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white font-medium rounded-lg transition-colors"
                     >
                         {starting
@@ -221,11 +328,21 @@ export function ScansPanel({ guildId }: ScansPanelProps) {
                 <table className="w-full">
                     <thead className="bg-white/5">
                         <tr>
-                            <th className="text-left p-3 font-semibold">Channel</th>
-                            <th className="text-left p-3 font-semibold">Status</th>
-                            <th className="text-right p-3 font-semibold">Clips</th>
-                            <th className="text-right p-3 font-semibold">Scanned</th>
-                            <th className="text-right p-3 font-semibold">Actions</th>
+                            <th className="text-left p-3 font-semibold">
+                                Channel
+                            </th>
+                            <th className="text-left p-3 font-semibold">
+                                Status
+                            </th>
+                            <th className="text-right p-3 font-semibold">
+                                Clips
+                            </th>
+                            <th className="text-right p-3 font-semibold">
+                                Scanned
+                            </th>
+                            <th className="text-right p-3 font-semibold">
+                                Actions
+                            </th>
                         </tr>
                     </thead>
                     <tbody>
@@ -235,9 +352,16 @@ export function ScansPanel({ guildId }: ScansPanelProps) {
                                 className="border-t border-white/10 hover:bg-white/5"
                             >
                                 <td className="p-3">
-                                    <span className="font-mono text-sm">
-                                        #{channel.channelName}
-                                    </span>
+                                    <div className="flex items-center gap-2">
+                                        <span className="font-mono text-sm">
+                                            #{channel.channelName}
+                                        </span>
+                                        {!channel.messageScanEnabled && (
+                                            <span className="px-2 py-0.5 text-xs rounded bg-red-500/20 text-red-400">
+                                                Disabled
+                                            </span>
+                                        )}
+                                    </div>
                                 </td>
                                 <td className="p-3">
                                     <StatusBadge status={channel.status} />
@@ -250,15 +374,25 @@ export function ScansPanel({ guildId }: ScansPanelProps) {
                                 </td>
                                 <td className="p-3 text-right">
                                     <button
-                                        onClick={() => handleStartScan(channel.channelId)}
+                                        onClick={() =>
+                                            handleStartScan(channel.channelId)
+                                        }
                                         disabled={
+                                            !channel.messageScanEnabled ||
                                             scanning[channel.channelId] ||
                                             channel.status === "RUNNING" ||
                                             channel.status === "PENDING"
                                         }
                                         className="px-3 py-1 text-sm bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 disabled:cursor-not-allowed rounded"
+                                        title={
+                                            !channel.messageScanEnabled
+                                                ? "Enable scanning in Overview tab first"
+                                                : ""
+                                        }
                                     >
-                                        {scanning[channel.channelId]
+                                        {!channel.messageScanEnabled
+                                            ? "Disabled"
+                                            : scanning[channel.channelId]
                                             ? "Starting..."
                                             : channel.status === "RUNNING"
                                             ? "Running..."
@@ -302,7 +436,8 @@ function StatusBadge({ status }: { status: string | null }) {
     return (
         <span
             className={`px-2 py-1 text-xs rounded ${
-                colors[status as keyof typeof colors] || "bg-gray-500/20 text-gray-400"
+                colors[status as keyof typeof colors] ||
+                "bg-gray-500/20 text-gray-400"
             }`}
         >
             {status}

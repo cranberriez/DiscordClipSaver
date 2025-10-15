@@ -1,9 +1,9 @@
 /**
  * API route to get scan statuses for all channels in a guild
- * Returns all channels with their scan status (or null if never scanned)
+ * Returns only scan statuses (not channels)
  */
 import { NextRequest, NextResponse } from "next/server";
-import { getChannelScanStatusesWithInfo } from "@/lib/db/queries/scan_status";
+import { getGuildScanStatuses } from "@/lib/db/queries/scan_status";
 
 export async function GET(
     req: NextRequest,
@@ -12,11 +12,10 @@ export async function GET(
     try {
         const { guildId } = await params;
 
-        // Returns all channels with scan status joined
-        // Channels without scan status will have null status
-        const channels = await getChannelScanStatusesWithInfo(guildId);
+        // Returns only scan statuses for channels that have been scanned
+        const statuses = await getGuildScanStatuses(guildId);
 
-        return NextResponse.json({ channels });
+        return NextResponse.json({ statuses });
     } catch (error) {
         console.error("Failed to fetch scan statuses:", error);
         return NextResponse.json(

@@ -4,7 +4,10 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import type { ChannelScanStatus, ScanStatus } from "../db/schemas/channel_scan_status.kysely";
+import type {
+    ChannelScanStatus,
+    ScanStatus,
+} from "../db/schemas/channel_scan_status.kysely";
 
 export interface ChannelWithScanStatus {
     channelId: string;
@@ -54,10 +57,10 @@ export function useChannelScanStatus(guildId: string, channelId: string) {
 
 /**
  * Hook to fetch scan statuses for all channels in a guild
- * Returns all channels with their scan status (or null if never scanned)
+ * Returns scan statuses as a map (channelId -> status)
  */
 export function useGuildScanStatuses(guildId: string) {
-    const [channels, setChannels] = useState<ChannelWithScanStatus[]>([]);
+    const [scanStatuses, setScanStatuses] = useState<Record<string, ChannelScanStatus>>({});
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
@@ -66,17 +69,31 @@ export function useGuildScanStatuses(guildId: string) {
             setLoading(true);
             setError(null);
 
-            const response = await fetch(
-                `/api/guilds/${guildId}/scan-statuses`
-            );
+            const url = `/api/guilds/${guildId}/scan-statuses`;
+            console.log("Fetching scan statuses from:", url);
+
+            const response = await fetch(url);
 
             if (!response.ok) {
+                const errorText = await response.text();
+                console.error("API Error:", response.status, errorText);
                 throw new Error("Failed to fetch scan statuses");
             }
 
             const data = await response.json();
-            setChannels(data.channels);
+            console.log("Scan statuses response:", data);
+            
+            // Convert array to map for easy lookup
+            const statusMap: Record<string, ChannelScanStatus> = {};
+            if (data.statuses && Array.isArray(data.statuses)) {
+                data.statuses.forEach((status: ChannelScanStatus) => {
+                    statusMap[status.channel_id] = status;
+                });
+            }
+            
+            setScanStatuses(statusMap);
         } catch (err) {
+            console.error("Hook error:", err);
             setError(err instanceof Error ? err.message : "Unknown error");
         } finally {
             setLoading(false);
@@ -87,7 +104,7 @@ export function useGuildScanStatuses(guildId: string) {
         fetchStatuses();
     }, [fetchStatuses]);
 
-    return { channels, loading, error, refetch: fetchStatuses };
+    return { scanStatuses, loading, error, refetch: fetchStatuses };
 }
 
 /**

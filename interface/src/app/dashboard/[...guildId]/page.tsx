@@ -117,7 +117,7 @@ export default async function GuildPage({ params }: PageProps) {
                         {
                             id: "scans",
                             label: "Scans",
-                            content: <ScansPanel guildId={guild.id} />,
+                            content: <ScansPanel guildId={guild.id} channels={channels} />,
                         },
                         {
                             id: "settings",
