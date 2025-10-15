@@ -66,7 +66,7 @@ export default function GuildHeader({
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <InfoCard title="Owner" value={ownerId ?? "Unclaimed"} />
-                
+
                 {/* Message Scanning Card with Toggle */}
                 <div className="p-4 border border-white/20 rounded-lg bg-white/5">
                     <div className="flex items-center justify-between">
@@ -82,17 +82,31 @@ export default function GuildHeader({
                                             : "text-gray-500"
                                     }`}
                                 >
-                                    {messageScanEnabled ? "Enabled" : "Disabled"}
+                                    {messageScanEnabled
+                                        ? "Enabled"
+                                        : "Disabled"}
                                 </p>
                             </div>
                             <div className="group relative">
                                 <button className="text-gray-400 hover:text-gray-300">
-                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                    <svg
+                                        className="w-4 h-4"
+                                        fill="none"
+                                        stroke="currentColor"
+                                        viewBox="0 0 24 24"
+                                    >
+                                        <path
+                                            strokeLinecap="round"
+                                            strokeLinejoin="round"
+                                            strokeWidth={2}
+                                            d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                                        />
                                     </svg>
                                 </button>
                                 <div className="absolute left-0 bottom-full mb-2 hidden group-hover:block w-64 p-2 bg-gray-900 border border-white/20 rounded text-xs text-gray-300 z-10">
-                                    This only allows scans to happen, it doesn't start them. Use the Scans tab to start scanning channels.
+                                    This only allows scans to happen, it does
+                                    not start them. Use the Scans tab to start
+                                    scanning channels.
                                 </div>
                             </div>
                         </div>

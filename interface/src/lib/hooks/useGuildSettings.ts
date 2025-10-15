@@ -153,7 +153,7 @@ export function useGuildSettings(guildId: string): UseGuildSettingsReturn {
         } finally {
             setSaving(false);
         }
-    }, [builder, guildId]);
+    }, [builder]);
 
     // Reset pending changes (revert to server state)
     const reset = useCallback(() => {
