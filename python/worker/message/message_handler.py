@@ -5,8 +5,9 @@ import hashlib
 import json
 import uuid
 from datetime import datetime, timedelta, timezone
-from shared.db.models import Message, Clip, FailedThumbnail, User
+from shared.db.models import Message, Clip, User
 from shared.settings_resolver import get_channel_settings, ResolvedSettings
+from worker.thumbnail.thumbnail_handler import ThumbnailHandler
 import discord
 import logging
 
@@ -14,12 +15,15 @@ logger = logging.getLogger(__name__)
 
 
 class MessageHandler:
+    def __init__(self):
+        """Initialize message handler with thumbnail handler"""
+        self.thumbnail_handler = ThumbnailHandler()
+    
     async def process_message(
         self,
         discord_message: discord.Message,
         channel_id: str,
-        guild_id: str,
-        thumbnail_generator
+        guild_id: str
     ) -> int:
         """
         Process a Discord message, extract video attachments, generate thumbnails.
@@ -30,7 +34,6 @@ class MessageHandler:
             discord_message: Discord.py message object
             channel_id: Channel snowflake
             guild_id: Guild snowflake
-            thumbnail_generator: Thumbnail generator instance
 
         Returns:
             Number of clips found and processed
@@ -99,8 +102,7 @@ class MessageHandler:
                 discord_message,
                 channel_id,
                 guild_id,
-                settings_hash,
-                thumbnail_generator
+                settings_hash
             )
             if success:
                 clips_processed += 1
@@ -113,8 +115,7 @@ class MessageHandler:
         discord_message: discord.Message,
         channel_id: str,
         guild_id: str,
-        settings_hash: str,
-        thumbnail_generator
+        settings_hash: str
     ) -> bool:
         """
         Process single video attachment.
@@ -155,26 +156,10 @@ class MessageHandler:
             logger.debug(f"Clip {clip_id} already processed with same settings, skipping")
             return True
         
-        # Generate thumbnail
+        # Generate thumbnails (small and large) using thumbnail handler
         if created or clip.thumbnail_status in ["failed", "pending"]:
-            try:
-                await clip.update_from_dict({"thumbnail_status": "processing"}).save()
-                await thumbnail_generator.generate_for_clip(clip)
-                await clip.update_from_dict({"thumbnail_status": "completed"}).save()
-                logger.info(f"Thumbnail generated for clip {clip_id}")
-                return True
-            except Exception as e:
-                logger.error(f"Thumbnail generation failed for clip {clip_id}: {e}")
-                await clip.update_from_dict({"thumbnail_status": "failed"}).save()
-                
-                # Log to failed_thumbnails table
-                await FailedThumbnail.create(
-                    id=str(uuid.uuid4()),
-                    clip_id=clip_id,
-                    error_message=str(e),
-                    next_retry_at=datetime.now(timezone.utc) + timedelta(minutes=5)
-                )
-                return False
+            success = await self.thumbnail_handler.process_clip(clip)
+            return success
         
         return True
     

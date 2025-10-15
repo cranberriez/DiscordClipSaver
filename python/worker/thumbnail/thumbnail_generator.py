@@ -8,11 +8,26 @@ Requires ffmpeg to be installed on the system:
 import logging
 import os
 import shutil
+import tempfile
+import uuid
 from pathlib import Path
-from shared.db.models import Clip
+from io import BytesIO
+from typing import Tuple
+import aiohttp
+import ffmpeg
+from PIL import Image
+from shared.db.models import Clip, Thumbnail
 from shared.storage import get_storage_backend
 
 logger = logging.getLogger(__name__)
+
+# Thumbnail size configuration (can be overridden by environment variables)
+THUMBNAIL_SMALL_WIDTH = int(os.getenv('THUMBNAIL_SMALL_WIDTH', '320'))
+THUMBNAIL_SMALL_HEIGHT = int(os.getenv('THUMBNAIL_SMALL_HEIGHT', '180'))
+THUMBNAIL_LARGE_WIDTH = int(os.getenv('THUMBNAIL_LARGE_WIDTH', '640'))
+THUMBNAIL_LARGE_HEIGHT = int(os.getenv('THUMBNAIL_LARGE_HEIGHT', '360'))
+THUMBNAIL_TIMESTAMP = float(os.getenv('THUMBNAIL_TIMESTAMP', '1.0'))
+THUMBNAIL_QUALITY = int(os.getenv('THUMBNAIL_QUALITY', '85'))
 
 
 class ThumbnailGenerator:
@@ -67,48 +82,172 @@ class ThumbnailGenerator:
         
         return None
     
-    async def generate_for_clip(self, clip: Clip) -> bool:
+    async def generate_for_clip(self, clip: Clip, timestamp: float = None) -> Tuple[str, str]:
         """
-        Generate a thumbnail for a clip
+        Generate small and large thumbnails for a clip
         
         Args:
             clip: Clip model instance
+            timestamp: Time in seconds to extract frame from (default: from env or 1.0)
             
         Returns:
-            True if thumbnail was generated successfully
-            
-        TODO:
-            - Download video from clip.cdn_url
-            - Extract frame at specific timestamp (e.g., 1 second in)
-            - Resize to thumbnail dimensions (e.g., 320x180)
-            - Save as WebP format
-            - Upload to storage (local or S3)
-            - Create Thumbnail record in database
+            Tuple of (small_thumbnail_path, large_thumbnail_path)
         """
-        logger.info(f"🎬 Generating thumbnail for clip: {clip.id}")
-        logger.info(f"   Filename: {clip.filename}")
-        logger.info(f"   MIME type: {clip.mime_type}")
-        logger.info(f"   File size: {clip.file_size} bytes")
-        logger.info(f"   CDN URL: {clip.cdn_url[:80]}...")
+        if timestamp is None:
+            timestamp = THUMBNAIL_TIMESTAMP
+            
+        logger.info(f"Generating thumbnails for clip: {clip.id}")
+        logger.info(f"  Filename: {clip.filename}")
+        logger.info(f"  MIME type: {clip.mime_type}")
+        logger.info(f"  File size: {clip.file_size:,} bytes ({clip.file_size / 1024 / 1024:.2f} MB)")
+        logger.info(f"  CDN URL: {clip.cdn_url[:80]}...")
         
-        # TODO: Implement actual thumbnail generation
-        # For now, just demonstrate storage usage with a placeholder
+        temp_video = None
+        temp_frame = None
         
-        # Example storage path: thumbnails/guild_123/clip_abc.webp
-        storage_path = f"thumbnails/guild_{clip.guild_id}/clip_{clip.id}.webp"
+        try:
+            # Download full video
+            logger.info(f"  Downloading video from CDN...")
+            temp_video = await self._download_video(clip.cdn_url)
+            
+            # Log actual file size
+            actual_size = os.path.getsize(temp_video)
+            logger.info(f"  Downloaded {actual_size:,} bytes ({actual_size / 1024 / 1024:.2f} MB)")
+            
+            # Extract frame
+            logger.info(f"  Extracting frame at {timestamp}s...")
+            temp_frame = await self._extract_frame(temp_video, timestamp)
+            logger.info(f"  Frame extracted successfully")
+            
+            # Generate small thumbnail
+            logger.info(f"  Generating small thumbnail ({THUMBNAIL_SMALL_WIDTH}x{THUMBNAIL_SMALL_HEIGHT})...")
+            small_thumbnail_data = await self._resize_and_convert(
+                temp_frame, 
+                THUMBNAIL_SMALL_WIDTH, 
+                THUMBNAIL_SMALL_HEIGHT
+            )
+            logger.info(f"  Small thumbnail size: {len(small_thumbnail_data):,} bytes")
+            
+            # Generate large thumbnail
+            logger.info(f"  Generating large thumbnail ({THUMBNAIL_LARGE_WIDTH}x{THUMBNAIL_LARGE_HEIGHT})...")
+            large_thumbnail_data = await self._resize_and_convert(
+                temp_frame, 
+                THUMBNAIL_LARGE_WIDTH, 
+                THUMBNAIL_LARGE_HEIGHT
+            )
+            logger.info(f"  Large thumbnail size: {len(large_thumbnail_data):,} bytes")
+            
+            # Save small thumbnail (using clip ID as filename)
+            small_storage_path = f"thumbnails/guild_{clip.guild_id}/{clip.id}_small.webp"
+            small_saved_path = await self.storage.save(small_thumbnail_data, small_storage_path)
+            logger.info(f"  Saved small thumbnail to: {small_saved_path}")
+            
+            # Save large thumbnail
+            large_storage_path = f"thumbnails/guild_{clip.guild_id}/{clip.id}_large.webp"
+            large_saved_path = await self.storage.save(large_thumbnail_data, large_storage_path)
+            logger.info(f"  Saved large thumbnail to: {large_saved_path}")
+            
+            # Get public URLs
+            small_public_url = self.storage.get_public_url(small_storage_path)
+            large_public_url = self.storage.get_public_url(large_storage_path)
+            logger.info(f"  Small thumbnail URL: {small_public_url}")
+            logger.info(f"  Large thumbnail URL: {large_public_url}")
+            
+            logger.info(f"  Thumbnail generation complete")
+            
+            return (small_storage_path, large_storage_path)
+            
+        except Exception as e:
+            logger.error(f"Failed to generate thumbnail for clip {clip.id}: {e}", exc_info=True)
+            raise
+            
+        finally:
+            # Clean up temporary files
+            if temp_video and os.path.exists(temp_video):
+                os.unlink(temp_video)
+                logger.debug(f"Cleaned up temp video: {temp_video}")
+            if temp_frame and os.path.exists(temp_frame):
+                os.unlink(temp_frame)
+                logger.debug(f"Cleaned up temp frame: {temp_frame}")
+    
+    async def _download_video(self, url: str) -> str:
+        """
+        Download full video from URL to temporary file
         
-        # In the future, this would be actual thumbnail data
-        # For now, just a placeholder
-        placeholder_data = b"placeholder thumbnail data"
+        Args:
+            url: Video URL (Discord CDN)
+            
+        Returns:
+            Path to temporary video file
+        """
+        # Create temporary file
+        temp_fd, temp_path = tempfile.mkstemp(suffix='.mp4')
+        os.close(temp_fd)
         
-        # Save to storage (works with local, Docker volume, or GCS)
-        saved_path = await self.storage.save(placeholder_data, storage_path)
-        logger.info(f"   💾 Saved thumbnail to: {saved_path}")
+        async with aiohttp.ClientSession() as session:
+            async with session.get(url) as response:
+                response.raise_for_status()
+                
+                bytes_downloaded = 0
+                with open(temp_path, 'wb') as f:
+                    async for chunk in response.content.iter_chunked(8192):
+                        f.write(chunk)
+                        bytes_downloaded += len(chunk)
+                
+                logger.debug(f"Downloaded {bytes_downloaded:,} bytes (full file)")
         
-        # Get public URL
-        public_url = self.storage.get_public_url(storage_path)
-        logger.info(f"   🔗 Public URL: {public_url}")
+        return temp_path
+    
+    async def _extract_frame(self, video_path: str, timestamp: float) -> str:
+        """
+        Extract a single frame from video at specified timestamp
         
-        logger.info(f"   ✅ Thumbnail generation complete (stub)")
+        Args:
+            video_path: Path to video file
+            timestamp: Time in seconds
+            
+        Returns:
+            Path to extracted frame (PNG)
+        """
+        # Create temporary file for frame
+        temp_fd, temp_path = tempfile.mkstemp(suffix='.png')
+        os.close(temp_fd)
         
-        return True
+        try:
+            # Use ffmpeg to extract frame
+            (
+                ffmpeg
+                .input(video_path, ss=timestamp)
+                .output(temp_path, vframes=1, format='image2', vcodec='png')
+                .overwrite_output()
+                .run(cmd=self.ffmpeg_path, capture_stdout=True, capture_stderr=True, quiet=True)
+            )
+        except ffmpeg.Error as e:
+            logger.error(f"FFmpeg error: {e.stderr.decode() if e.stderr else 'Unknown error'}")
+            raise
+        
+        return temp_path
+    
+    async def _resize_and_convert(self, image_path: str, width: int, height: int) -> bytes:
+        """
+        Resize image and convert to WebP format
+        
+        Args:
+            image_path: Path to source image
+            width: Target width
+            height: Target height
+            
+        Returns:
+            WebP image data as bytes
+        """
+        # Open image with Pillow
+        with Image.open(image_path) as img:
+            # Resize maintaining aspect ratio
+            img.thumbnail((width, height), Image.Resampling.LANCZOS)
+            
+            # Convert to WebP
+            output = BytesIO()
+            img.save(output, format='WEBP', quality=THUMBNAIL_QUALITY, method=6)
+            output.seek(0)
+            
+            return output.read()

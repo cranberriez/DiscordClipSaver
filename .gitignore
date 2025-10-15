@@ -11,3 +11,6 @@
 
 # Local FFmpeg installation
 bin/ffmpeg/
+
+# Local Thumbnails
+python/storage/thumbnails

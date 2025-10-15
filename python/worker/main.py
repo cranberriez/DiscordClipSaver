@@ -10,7 +10,6 @@ from shared.db.utils import init_db, close_db
 from worker.discord.bot import WorkerBot
 from shared.redis.redis_client import RedisStreamClient
 from worker.processor import JobProcessor
-from worker.thumbnail import ThumbnailGenerator
 
 # Load environment variables
 load_dotenv()
@@ -54,13 +53,9 @@ class Worker:
         # Connect to Redis
         await self.redis.connect()
         
-        # Initialize thumbnail generator
-        thumbnail_generator = ThumbnailGenerator()
-        
         # Initialize processor with redis client for job continuation
         self.processor = JobProcessor(
-            bot=self.bot, 
-            thumbnail_generator=thumbnail_generator,
+            bot=self.bot,
             redis_client=self.redis
         )
         

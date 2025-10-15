@@ -177,7 +177,8 @@ class Clip(Model):
 class Thumbnail(Model):
     """Generated thumbnail for a clip"""
     id = fields.CharField(max_length=64, indexable=True, pk=True)  # UUID
-    clip = fields.OneToOneField("models.Clip", related_name="thumbnail", indexable=True)
+    clip = fields.ForeignKeyField("models.Clip", related_name="thumbnails", indexable=True)
+    size_type = fields.CharField(max_length=10)  # 'small' or 'large'
     storage_path = fields.TextField()  # Local path or cloud bucket path
     width = fields.IntField()
     height = fields.IntField()
@@ -186,6 +187,9 @@ class Thumbnail(Model):
     created_at = fields.DatetimeField(auto_now_add=True)
     updated_at = fields.DatetimeField(auto_now=True)
     deleted_at = fields.DatetimeField(null=True)
+    
+    class Meta:
+        unique_together = (("clip", "size_type"),)  # One small and one large per clip
 
 
 class FailedThumbnail(Model):

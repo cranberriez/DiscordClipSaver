@@ -8,6 +8,7 @@ from worker.discord.bot import WorkerBot
 from worker.discord.get_message_history import get_message_history
 from worker.discord.get_message import get_message
 from worker.message.message_handler import MessageHandler
+from worker.thumbnail.thumbnail_handler import ThumbnailHandler
 from shared.db.models import Guild, Channel, ScanStatus, ChannelType
 from shared.db.repositories.channel_scan_status import (
     get_or_create_scan_status,
@@ -23,10 +24,10 @@ logger = logging.getLogger(__name__)
 class JobProcessor:
     """Processes jobs from the Redis queue"""
     
-    def __init__(self, bot: WorkerBot, thumbnail_generator=None, redis_client: Optional[RedisStreamClient] = None):
+    def __init__(self, bot: WorkerBot, redis_client: Optional[RedisStreamClient] = None):
         self.bot = bot
         self.message_handler = MessageHandler()
-        self.thumbnail_generator = thumbnail_generator
+        self.thumbnail_handler = ThumbnailHandler()
         self.redis_client = redis_client
     
     async def validate_scan_enabled(self, guild_id: str, channel_id: str) -> tuple[bool, Optional[str]]:
@@ -213,8 +214,7 @@ class JobProcessor:
                 clips_found = await self.message_handler.process_message(
                     discord_message=discord_message,
                     channel_id=channel_id,
-                    guild_id=guild_id,
-                    thumbnail_generator=self.thumbnail_generator
+                    guild_id=guild_id
                 )
                 total_clips += clips_found
             
@@ -339,8 +339,7 @@ class JobProcessor:
                     clips_found = await self.message_handler.process_message(
                         discord_message=discord_message,
                         channel_id=channel_id,
-                        guild_id=guild_id,
-                        thumbnail_generator=self.thumbnail_generator
+                        guild_id=guild_id
                     )
                     total_clips += clips_found
                     processed_message_ids.append(message_id)
@@ -407,12 +406,12 @@ class JobProcessor:
         Args:
             job_data: ThumbnailRetryJob data
         """
-        clip_ids = job_data["clip_ids"]
-        retry_count = job_data.get("retry_count", 0)
+        logger.info("Processing thumbnail retry job")
         
-        logger.info(f"Processing thumbnail retry: {len(clip_ids)} clips, retry #{retry_count}")
-        
-        # TODO: Implement thumbnail retry logic
-        # This would fetch clips from database and retry thumbnail generation
-        logger.warning("Thumbnail retry not yet implemented")
-        pass
+        try:
+            # Use thumbnail handler to retry failed thumbnails
+            success_count = await self.thumbnail_handler.retry_failed_thumbnails()
+            logger.info(f"Thumbnail retry complete: {success_count} thumbnails successfully generated")
+        except Exception as e:
+            logger.error(f"Thumbnail retry job failed: {e}", exc_info=True)
+            raise
