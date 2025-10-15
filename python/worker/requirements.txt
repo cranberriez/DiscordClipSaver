@@ -16,3 +16,9 @@ python-dotenv
 
 # Logging and utilities
 python-json-logger
+
+# Async file I/O for storage
+aiofiles
+
+# Optional: Cloud storage (uncomment if using GCS)
+# google-cloud-storage
