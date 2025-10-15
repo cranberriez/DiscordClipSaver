@@ -1,7 +1,18 @@
 "use client";
 
-import { useToggleScanning } from '@/lib/hooks/queries';
-import type { Guild } from '@/lib/db/types';
+import { useToggleScanning } from "@/lib/hooks/queries";
+import type { Guild } from "@/lib/db/types";
+import {
+    Card,
+    CardContent,
+    CardDescription,
+    CardHeader,
+    CardTitle,
+} from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Switch } from "@/components/ui/switch";
+import { Info, Image as ImageIcon } from "lucide-react";
 
 interface GuildHeaderProps {
     guildId: string;
@@ -38,78 +49,59 @@ export default function GuildHeader({
             </div>
 
             {toggleMutation.isError && (
-                <div className="p-3 bg-red-500/10 border border-red-500/20 rounded-lg">
-                    <p className="text-red-400 text-sm">
-                        {toggleMutation.error instanceof Error 
-                            ? toggleMutation.error.message 
-                            : 'Failed to toggle scanning'}
-                    </p>
-                </div>
+                <Card className="border-destructive/50 bg-destructive/10">
+                    <CardContent className="pt-6">
+                        <p className="text-destructive text-sm">
+                            {toggleMutation.error instanceof Error
+                                ? toggleMutation.error.message
+                                : "Failed to toggle scanning"}
+                        </p>
+                    </CardContent>
+                </Card>
             )}
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <InfoCard title="Owner" value={ownerId ?? "Unclaimed"} />
 
-                {/* Message Scanning Card with Toggle */}
-                <div className="p-4 border border-white/20 rounded-lg bg-white/5">
-                    <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                            <div>
-                                <h3 className="text-sm font-medium text-muted-foreground mb-1">
+                {/* Message Scanning Card with Switch */}
+                <Card>
+                    <CardHeader>
+                        <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                                <CardTitle className="text-base">
                                     Message Scanning
-                                </h3>
-                                <p
-                                    className={`text-lg font-semibold ${
-                                        messageScanEnabled
-                                            ? "text-green-500"
-                                            : "text-gray-500"
-                                    }`}
-                                >
-                                    {messageScanEnabled
-                                        ? "Enabled"
-                                        : "Disabled"}
-                                </p>
-                            </div>
-                            <div className="group relative">
-                                <button className="text-gray-400 hover:text-gray-300">
-                                    <svg
-                                        className="w-4 h-4"
-                                        fill="none"
-                                        stroke="currentColor"
-                                        viewBox="0 0 24 24"
-                                    >
-                                        <path
-                                            strokeLinecap="round"
-                                            strokeLinejoin="round"
-                                            strokeWidth={2}
-                                            d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                                        />
-                                    </svg>
-                                </button>
-                                <div className="absolute left-0 bottom-full mb-2 hidden group-hover:block w-64 p-2 bg-gray-900 border border-white/20 rounded text-xs text-gray-300 z-10">
-                                    This only allows scans to happen, it does
-                                    not start them. Use the Scans tab to start
-                                    scanning channels.
+                                </CardTitle>
+                                <div className="group relative">
+                                    <Info className="h-4 w-4 text-muted-foreground cursor-help" />
+                                    <div className="absolute left-0 bottom-full mb-2 hidden group-hover:block w-64 p-2 bg-popover border rounded text-xs text-popover-foreground z-10 shadow-md">
+                                        This only allows scans to happen. Use
+                                        the Scans tab to start scanning
+                                        channels.
+                                    </div>
                                 </div>
                             </div>
+                            <Switch
+                                checked={messageScanEnabled}
+                                onCheckedChange={handleToggle}
+                                disabled={toggleMutation.isPending}
+                            />
                         </div>
-                        <button
-                            onClick={handleToggle}
-                            disabled={toggleMutation.isPending}
-                            className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors ${
-                                messageScanEnabled
-                                    ? "bg-red-600 text-white hover:bg-red-700"
-                                    : "bg-green-600 text-white hover:bg-green-700"
-                            } disabled:opacity-50 disabled:cursor-not-allowed`}
+                    </CardHeader>
+                    <CardContent>
+                        <Badge
+                            variant={
+                                messageScanEnabled ? "default" : "secondary"
+                            }
                         >
-                            {toggleMutation.isPending
-                                ? "Updating..."
-                                : messageScanEnabled
-                                ? "Turn Off"
-                                : "Turn On"}
-                        </button>
-                    </div>
-                </div>
+                            {messageScanEnabled ? "Enabled" : "Disabled"}
+                        </Badge>
+                        {toggleMutation.isPending && (
+                            <p className="text-xs text-muted-foreground mt-2">
+                                Updating...
+                            </p>
+                        )}
+                    </CardContent>
+                </Card>
 
                 <InfoCard
                     title="Last Message Scan"
@@ -142,18 +134,20 @@ export default function GuildHeader({
 function InfoCard({
     title,
     value,
-    valueClass = "text-white",
+    valueClass = "text-foreground",
 }: {
     title: string;
     value: string;
     valueClass?: string;
 }) {
     return (
-        <div className="p-4 border border-white/20 rounded-lg bg-white/5">
-            <h3 className="text-sm font-medium text-muted-foreground mb-1">
-                {title}
-            </h3>
-            <p className={`text-lg font-semibold ${valueClass}`}>{value}</p>
-        </div>
+        <Card>
+            <CardHeader>
+                <CardDescription>{title}</CardDescription>
+            </CardHeader>
+            <CardContent>
+                <p className={`text-lg font-semibold ${valueClass}`}>{value}</p>
+            </CardContent>
+        </Card>
     );
 }

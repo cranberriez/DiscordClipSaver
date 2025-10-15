@@ -46,10 +46,10 @@ export function UserMenu({ user }: UserMenuProps) {
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem
-                    className="text-red-600 focus:text-red-600 cursor-pointer"
+                    className="text-destructive hover:bg-destructive/10 cursor-pointer"
                     onClick={() => signOut()}
                 >
-                    <LogOut className="mr-2 h-4 w-4" />
+                    <LogOut className="mr-2 h-4 w-4 text-destructive" />
                     Sign Out
                 </DropdownMenuItem>
             </DropdownMenuContent>
