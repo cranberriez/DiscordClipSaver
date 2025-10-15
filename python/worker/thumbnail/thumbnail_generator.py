@@ -1,10 +1,14 @@
 """
 Thumbnail generator for video clips
 
-This is a stub implementation that will be expanded later to actually
-generate thumbnails from video URLs.
+Requires ffmpeg to be installed on the system:
+- Docker: Installed via Dockerfile
+- Local: See worker/README.md for platform-specific installation
 """
 import logging
+import os
+import shutil
+from pathlib import Path
 from shared.db.models import Clip
 from shared.storage import get_storage_backend
 
@@ -17,7 +21,51 @@ class ThumbnailGenerator:
     def __init__(self):
         """Initialize the thumbnail generator"""
         self.storage = get_storage_backend()
+        
+        # Find ffmpeg binary (check local installation first, then system PATH)
+        self.ffmpeg_path = self._find_ffmpeg()
+        if not self.ffmpeg_path:
+            logger.error(
+                "FFmpeg not found in local bin/ directory or system PATH. "
+                "See python/worker/README.md for installation instructions."
+            )
+            raise RuntimeError(
+                "FFmpeg is required for thumbnail generation but was not found. "
+                "Install ffmpeg locally (bin/ffmpeg/) or in your system PATH."
+            )
+        
         logger.info(f"ThumbnailGenerator initialized with storage: {type(self.storage).__name__}")
+        logger.info(f"FFmpeg found at: {self.ffmpeg_path}")
+    
+    def _find_ffmpeg(self) -> str | None:
+        """
+        Find ffmpeg binary, checking local installation first, then system PATH.
+        
+        Returns:
+            Path to ffmpeg binary, or None if not found
+        """
+        # Check for local installation in project root
+        # Supports both running from worker/ and from project root
+        project_root = Path(__file__).parent.parent.parent.parent  # Go up to project root
+        local_ffmpeg_paths = [
+            project_root / "bin" / "ffmpeg" / "bin" / "ffmpeg.exe",  # Windows
+            project_root / "bin" / "ffmpeg" / "bin" / "ffmpeg",      # Unix
+            project_root / "bin" / "ffmpeg" / "ffmpeg.exe",          # Windows (alternative)
+            project_root / "bin" / "ffmpeg" / "ffmpeg",              # Unix (alternative)
+        ]
+        
+        for path in local_ffmpeg_paths:
+            if path.exists() and path.is_file():
+                logger.debug(f"Found local ffmpeg at: {path}")
+                return str(path)
+        
+        # Fall back to system PATH
+        system_ffmpeg = shutil.which("ffmpeg")
+        if system_ffmpeg:
+            logger.debug(f"Found system ffmpeg at: {system_ffmpeg}")
+            return system_ffmpeg
+        
+        return None
     
     async def generate_for_clip(self, clip: Clip) -> bool:
         """

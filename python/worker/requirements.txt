@@ -20,5 +20,9 @@ python-json-logger
 # Async file I/O for storage
 aiofiles
 
+# Video processing (requires ffmpeg binary installed on system)
+ffmpeg-python
+Pillow
+
 # Optional: Cloud storage (uncomment if using GCS)
 # google-cloud-storage

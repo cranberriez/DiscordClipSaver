@@ -1,11 +1,10 @@
 FROM python:3.13-slim
 
-# Install system dependencies for video processing (future use)
-# Uncomment when implementing actual thumbnail generation
-# RUN apt-get update && apt-get install -y \
-#     ffmpeg \
-#     libpq-dev \
-#     && rm -rf /var/lib/apt/lists/*
+# Install system dependencies for video processing
+RUN apt-get update && apt-get install -y \
+    ffmpeg \
+    libpq-dev \
+    && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 

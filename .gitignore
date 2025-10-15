@@ -8,3 +8,6 @@
 
 # Vscode
 .vscode/
+
+# Local FFmpeg installation
+bin/ffmpeg/

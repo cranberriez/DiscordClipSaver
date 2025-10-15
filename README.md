@@ -11,8 +11,9 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 ## Prerequisites
 
 -   Python >= 3.12 (<3.14.0, asyncpg has issues with 3.14)
--   Docker (optional)
 -   Node.js >= 20
+-   Docker (optional, recommended for production)
+-   FFmpeg (required for thumbnail generation - see worker README for installation)
 
 Docker or a Postgres and Redis cloud server are required for the bot to function.
 

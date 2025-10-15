@@ -22,12 +22,91 @@ The worker consists of several components:
 
 ## Setup
 
-1. **Install dependencies**:
+1. **Install FFmpeg** (required for thumbnail generation):
+   
+   You can either install FFmpeg **locally in the project** (recommended) or **system-wide**.
+   
+   ### Option A: Local Installation (Recommended)
+   
+   Install FFmpeg in the project's `bin/ffmpeg/` directory. This keeps your system clean and makes the project portable.
+   
+   **Windows:**
+   ```powershell
+   # Manual installation (from project root: DiscordClipSaver/)
+   # 1. Download ffmpeg-release-essentials.zip from https://www.gyan.dev/ffmpeg/builds/
+   # 2. Extract the zip file
+   # 3. Move/rename the extracted folder to: bin/ffmpeg/
+   # 4. Verify you have: bin/ffmpeg/bin/ffmpeg.exe
+   ```
+   
+   **macOS:**
+   ```bash
+   # From project root
+   mkdir -p bin/ffmpeg/bin
+   
+   # Download static build
+   curl -L https://evermeet.cx/ffmpeg/getrelease/ffmpeg/zip -o /tmp/ffmpeg.zip
+   unzip /tmp/ffmpeg.zip -d bin/ffmpeg/bin/
+   chmod +x bin/ffmpeg/bin/ffmpeg
+   ```
+   
+   **Linux:**
+   ```bash
+   # From project root
+   mkdir -p bin/ffmpeg/bin
+   
+   # Download static build
+   wget https://johnvansickle.com/ffmpeg/releases/ffmpeg-release-amd64-static.tar.xz -O /tmp/ffmpeg.tar.xz
+   tar -xf /tmp/ffmpeg.tar.xz -C /tmp/
+   cp /tmp/ffmpeg-*-amd64-static/ffmpeg bin/ffmpeg/bin/
+   chmod +x bin/ffmpeg/bin/ffmpeg
+   ```
+   
+   ### Option B: System-Wide Installation
+   
+   **Windows:**
+   ```powershell
+   # Using winget (recommended)
+   winget install "FFmpeg (Essentials Build)"
+   
+   # OR using Chocolatey
+   choco install ffmpeg
+   ```
+   
+   **macOS:**
+   ```bash
+   brew install ffmpeg
+   ```
+   
+   **Linux (Debian/Ubuntu):**
+   ```bash
+   sudo apt-get update && sudo apt-get install -y ffmpeg
+   ```
+   
+   ### Verify Installation
+   
+   **Local installation:**
+   ```bash
+   # Windows
+   .\bin\ffmpeg\bin\ffmpeg.exe -version
+   
+   # macOS/Linux
+   ./bin/ffmpeg/bin/ffmpeg -version
+   ```
+   
+   **System installation:**
+   ```bash
+   ffmpeg -version
+   ```
+   
+   The worker will automatically detect FFmpeg in `bin/ffmpeg/` first, then fall back to system PATH.
+
+2. **Install Python dependencies**:
    ```bash
    pip install -r requirements.txt
    ```
 
-2. **Configure environment variables** (create `.env` file):
+3. **Configure environment variables** (create `.env` file):
    ```env
    # Discord Bot
    DISCORD_BOT_TOKEN=your_bot_token_here
