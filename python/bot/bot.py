@@ -1,5 +1,6 @@
 import discord
 from bot.services.container import guild_service, channel_service
+from bot.services.scan_service import get_scan_service
 from bot.logger import logger
 
 # ----- Discord bot -----
@@ -16,6 +17,10 @@ async def on_ready():
     
     for guild in bot.guilds:
         await channel_service.sync_channels(bot, guild)
+    
+    # Detect gaps and queue catch-up scans
+    scan_service = get_scan_service()
+    await scan_service.detect_and_queue_gaps(bot)
 
 
 # --- Guild Events ---
@@ -65,7 +70,10 @@ async def on_message(message: discord.Message):
         return
     # Dev visibility
     logger.info("[%s] %s: %s", message.id, message.author, message.content)
-
+    
+    # Handle message scanning (lightweight - just checks for attachments and queues job)
+    scan_service = get_scan_service()
+    await scan_service.handle_new_message(message)
+    
     # TODO: Handle messages from previously unknown channels, fetch single channel and add
-
     # TODO: Handle messages from unknown guilds, fetch single guild and add

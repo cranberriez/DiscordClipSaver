@@ -8,7 +8,7 @@ import signal
 from dotenv import load_dotenv
 from shared.db.utils import init_db, close_db
 from worker.discord.bot import WorkerBot
-from worker.redis.redis_client import RedisStreamClient
+from shared.redis.redis_client import RedisStreamClient
 from worker.processor import JobProcessor
 from worker.thumbnail import ThumbnailGenerator
 
@@ -28,7 +28,12 @@ class Worker:
     
     def __init__(self):
         self.bot = WorkerBot()
-        self.redis = RedisStreamClient()
+        # Initialize Redis as a consumer with consumer group and name
+        self.redis = RedisStreamClient(
+            stream_pattern="*",
+            consumer_group="worker_group",
+            consumer_name="worker_1"  # TODO: Make this unique per worker instance
+        )
         self.processor = None
         self.running = False
         self.shutdown_event = asyncio.Event()

@@ -114,6 +114,123 @@ Controls whether the worker automatically queues continuation jobs:
 
 ---
 
+## Gap Detection on Bot Startup
+
+### The Problem
+
+When the bot restarts, it may have missed messages. How do we detect and fill these gaps?
+
+### Solution: Automatic Gap Detection
+
+**On bot startup (`on_ready` event):**
+
+1. **Query enabled channels:**
+   - Get all guilds with `message_scan_enabled=True`
+   - Get all channels with `message_scan_enabled=True`
+
+2. **For each enabled channel:**
+   - Check `channel_scan_status.forward_message_id` (last known message)
+   - Fetch latest message from Discord channel
+   - Compare IDs
+
+3. **If gap detected:**
+   - Queue a forward `BatchScanJob` with:
+     - `after_message_id` = last known message ID
+     - `auto_continue=True` (scan until caught up)
+     - `direction="forward"`
+
+4. **Result:**
+   - Bot automatically catches up on all missed messages
+   - No manual intervention needed
+   - Happens once per bot restart
+
+### Example Gap Detection Flow
+
+```
+Bot was offline from 10:00 AM to 2:00 PM
+
+Channel scan status:
+  forward_message_id: "1234567890"  (last message at 10:00 AM)
+
+Bot starts at 2:00 PM:
+  Latest message in channel: "1234567999"  (message at 1:45 PM)
+  
+Gap detected! Queue job:
+  {
+    "type": "batch",
+    "direction": "forward",
+    "after_message_id": "1234567890",
+    "auto_continue": true
+  }
+
+Worker processes:
+  - Scans messages from 10:00 AM to 1:45 PM
+  - Updates forward_message_id to "1234567999"
+  - Channel is now caught up
+```
+
+---
+
+## Real-time Message Tracking
+
+### The Problem
+
+When the bot receives new messages in real-time, how do we prevent gap detection from re-scanning them?
+
+### Solution: Worker Updates `forward_message_id`
+
+**For real-time messages (`MessageScanJob`):**
+
+1. Worker processes the message(s)
+2. Worker finds the newest message ID (snowflakes are sortable - larger = newer)
+3. Worker compares with current `forward_message_id`
+4. If newer, updates `forward_message_id`
+
+**Example:**
+```
+Current state:
+  forward_message_id = "1000"
+
+New message arrives: "1005"
+Bot queues MessageScanJob
+
+Worker processes:
+  - Checks: 1005 > 1000? Yes
+  - Updates forward_message_id = "1005"
+
+Bot restarts:
+  - Latest message in channel: "1005"
+  - forward_message_id: "1005"
+  - No gap detected ✅
+```
+
+### Edge Cases Handled
+
+**Case 1: Channel never batch scanned**
+```
+forward_message_id = null
+New message: "100"
+Worker updates forward_message_id = "100"
+Gap detection now works for future messages ✅
+```
+
+**Case 2: Out-of-order messages**
+```
+forward_message_id = "1000"
+Old message processed: "995"
+Worker checks: 995 > 1000? No
+Does NOT update forward_message_id ✅
+```
+
+**Case 3: Multiple messages in one job**
+```
+Message IDs: ["1001", "1003", "1002"]
+Worker finds max: "1003"
+Updates forward_message_id = "1003" ✅
+```
+
+---
+
 ## Bot Message Handling Strategy
 
 ### The Problem

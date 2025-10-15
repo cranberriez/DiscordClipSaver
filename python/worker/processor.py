@@ -14,8 +14,8 @@ from shared.db.repositories.channel_scan_status import (
     update_scan_status,
     increment_scan_counts
 )
-from worker.redis.redis_client import RedisStreamClient
-from worker.redis.redis import BatchScanJob
+from shared.redis.redis_client import RedisStreamClient
+from shared.redis.redis import BatchScanJob
 
 logger = logging.getLogger(__name__)
 
@@ -241,11 +241,21 @@ class JobProcessor:
         logger.info(f"Processing message scan: channel={channel_id}, messages={len(message_ids)}")
         
         try:
+            # Validate guild and channel scan enabled flags
+            is_enabled, error_message = await self.validate_scan_enabled(guild_id, channel_id)
+            
+            if not is_enabled:
+                logger.debug(f"Scan disabled for channel {channel_id}: {error_message}")
+                # Don't update scan status for real-time messages - just skip silently
+                return
+            
             # Fetch the Discord channel
             discord_channel = await self.bot.fetch_channel(int(channel_id))
             
             # Process each message
             total_clips = 0
+            processed_message_ids = []
+            
             for message_id in message_ids:
                 try:
                     # Fetch the specific message
@@ -259,10 +269,30 @@ class JobProcessor:
                         thumbnail_generator=self.thumbnail_generator
                     )
                     total_clips += clips_found
+                    processed_message_ids.append(message_id)
                     
                 except Exception as e:
                     logger.error(f"Failed to process message {message_id}: {e}")
                     continue
+            
+            # Update forward_message_id to the newest message processed
+            # This prevents gap detection from re-scanning these messages
+            if processed_message_ids:
+                # Message IDs are snowflakes - larger = newer
+                newest_message_id = max(processed_message_ids, key=lambda x: int(x))
+                
+                # Get current forward_message_id to compare
+                scan_status = await get_or_create_scan_status(guild_id, channel_id)
+                current_forward_id = scan_status.forward_message_id
+                
+                # Only update if this message is newer than what we have
+                if not current_forward_id or int(newest_message_id) > int(current_forward_id):
+                    await update_scan_status(
+                        guild_id=guild_id,
+                        channel_id=channel_id,
+                        forward_message_id=newest_message_id
+                    )
+                    logger.debug(f"Updated forward_message_id to {newest_message_id} for channel {channel_id}")
             
             logger.info(f"Message scan complete: processed {len(message_ids)} messages, found {total_clips} clips")
             

@@ -14,10 +14,13 @@ class RedisStreamClient:
     """Manages Redis stream for job queue"""
     
     STREAM_PREFIX = "jobs"
-    CONSUMER_GROUP = "worker_group"
-    CONSUMER_NAME = "worker_1"  # Can be made unique per worker instance
     
-    def __init__(self, stream_pattern: str = "*"):
+    def __init__(
+        self, 
+        stream_pattern: str = "*",
+        consumer_group: Optional[str] = None,
+        consumer_name: Optional[str] = None
+    ):
         """
         Initialize Redis stream client
         
@@ -26,10 +29,15 @@ class RedisStreamClient:
                 - "*" = all streams (jobs:*)
                 - "guild:{guild_id}" = specific guild (jobs:guild:123)
                 - "channel:{channel_id}" = specific channel (jobs:channel:456)
+            consumer_group: Consumer group name (required for workers, None for producers like bot)
+            consumer_name: Consumer name (required for workers, None for producers like bot)
         """
         self.client: Optional[redis_async.Redis] = None
         self.connected = False
         self.stream_pattern = stream_pattern
+        self.consumer_group = consumer_group
+        self.consumer_name = consumer_name
+        self.is_consumer = consumer_group is not None and consumer_name is not None
     
     async def connect(self):
         """Connect to Redis"""
@@ -119,15 +127,18 @@ class RedisStreamClient:
         return message_id
     
     async def _ensure_consumer_group(self, stream_name: str):
-        """Ensure consumer group exists for a stream"""
+        """Ensure consumer group exists for a stream (only if this is a consumer)"""
+        if not self.is_consumer:
+            return
+        
         try:
             await self.client.xgroup_create(
                 name=stream_name,
-                groupname=self.CONSUMER_GROUP,
+                groupname=self.consumer_group,
                 id='0',
                 mkstream=True
             )
-            logger.debug(f"Created consumer group '{self.CONSUMER_GROUP}' for stream '{stream_name}'")
+            logger.debug(f"Created consumer group '{self.consumer_group}' for stream '{stream_name}'")
         except redis_async.ResponseError as e:
             if "BUSYGROUP" not in str(e):
                 raise
@@ -156,7 +167,7 @@ class RedisStreamClient:
                 # Get pending messages for this stream
                 pending = await self.client.xpending_range(
                     stream_name,
-                    self.CONSUMER_GROUP,
+                    self.consumer_group,
                     min='-',
                     max='+',
                     count=10
@@ -176,8 +187,8 @@ class RedisStreamClient:
                         # Claim the message
                         claimed = await self.client.xclaim(
                             stream_name,
-                            self.CONSUMER_GROUP,
-                            self.CONSUMER_NAME,
+                            self.consumer_group,
+                            self.consumer_name,
                             min_idle_time=min_idle_time,
                             message_ids=[message_id]
                         )
@@ -219,6 +230,8 @@ class RedisStreamClient:
         First attempts to claim any pending messages (from crashed workers),
         then reads new messages.
         
+        Note: This method requires consumer_group and consumer_name to be set.
+        
         Args:
             count: Number of messages to read
             block: Block time in milliseconds (0 = non-blocking)
@@ -228,6 +241,9 @@ class RedisStreamClient:
         """
         if not self.connected:
             raise RuntimeError("Redis not connected")
+        
+        if not self.is_consumer:
+            raise RuntimeError("read_jobs requires consumer_group and consumer_name to be set")
         
         # Get all streams matching the pattern
         streams = await self._get_matching_streams()
@@ -253,8 +269,8 @@ class RedisStreamClient:
         
         # Read new messages from all matching streams
         messages = await self.client.xreadgroup(
-            groupname=self.CONSUMER_GROUP,
-            consumername=self.CONSUMER_NAME,
+            groupname=self.consumer_group,
+            consumername=self.consumer_name,
             streams=streams_dict,
             count=count,
             block=block
@@ -290,6 +306,8 @@ class RedisStreamClient:
         """
         Acknowledge a job as completed
         
+        Note: This method requires consumer_group to be set.
+        
         Args:
             stream_name: Redis stream name
             message_id: Redis stream message ID
@@ -297,9 +315,12 @@ class RedisStreamClient:
         if not self.connected:
             raise RuntimeError("Redis not connected")
         
+        if not self.is_consumer:
+            raise RuntimeError("acknowledge_job requires consumer_group to be set")
+        
         await self.client.xack(
             stream_name,
-            self.CONSUMER_GROUP,
+            self.consumer_group,
             message_id
         )
         

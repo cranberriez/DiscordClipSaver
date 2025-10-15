@@ -7,8 +7,8 @@ before pushing jobs to Redis.
 import asyncio
 import logging
 from dotenv import load_dotenv
-from worker.redis.redis_client import RedisStreamClient
-from worker.redis.redis import BatchScanJob, MessageScanJob
+from shared.redis.redis_client import RedisStreamClient
+from shared.redis.redis import BatchScanJob, MessageScanJob
 from shared.db.utils import init_db, close_db
 from shared.settings_resolver import get_channel_settings
 from shared.db.models import Guild, Channel
@@ -64,6 +64,7 @@ async def push_test_batch_job():
     # Initialize database
     await init_db()
     
+    # Test pusher is a producer, not a consumer
     redis_client = RedisStreamClient()
     
     try:
@@ -119,6 +120,7 @@ async def push_test_message_job():
     # Initialize database
     await init_db()
     
+    # Test pusher is a producer, not a consumer
     redis_client = RedisStreamClient()
     
     try:

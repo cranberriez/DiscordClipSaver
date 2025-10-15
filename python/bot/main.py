@@ -9,8 +9,10 @@ from dotenv import load_dotenv
 from bot.api import api
 from bot.bot import bot as discord_bot
 from bot.schedules.scheduler import start_scheduler_and_jobs
+from bot.services.scan_service import get_scan_service
 
 from shared.db.utils import init_db, close_db
+from shared.redis.redis_client import RedisStreamClient
 
 load_dotenv()
 
@@ -18,6 +20,18 @@ load_dotenv()
 async def main():
     # Initialize database (async)
     await init_db(generate_schemas=True)
+    
+    # Initialize Redis client for job queue (bot is a producer, not a consumer)
+    redis_client = RedisStreamClient(
+        stream_pattern="*",
+        consumer_group=None,  # Bot doesn't consume jobs
+        consumer_name=None    # Bot only produces jobs
+    )
+    await redis_client.connect()
+    
+    # Configure scan service with Redis client
+    scan_service = get_scan_service(redis_client=redis_client)
+    
     # Start FastAPI (uvicorn) in the background
     config = uvicorn.Config(api, host="0.0.0.0", port=8000, loop="asyncio", log_level="info")
     server = uvicorn.Server(config)
@@ -52,6 +66,10 @@ async def main():
 
         with suppress(asyncio.CancelledError):
             await api_task
+        
+        # Disconnect Redis
+        with suppress(Exception):
+            await redis_client.disconnect()
 
         # Close database connections
         with suppress(Exception):
