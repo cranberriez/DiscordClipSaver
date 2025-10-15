@@ -24,7 +24,7 @@
         // BASIC
         // =========================
 
-        "is_enabled": true, // mirrors is_reading; UI can toggle both together
+        "is_enabled": true, // Whether channels will default to enabled when they are found. This setting does NOT override individual channel message_scan_enabled boolean.
         "scan_mode": "forward", // "forward" = use after:last_message_id; "backfill" = use before
         "max_messages_per_pass": 1000,
         "debounce_ms": 250, // throttle in-memory updates for hot channels

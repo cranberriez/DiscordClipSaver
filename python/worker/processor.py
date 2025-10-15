@@ -8,6 +8,14 @@ from worker.discord.bot import WorkerBot
 from worker.discord.get_message_history import get_message_history
 from worker.discord.get_message import get_message
 from worker.message.message_handler import MessageHandler
+from shared.db.models import Guild, Channel, ScanStatus
+from shared.db.repositories.channel_scan_status import (
+    get_or_create_scan_status,
+    update_scan_status,
+    increment_scan_counts
+)
+from worker.redis.redis_client import RedisStreamClient
+from worker.redis.redis import BatchScanJob
 
 logger = logging.getLogger(__name__)
 
@@ -15,10 +23,40 @@ logger = logging.getLogger(__name__)
 class JobProcessor:
     """Processes jobs from the Redis queue"""
     
-    def __init__(self, bot: WorkerBot, thumbnail_generator=None):
+    def __init__(self, bot: WorkerBot, thumbnail_generator=None, redis_client: Optional[RedisStreamClient] = None):
         self.bot = bot
         self.message_handler = MessageHandler()
         self.thumbnail_generator = thumbnail_generator
+        self.redis_client = redis_client
+    
+    async def validate_scan_enabled(self, guild_id: str, channel_id: str) -> tuple[bool, Optional[str]]:
+        """
+        Validate that both guild and channel have message scanning enabled.
+        
+        Args:
+            guild_id: Discord guild snowflake
+            channel_id: Discord channel snowflake
+            
+        Returns:
+            Tuple of (is_enabled, error_message)
+        """
+        # Check guild scan enabled
+        guild = await Guild.get_or_none(id=str(guild_id))
+        if not guild:
+            return False, "Guild not found in database"
+        
+        if not guild.message_scan_enabled:
+            return False, "Guild scanning disabled"
+        
+        # Check channel scan enabled
+        channel = await Channel.get_or_none(id=str(channel_id))
+        if not channel:
+            return False, "Channel not found in database"
+        
+        if not channel.message_scan_enabled:
+            return False, "Channel scanning disabled for this channel"
+        
+        return True, None
     
     async def process_job(self, job_data: dict):
         """
@@ -54,10 +92,35 @@ class JobProcessor:
         limit = job_data.get("limit", 100)
         before_message_id = job_data.get("before_message_id")
         after_message_id = job_data.get("after_message_id")
+        auto_continue = job_data.get("auto_continue", True)
         
         logger.info(f"Processing batch scan: channel={channel_id}, direction={direction}, limit={limit}")
         
         try:
+            # Get or create scan status
+            scan_status = await get_or_create_scan_status(guild_id, channel_id)
+            
+            # Validate guild and channel scan enabled flags
+            is_enabled, error_message = await self.validate_scan_enabled(guild_id, channel_id)
+            
+            if not is_enabled:
+                logger.warning(f"Scan disabled for channel {channel_id}: {error_message}")
+                await update_scan_status(
+                    guild_id=guild_id,
+                    channel_id=channel_id,
+                    status=ScanStatus.CANCELLED,
+                    error_message=error_message
+                )
+                return
+            
+            # Update status to running
+            await update_scan_status(
+                guild_id=guild_id,
+                channel_id=channel_id,
+                status=ScanStatus.RUNNING,
+                error_message=None
+            )
+            
             # Fetch the Discord channel
             discord_channel = await self.bot.fetch_channel(int(channel_id))
             
@@ -83,10 +146,85 @@ class JobProcessor:
                 )
                 total_clips += clips_found
             
+            # Update scan counts
+            await increment_scan_counts(
+                guild_id=guild_id,
+                channel_id=channel_id,
+                messages_scanned=len(messages),
+                clips_found=total_clips
+            )
+            
+            # Track message IDs for continuation
+            continuation_needed = False
+            if messages:
+                if direction == "backward":
+                    # Oldest message is the last in the list
+                    oldest_message_id = str(messages[-1].id)
+                    await update_scan_status(
+                        guild_id=guild_id,
+                        channel_id=channel_id,
+                        backward_message_id=oldest_message_id
+                    )
+                    # If we got a full batch, there might be more messages
+                    continuation_needed = len(messages) >= limit
+                    
+                elif direction == "forward":
+                    # Newest message is the last in the list
+                    newest_message_id = str(messages[-1].id)
+                    await update_scan_status(
+                        guild_id=guild_id,
+                        channel_id=channel_id,
+                        forward_message_id=newest_message_id
+                    )
+                    # If we got a full batch, there might be more messages
+                    continuation_needed = len(messages) >= limit
+            
+            # Queue continuation job if needed and allowed
+            if continuation_needed and auto_continue and self.redis_client:
+                logger.info(f"Queueing continuation job for channel {channel_id} (direction: {direction})")
+                
+                continuation_job = BatchScanJob(
+                    guild_id=guild_id,
+                    channel_id=channel_id,
+                    direction=direction,
+                    limit=limit,
+                    before_message_id=oldest_message_id if direction == "backward" else before_message_id,
+                    after_message_id=newest_message_id if direction == "forward" else after_message_id,
+                    auto_continue=True  # Preserve auto_continue for continuation jobs
+                )
+                
+                await self.redis_client.push_job(continuation_job.model_dump())
+                
+                # Keep status as RUNNING since continuation is queued
+                await update_scan_status(
+                    guild_id=guild_id,
+                    channel_id=channel_id,
+                    status=ScanStatus.RUNNING
+                )
+            else:
+                # No more messages, auto_continue disabled, or no continuation needed - mark as succeeded
+                await update_scan_status(
+                    guild_id=guild_id,
+                    channel_id=channel_id,
+                    status=ScanStatus.SUCCEEDED
+                )
+                
+                if not auto_continue and continuation_needed:
+                    logger.info(f"Batch scan complete but auto_continue=False, not queueing continuation")
+            
             logger.info(f"Batch scan complete: processed {len(messages)} messages, found {total_clips} clips")
             
         except Exception as e:
             logger.error(f"Batch scan failed for channel {channel_id}: {e}", exc_info=True)
+            
+            # Update status to failed
+            await update_scan_status(
+                guild_id=guild_id,
+                channel_id=channel_id,
+                status=ScanStatus.FAILED,
+                error_message=str(e)
+            )
+            
             raise
     
     async def process_message_scan(self, job_data: dict):

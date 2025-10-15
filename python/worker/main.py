@@ -52,8 +52,12 @@ class Worker:
         # Initialize thumbnail generator
         thumbnail_generator = ThumbnailGenerator()
         
-        # Initialize processor
-        self.processor = JobProcessor(bot=self.bot, thumbnail_generator=thumbnail_generator)
+        # Initialize processor with redis client for job continuation
+        self.processor = JobProcessor(
+            bot=self.bot, 
+            thumbnail_generator=thumbnail_generator,
+            redis_client=self.redis
+        )
         
         logger.info("Worker initialized successfully")
         

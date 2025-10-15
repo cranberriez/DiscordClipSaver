@@ -30,6 +30,8 @@ class BatchScanJob(BaseJob):
     # Starting point for scan (null = start from beginning/end)
     before_message_id: Optional[str] = None  # For backward scan
     after_message_id: Optional[str] = None   # For forward scan
+    # Whether to automatically queue continuation jobs until channel is fully scanned
+    auto_continue: bool = True  # Default to True for historical scans
 
 
 class MessageScanJob(BaseJob):
