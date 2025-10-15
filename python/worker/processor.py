@@ -192,7 +192,7 @@ class JobProcessor:
                     auto_continue=True  # Preserve auto_continue for continuation jobs
                 )
                 
-                await self.redis_client.push_job(continuation_job.model_dump())
+                await self.redis_client.push_job(continuation_job.model_dump(mode='json'))
                 
                 # Keep status as RUNNING since continuation is queued
                 await update_scan_status(

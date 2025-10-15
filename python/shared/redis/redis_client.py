@@ -120,7 +120,9 @@ class RedisStreamClient:
         
         message_id = await self.client.xadd(
             name=stream_name,
-            fields=serialized_data
+            fields=serialized_data,
+            maxlen=100,  # Keep last 100 jobs per stream
+            approximate=True  # More efficient, allows ~10k-10.1k
         )
         
         logger.info(f"Pushed job {job_data.get('job_id', 'unknown')} to stream {stream_name}: {message_id}")
@@ -324,7 +326,10 @@ class RedisStreamClient:
             message_id
         )
         
-        logger.debug(f"Acknowledged job {message_id} from stream {stream_name}")
+        # Also delete the message from the stream to save memory
+        await self.client.xdel(stream_name, message_id)
+        
+        logger.debug(f"Acknowledged and deleted job {message_id} from stream {stream_name}")
     
     async def list_streams(self, guild_id: Optional[str] = None, job_type: Optional[str] = None) -> List[str]:
         """
