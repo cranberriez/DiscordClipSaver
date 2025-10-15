@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { tryGetAuthInfo } from "@/lib/auth";
-import { getSingleGuildById } from "@/lib/db";
-import { bulkUpdateChannelsEnabled } from "@/lib/db/queries/channels";
+import { getSingleGuildById, bulkUpdateChannelsEnabled } from "@/lib/db";
 import { z } from "zod";
 
 const BulkUpdateSchema = z.object({

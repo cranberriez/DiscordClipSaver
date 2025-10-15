@@ -8,9 +8,14 @@ export {
     getGuildsByIds,
     getSingleGuildById,
     setGuildOwnerIfUnclaimed,
+    updateGuildMessageScanEnabled,
 } from "./queries/guilds";
 export {
     getGuildSettings,
     upsertGuildSettings,
     deleteGuildSettings,
 } from "./queries/guild_settings";
+export {
+    getChannelsByGuildId,
+    bulkUpdateChannelsEnabled,
+} from "./queries/channels";

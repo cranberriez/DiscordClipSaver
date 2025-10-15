@@ -46,3 +46,20 @@ export async function setGuildOwnerIfUnclaimed(
     );
     return affected > 0;
 }
+
+/**
+ * Toggle message scanning for a guild
+ */
+export async function updateGuildMessageScanEnabled(
+    guildId: string,
+    enabled: boolean
+): Promise<void> {
+    await getDb()
+        .updateTable("guild")
+        .set({
+            message_scan_enabled: enabled,
+            updated_at: new Date(),
+        })
+        .where("id", "=", guildId)
+        .executeTakeFirst();
+}

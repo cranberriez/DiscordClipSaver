@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { tryGetAuthInfo } from "@/lib/auth";
-import { getSingleGuildById } from "@/lib/db";
-import { getDb } from "@/lib/db/db";
+import { getSingleGuildById, updateGuildMessageScanEnabled } from "@/lib/db";
 import { z } from "zod";
 
 const ToggleSchema = z.object({
@@ -65,14 +64,7 @@ export async function POST(
 
     // Update guild message_scan_enabled
     try {
-        await getDb()
-            .updateTable("guild")
-            .set({
-                message_scan_enabled: enabled,
-                updated_at: new Date(),
-            })
-            .where("id", "=", guildId)
-            .executeTakeFirst();
+        await updateGuildMessageScanEnabled(guildId, enabled);
 
         return NextResponse.json({
             success: true,
