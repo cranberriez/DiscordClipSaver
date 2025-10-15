@@ -3,11 +3,11 @@ import { getSingleGuildById } from "@/lib/db/queries/guilds";
 import { getChannelsByGuildId } from "@/lib/db/queries/channels";
 import { redirect } from "next/navigation";
 import Link from "next/link";
-import ChannelsList from "./ChannelsList";
-import GuildTabs from "./GuildTabs";
-import DynamicSettingsForm from "./DynamicSettingsForm";
-import GuildHeader from "./GuildHeader";
-import { ScansPanel } from "./ScansPanel";
+import ChannelsList from "@/components/guild/ChannelsList";
+import GuildTabs from "@/components/guild/GuildTabs";
+import DynamicSettingsForm from "@/components/guild/DynamicSettingsForm";
+import GuildHeader from "@/components/guild/GuildHeader";
+import { ScansPanel } from "@/components/guild/ScansPanel";
 
 type PageProps = {
     params: Promise<{ guildId: string[] }>;
@@ -110,14 +110,21 @@ export default async function GuildPage({ params }: PageProps) {
                                 <ChannelsList
                                     channels={channels}
                                     guildId={guild.id}
-                                    guildScanEnabled={guild.message_scan_enabled}
+                                    guildScanEnabled={
+                                        guild.message_scan_enabled
+                                    }
                                 />
                             ),
                         },
                         {
                             id: "scans",
                             label: "Scans",
-                            content: <ScansPanel guildId={guild.id} channels={channels} />,
+                            content: (
+                                <ScansPanel
+                                    guildId={guild.id}
+                                    channels={channels}
+                                />
+                            ),
                         },
                         {
                             id: "settings",
