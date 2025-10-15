@@ -8,6 +8,8 @@ export async function getChannelsByGuildId(
         .selectFrom("channel")
         .selectAll()
         .where("guild_id", "=", guildId)
+        // Filter out category and voice channels - they cannot be scanned
+        .where("type", "not in", ["category"])
         .execute();
 
     return channels;
@@ -15,7 +17,7 @@ export async function getChannelsByGuildId(
 
 /**
  * Bulk enable/disable all channels for a guild.
- * 
+ *
  * @param guildId - The guild ID
  * @param enabled - Whether to enable or disable message scanning
  * @returns Number of channels updated

@@ -14,7 +14,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import { Info, RefreshCw, Play, ArrowDown, ArrowUp } from "lucide-react";
+import { Info, RefreshCw, Play, ArrowDown, ArrowUp, AlertCircle } from "lucide-react";
 
 interface ScansPanelProps {
     guildId: string;
@@ -58,6 +58,7 @@ export function ScansPanel({
             totalMessagesScanned:
                 scanStatusMap[channel.id]?.total_messages_scanned || 0,
             updatedAt: scanStatusMap[channel.id]?.updated_at || null,
+            errorMessage: scanStatusMap[channel.id]?.error_message || null,
         }));
     }, [serverChannels, scanStatusMap]);
 
@@ -66,6 +67,9 @@ export function ScansPanel({
     ).length;
     const activeScans = channels.filter(
         ch => ch.status === "RUNNING" || ch.status === "PENDING"
+    ).length;
+    const failedScans = channels.filter(
+        ch => ch.status === "FAILED"
     ).length;
 
     const handleStartScan = (channelId: string) => {
@@ -199,6 +203,11 @@ export function ScansPanel({
                                 <span>
                                     • <strong>{activeScans}</strong> active scans
                                 </span>
+                                {failedScans > 0 && (
+                                    <span className="text-destructive">
+                                        • <strong>{failedScans}</strong> failed
+                                    </span>
+                                )}
                             </div>
                         </div>
                     </div>
@@ -334,14 +343,22 @@ export function ScansPanel({
                                     className="border-t hover:bg-muted/50"
                                 >
                                     <td className="p-3">
-                                        <div className="flex items-center gap-2">
-                                            <span className="font-mono text-sm">
-                                                #{channel.channelName}
-                                            </span>
-                                            {!channel.messageScanEnabled && (
-                                                <Badge variant="destructive" className="text-xs">
-                                                    Disabled
-                                                </Badge>
+                                        <div className="flex flex-col gap-1">
+                                            <div className="flex items-center gap-2">
+                                                <span className="font-mono text-sm">
+                                                    #{channel.channelName}
+                                                </span>
+                                                {!channel.messageScanEnabled && (
+                                                    <Badge variant="destructive" className="text-xs">
+                                                        Disabled
+                                                    </Badge>
+                                                )}
+                                            </div>
+                                            {channel.errorMessage && (
+                                                <div className="flex items-start gap-1.5 text-xs text-destructive">
+                                                    <AlertCircle className="h-3.5 w-3.5 mt-0.5 flex-shrink-0" />
+                                                    <span className="line-clamp-2">{channel.errorMessage}</span>
+                                                </div>
                                             )}
                                         </div>
                                     </td>
