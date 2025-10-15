@@ -44,7 +44,7 @@ async def update_scan_status(
     backward_message_id: Optional[str] = None,
     message_count: Optional[int] = None,
     total_messages_scanned: Optional[int] = None,
-    error_message: Optional[str] = None,
+    error_message: Optional[str] = ...,  # Use sentinel to distinguish None from not provided
 ) -> ChannelScanStatus:
     """
     Update a channel scan status record.
@@ -57,7 +57,7 @@ async def update_scan_status(
         backward_message_id: Oldest message ID scanned going backward
         message_count: Count of messages with clips
         total_messages_scanned: Total messages examined
-        error_message: Error message if failed
+        error_message: Error message if failed (pass None to clear)
         
     Returns:
         Updated ChannelScanStatus instance
@@ -74,7 +74,7 @@ async def update_scan_status(
         scan_status.message_count = message_count
     if total_messages_scanned is not None:
         scan_status.total_messages_scanned = total_messages_scanned
-    if error_message is not None:
+    if error_message is not ...:  # Update if explicitly provided (even if None)
         scan_status.error_message = error_message
     
     await scan_status.save()

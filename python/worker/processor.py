@@ -60,8 +60,9 @@ class JobProcessor:
         if channel.type == ChannelType.CATEGORY:
             return False, "Cannot scan category channels"
         
-        if channel.type == ChannelType.VOICE:
-            return False, "Cannot scan voice channels"
+        # This is fine, voice channels are supported
+        # if channel.type == ChannelType.VOICE:
+        #     return False, "Cannot scan voice channels"
         
         return True, None
     
