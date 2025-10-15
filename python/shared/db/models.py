@@ -205,8 +205,8 @@ class FailedThumbnail(Model):
 class InstallIntent(Model):
     """Short-lived OAuth state for bot installation"""
     id = fields.IntField(auto_increment=True, pk=True)  # auto id
-    user = fields.CharField(max_length=64, indexable=True)  # Discord user snowflake (no FK, just ID)
-    guild = fields.CharField(max_length=64)  # Target guild if known (no FK, just ID)
+    user = fields.ForeignKeyField("models.User", related_name="install_intents", indexable=True)  # User must exist (logged in to interface)
+    guild = fields.CharField(max_length=64)  # Target guild if known (no FK, guild might not exist yet)
     state = fields.TextField()  # OAuth state for verification
     expires_at = fields.DatetimeField()
     created_at = fields.DatetimeField(auto_now_add=True)

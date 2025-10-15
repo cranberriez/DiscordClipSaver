@@ -29,7 +29,7 @@ export async function createInstallIntent(
         .values({
             state: params.state,
             user_id: params.user_id,
-            guild_id: params.guild_id,
+            guild: params.guild,
             expires_at: params.expires_at,
         })
         .returning("expires_at")

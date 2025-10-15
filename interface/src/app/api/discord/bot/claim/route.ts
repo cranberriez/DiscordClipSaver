@@ -22,7 +22,7 @@ export async function GET(req: NextRequest) {
             try {
                 const intent = await consumeInstallIntent({ state });
                 if (intent) {
-                    guildId = intent.guild_id;
+                    guildId = intent.guild;
                 }
             } catch {
                 // ignore cleanup failure; still redirect with error details
@@ -49,7 +49,7 @@ export async function GET(req: NextRequest) {
             { status: 400 }
         );
     }
-    const { guild_id: guildId, user_id: intendedAppUserId } = intent;
+    const { guild, user_id: intendedAppUserId } = intent;
 
     // 2) Exchange code for a USER access token
     const authInfo = await tryGetAuthInfo(req);
@@ -79,13 +79,13 @@ export async function GET(req: NextRequest) {
     }
 
     // 5) Claim ownership if unclaimed
-    if (!guildId) throw new Error("Guild ID is required");
-    const claimed = await setGuildOwnerIfUnclaimed(guildId, appUser.id);
+    if (!guild) throw new Error("Guild ID is required");
+    const claimed = await setGuildOwnerIfUnclaimed(guild, appUser.id);
     if (!claimed) {
         // already claimed
         await consumeInstallIntent({ state }); // still consume it
         return NextResponse.redirect(
-            new URL(`/install?guild=${guildId}&status=already_claimed`, req.url)
+            new URL(`/install?guild=${guild}&status=already_claimed`, req.url)
         );
     }
 
@@ -94,6 +94,6 @@ export async function GET(req: NextRequest) {
 
     // (Optional) You may kick an async check that the bot has joined and update UI later
     return NextResponse.redirect(
-        new URL(`/install?guild=${guildId}&status=ok`, req.url)
+        new URL(`/install?guild=${guild}&status=ok`, req.url)
     );
 }
