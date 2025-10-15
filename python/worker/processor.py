@@ -3,11 +3,12 @@ Job processor for handling different job types
 """
 import logging
 from typing import Optional
+import discord
 from worker.discord.bot import WorkerBot
 from worker.discord.get_message_history import get_message_history
 from worker.discord.get_message import get_message
 from worker.message.message_handler import MessageHandler
-from shared.db.models import Guild, Channel, ScanStatus
+from shared.db.models import Guild, Channel, ScanStatus, ChannelType
 from shared.db.repositories.channel_scan_status import (
     get_or_create_scan_status,
     update_scan_status,
@@ -54,6 +55,13 @@ class JobProcessor:
         
         if not channel.message_scan_enabled:
             return False, "Channel scanning disabled for this channel"
+        
+        # Check if channel type is scannable (not category, voice, etc.)
+        if channel.type == ChannelType.CATEGORY:
+            return False, "Cannot scan category channels"
+        
+        if channel.type == ChannelType.VOICE:
+            return False, "Cannot scan voice channels"
         
         return True, None
     
@@ -121,16 +129,80 @@ class JobProcessor:
             )
             
             # Fetch the Discord channel
-            discord_channel = await self.bot.fetch_channel(int(channel_id))
+            try:
+                discord_channel = await self.bot.fetch_channel(int(channel_id))
+            except discord.Forbidden:
+                error_msg = "Bot does not have permission to access this channel"
+                logger.warning(f"Permission denied for channel {channel_id}: {error_msg}")
+                await update_scan_status(
+                    guild_id=guild_id,
+                    channel_id=channel_id,
+                    status=ScanStatus.FAILED,
+                    error_message=error_msg
+                )
+                return
+            except discord.NotFound:
+                error_msg = "Channel not found or no longer exists"
+                logger.warning(f"Channel {channel_id} not found: {error_msg}")
+                await update_scan_status(
+                    guild_id=guild_id,
+                    channel_id=channel_id,
+                    status=ScanStatus.FAILED,
+                    error_message=error_msg
+                )
+                return
+            except discord.HTTPException as e:
+                error_msg = f"Discord API error: {str(e)}"
+                logger.error(f"HTTP error fetching channel {channel_id}: {error_msg}")
+                await update_scan_status(
+                    guild_id=guild_id,
+                    channel_id=channel_id,
+                    status=ScanStatus.FAILED,
+                    error_message=error_msg
+                )
+                return
+            
+            # Validate channel type supports message history
+            if not hasattr(discord_channel, 'history'):
+                error_msg = f"Channel type '{discord_channel.type}' does not support message scanning"
+                logger.warning(f"Invalid channel type for {channel_id}: {error_msg}")
+                await update_scan_status(
+                    guild_id=guild_id,
+                    channel_id=channel_id,
+                    status=ScanStatus.FAILED,
+                    error_message=error_msg
+                )
+                return
             
             # Fetch message history
-            messages = await get_message_history(
-                channel=discord_channel,
-                limit=limit,
-                before_id=int(before_message_id) if before_message_id else None,
-                after_id=int(after_message_id) if after_message_id else None,
-                direction=direction
-            )
+            try:
+                messages = await get_message_history(
+                    channel=discord_channel,
+                    limit=limit,
+                    before_id=int(before_message_id) if before_message_id else None,
+                    after_id=int(after_message_id) if after_message_id else None,
+                    direction=direction
+                )
+            except discord.Forbidden:
+                error_msg = "Bot does not have permission to read message history in this channel"
+                logger.warning(f"Permission denied reading history for channel {channel_id}: {error_msg}")
+                await update_scan_status(
+                    guild_id=guild_id,
+                    channel_id=channel_id,
+                    status=ScanStatus.FAILED,
+                    error_message=error_msg
+                )
+                return
+            except discord.HTTPException as e:
+                error_msg = f"Discord API error reading history: {str(e)}"
+                logger.error(f"HTTP error reading history for channel {channel_id}: {error_msg}")
+                await update_scan_status(
+                    guild_id=guild_id,
+                    channel_id=channel_id,
+                    status=ScanStatus.FAILED,
+                    error_message=error_msg
+                )
+                return
             
             logger.info(f"Fetched {len(messages)} messages from channel {channel_id}")
             
@@ -198,14 +270,16 @@ class JobProcessor:
                 await update_scan_status(
                     guild_id=guild_id,
                     channel_id=channel_id,
-                    status=ScanStatus.RUNNING
+                    status=ScanStatus.RUNNING,
+                    error_message=None
                 )
             else:
                 # No more messages, auto_continue disabled, or no continuation needed - mark as succeeded
                 await update_scan_status(
                     guild_id=guild_id,
                     channel_id=channel_id,
-                    status=ScanStatus.SUCCEEDED
+                    status=ScanStatus.SUCCEEDED,
+                    error_message=None
                 )
                 
                 if not auto_continue and continuation_needed:
