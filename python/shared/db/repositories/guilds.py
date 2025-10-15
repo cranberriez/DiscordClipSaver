@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Iterable, Any, Optional
+from typing import Iterable, Any
 
 from tortoise.expressions import Q
 
@@ -12,6 +12,7 @@ async def upsert_guilds(snapshots: Iterable[Any]) -> None:
     """Insert or update guilds from snapshot objects.
 
     Each snapshot should have attributes: id (str), name (str), and optional icon (str|None).
+    The icon is already a URL string, not an Asset object.
     """
     for s in snapshots:
         gid = getattr(s, "id")
@@ -22,7 +23,7 @@ async def upsert_guilds(snapshots: Iterable[Any]) -> None:
             id=str(gid),
             defaults={
                 "name": name,
-                "icon_url": icon.url if icon else None,
+                "icon_url": icon,
             },
         )
         if not created:
@@ -32,8 +33,8 @@ async def upsert_guilds(snapshots: Iterable[Any]) -> None:
             if obj.name != name:
                 obj.name = name
                 update_needed = True
-            if obj.icon_url != (icon.url if icon else None):
-                obj.icon_url = icon.url if icon else None
+            if obj.icon_url != icon:
+                obj.icon_url = icon
                 update_needed = True
             if obj.deleted_at is not None:
                 obj.deleted_at = None
