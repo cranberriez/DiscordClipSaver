@@ -7,6 +7,7 @@ import ChannelsList from "./ChannelsList";
 import GuildTabs from "./GuildTabs";
 import DynamicSettingsForm from "./DynamicSettingsForm";
 import GuildHeader from "./GuildHeader";
+import { ScansPanel } from "./ScansPanel";
 
 type PageProps = {
     params: Promise<{ guildId: string[] }>;
@@ -112,6 +113,11 @@ export default async function GuildPage({ params }: PageProps) {
                                     guildScanEnabled={guild.message_scan_enabled}
                                 />
                             ),
+                        },
+                        {
+                            id: "scans",
+                            label: "Scans",
+                            content: <ScansPanel guildId={guild.id} />,
                         },
                         {
                             id: "settings",

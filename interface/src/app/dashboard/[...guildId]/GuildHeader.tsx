@@ -25,16 +25,6 @@ export default function GuildHeader({
     const [error, setError] = useState<string | null>(null);
 
     const handleToggle = async () => {
-        const action = messageScanEnabled ? "disable" : "enable";
-        
-        // Confirmation dialog when enabling
-        if (!messageScanEnabled) {
-            const confirmed = confirm(
-                "Are you sure you want to begin scanning messages in this guild for all enabled channels?"
-            );
-            if (!confirmed) return;
-        }
-
         setToggling(true);
         setError(null);
 
@@ -47,7 +37,7 @@ export default function GuildHeader({
 
             if (!response.ok) {
                 const data = await response.json();
-                throw new Error(data.error || `Failed to ${action} scanning`);
+                throw new Error(data.error || "Failed to toggle scanning");
             }
 
             // Refresh the page to show updated state
@@ -80,19 +70,31 @@ export default function GuildHeader({
                 {/* Message Scanning Card with Toggle */}
                 <div className="p-4 border border-white/20 rounded-lg bg-white/5">
                     <div className="flex items-center justify-between">
-                        <div>
-                            <h3 className="text-sm font-medium text-muted-foreground mb-1">
-                                Message Scanning
-                            </h3>
-                            <p
-                                className={`text-lg font-semibold ${
-                                    messageScanEnabled
-                                        ? "text-green-500"
-                                        : "text-gray-500"
-                                }`}
-                            >
-                                {messageScanEnabled ? "Enabled" : "Disabled"}
-                            </p>
+                        <div className="flex items-center gap-2">
+                            <div>
+                                <h3 className="text-sm font-medium text-muted-foreground mb-1">
+                                    Message Scanning
+                                </h3>
+                                <p
+                                    className={`text-lg font-semibold ${
+                                        messageScanEnabled
+                                            ? "text-green-500"
+                                            : "text-gray-500"
+                                    }`}
+                                >
+                                    {messageScanEnabled ? "Enabled" : "Disabled"}
+                                </p>
+                            </div>
+                            <div className="group relative">
+                                <button className="text-gray-400 hover:text-gray-300">
+                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                    </svg>
+                                </button>
+                                <div className="absolute left-0 bottom-full mb-2 hidden group-hover:block w-64 p-2 bg-gray-900 border border-white/20 rounded text-xs text-gray-300 z-10">
+                                    This only allows scans to happen, it doesn't start them. Use the Scans tab to start scanning channels.
+                                </div>
+                            </div>
                         </div>
                         <button
                             onClick={handleToggle}
