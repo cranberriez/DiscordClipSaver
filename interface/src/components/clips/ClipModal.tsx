@@ -9,6 +9,7 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { VideoPlayer } from "./VideoPlayer";
 import type { Clip, Message, Thumbnail } from "@/lib/db/types";
 
 interface ClipWithMetadata extends Clip {
@@ -86,26 +87,35 @@ export function ClipModal({ clip, onClose }: ClipModalProps) {
                     <div className="relative">
                         {isExpired ? (
                             <div className="aspect-video bg-muted rounded-lg flex flex-col items-center justify-center gap-4">
-                                <p className="text-muted-foreground">
-                                    Video URL has expired
+                                <p className="text-muted-foreground text-center px-4">
+                                    Video cannot be played
                                 </p>
-                                <Button
-                                    onClick={refreshCdnUrl}
-                                    disabled={refreshing}
-                                >
-                                    {refreshing ? "Refreshing..." : "Refresh URL"}
-                                </Button>
+                                <p className="text-sm text-muted-foreground text-center px-4">
+                                    This may be due to an expired URL or unsupported video codec (HEVC/H.265).
+                                </p>
+                                <div className="flex gap-2">
+                                    <Button
+                                        onClick={refreshCdnUrl}
+                                        disabled={refreshing}
+                                        variant="outline"
+                                    >
+                                        {refreshing ? "Refreshing..." : "Refresh URL"}
+                                    </Button>
+                                    <Button
+                                        onClick={() => window.open(videoUrl, '_blank')}
+                                        variant="default"
+                                    >
+                                        Download Video
+                                    </Button>
+                                </div>
                             </div>
                         ) : (
-                            <video
-                                controls
-                                className="w-full rounded-lg"
+                            <VideoPlayer
+                                src={videoUrl}
                                 poster={getLargeThumbnail() || undefined}
-                                preload="metadata"
-                            >
-                                <source src={videoUrl} type={clip.mime_type} />
-                                Your browser does not support the video tag.
-                            </video>
+                                title={clip.filename}
+                                onError={() => setIsExpired(true)}
+                            />
                         )}
                     </div>
 

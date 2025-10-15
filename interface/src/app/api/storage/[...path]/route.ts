@@ -24,8 +24,16 @@ export async function GET(
     const storagePath = process.env.STORAGE_PATH || join(process.cwd(), "storage");
     const fullPath = join(storagePath, filePath);
     
+    console.log("Storage request:", {
+        requestedPath: filePath,
+        storagePath,
+        fullPath,
+        exists: existsSync(fullPath),
+    });
+    
     // Security: Ensure the resolved path is within storage directory
     if (!fullPath.startsWith(storagePath)) {
+        console.error("Path traversal attempt:", fullPath);
         return NextResponse.json(
             { error: "Invalid path" },
             { status: 400 }
@@ -34,8 +42,9 @@ export async function GET(
     
     // Check if file exists
     if (!existsSync(fullPath)) {
+        console.error("File not found:", fullPath);
         return NextResponse.json(
-            { error: "File not found" },
+            { error: "File not found", path: fullPath },
             { status: 404 }
         );
     }
