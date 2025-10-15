@@ -16,8 +16,15 @@ export async function upsertUser(params: NewUser): Promise<User> {
     return getDb()
         .insertInto("user")
         .values(newUser)
+        .onConflict((oc) =>
+            oc.column("id").doUpdateSet({
+                username: newUser.username,
+                discriminator: newUser.discriminator,
+                avatar_url: newUser.avatar_url,
+            })
+        )
         .returningAll()
-        .executeTakeFirstOrThrow(); // it SHOULD return the inserted row, throwing is good :)
+        .executeTakeFirstOrThrow();
 }
 
 export async function updateUser(params: UserUpdate): Promise<User> {
