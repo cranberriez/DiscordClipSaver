@@ -47,7 +47,9 @@ export function useScanStatuses(guildId: string) {
         select: (data) => data.statuses,
         // Smart polling: only poll when scans are running
         refetchInterval: (query) => {
-            const statuses = query.state.data as ChannelScanStatus[] | undefined;
+            // query.state.data is the raw API response before select transform
+            const data = query.state.data as { statuses: ChannelScanStatus[] } | undefined;
+            const statuses = data?.statuses;
             const hasRunningScans = statuses?.some(
                 (s) => s.status === 'RUNNING' || s.status === 'PENDING'
             );
@@ -84,7 +86,9 @@ export function useChannelScanStatus(guildId: string, channelId: string) {
         select: (data) => data.status,
         // Poll if scan is running
         refetchInterval: (query) => {
-            const status = query.state.data as ChannelScanStatus | null | undefined;
+            // query.state.data is the raw API response before select transform
+            const data = query.state.data as { status: ChannelScanStatus | null } | undefined;
+            const status = data?.status;
             const isRunning = status?.status === 'RUNNING' || status?.status === 'PENDING';
             return isRunning ? 5000 : false;
         },
