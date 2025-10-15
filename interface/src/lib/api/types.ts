@@ -33,6 +33,13 @@ export interface ToggleScanningResponse {
 // ============================================================================
 
 /**
+ * Response from GET /api/guilds/[guildId]/channels
+ */
+export interface ChannelsListResponse {
+    channels: Channel[];
+}
+
+/**
  * Response from POST /api/guilds/[guildId]/channels/bulk
  */
 export interface BulkUpdateChannelsResponse {

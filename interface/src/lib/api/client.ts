@@ -9,6 +9,7 @@ import { signOut } from 'next-auth/react';
 import type {
     GuildsListResponse,
     ToggleScanningResponse,
+    ChannelsListResponse,
     ScanStatusesResponse,
     SingleScanStatusResponse,
     GuildSettingsResponse,
@@ -121,10 +122,12 @@ export const api = {
     channels: {
         /**
          * Get all channels for a guild
-         * Note: No API route exists - use getChannelsByGuildId() directly in Server Components
-         * For Client Components, you'll need to create a GET route or pass data as props
+         * GET /api/guilds/[guildId]/channels
          */
-        // list: Not implemented as API route
+        list: (guildId: string) =>
+            apiRequest<ChannelsListResponse>(
+                `/api/guilds/${guildId}/channels`
+            ),
 
         /**
          * Bulk enable/disable all channels for a guild
