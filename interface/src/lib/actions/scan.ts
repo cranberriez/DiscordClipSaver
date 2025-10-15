@@ -25,12 +25,6 @@ export async function startChannelScan(
     }
 ): Promise<ScanResult> {
     try {
-        console.log("startChannelScan called with:", {
-            guildId,
-            channelId,
-            options,
-        });
-
         // Validate guild exists
         const guild = await getSingleGuildById(guildId);
         if (!guild) {
@@ -39,20 +33,11 @@ export async function startChannelScan(
 
         // Get all channels for this guild
         const channels = await getChannelsByGuildId(guildId);
-        console.log(
-            "All channels in guild:",
-            channels.map(c => ({ id: c.id, name: c.name }))
-        );
 
         // Find the specific channel
         const channel = channels.find(c => c.id === channelId);
-        console.log("Channel query result:", channel);
 
         if (!channel) {
-            console.log("Channel not found - query params:", {
-                channelId,
-                guildId,
-            });
             return { success: false, error: "Channel not found" };
         }
 

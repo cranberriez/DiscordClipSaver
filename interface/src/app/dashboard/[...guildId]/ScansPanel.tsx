@@ -45,22 +45,6 @@ export function ScansPanel({
         }));
     }, [serverChannels, scanStatusMap]);
 
-    // Debug logging
-    console.log("ScansPanel Debug:", {
-        guildId,
-        serverChannelsLength: serverChannels.length,
-        channelsLength: channels.length,
-        scanStatusesCount: scanStatuses.length,
-        channels,
-        serverChannels: serverChannels.map(ch => ({
-            id: ch.id,
-            name: ch.name,
-            message_scan_enabled: ch.message_scan_enabled,
-        })),
-        loading,
-        error,
-    });
-
     const unscannedCount = channels.filter(
         ch => !ch.status && ch.messageScanEnabled
     ).length;
@@ -69,7 +53,6 @@ export function ScansPanel({
     ).length;
 
     const handleStartScan = (channelId: string) => {
-        console.log("Starting scan for channel:", channelId);
         startScanMutation.mutate({
             channelId,
             options: {
