@@ -10,9 +10,9 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## Prerequisites
 
-- Python >= 3.12 (<3.14.0, asyncpg has issues with 3.14)
-- Docker (optional)
-- Node.js >= 20
+-   Python >= 3.12 (<3.14.0, asyncpg has issues with 3.14)
+-   Docker (optional)
+-   Node.js >= 20
 
 Docker or a Postgres and Redis cloud server are required for the bot to function.
 
@@ -37,9 +37,10 @@ At the time of writing this, some functionality is tied to the interface calling
 
 1. (optional) create a virtual environment with `python -m venv venv` in the /python folder and activate it with `venv\Scripts\activate` or `source venv/bin/activate` on Linux
 2. Navigate to the bot folder with `cd /python/bot`
-3. Install the shared module with `pip install -e ../shared`
-4. Install the bot's dependencies with `pip install -r requirements.txt`
-5. Run the bot with `python main.py`
+3. Install the bot's dependencies with `pip install -r requirements.txt`
+   TODO: MAKE THIS BETTER
+4. Navigate back to python folder with `cd ..`
+5. Run the bot in module mode with `python -m bot.main`
 
 ### Interface
 
