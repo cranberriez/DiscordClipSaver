@@ -9,6 +9,8 @@
         "lint": "eslint"
     },
     "dependencies": {
+        "@tanstack/react-query": "^5.90.3",
+        "@tanstack/react-query-devtools": "^5.90.2",
         "ioredis": "^5.8.1",
         "kysely": "^0.28.8",
         "next": "15.5.4",
@@ -17,7 +19,8 @@
         "react": "19.1.0",
         "react-dom": "19.1.0",
         "typescript": "^5",
-        "zod": "^4.1.12"
+        "zod": "^4.1.12",
+        "zustand": "^5.0.8"
     },
     "devDependencies": {
         "@eslint/eslintrc": "^3",
