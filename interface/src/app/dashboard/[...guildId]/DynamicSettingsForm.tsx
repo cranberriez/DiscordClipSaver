@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useGuildSettings } from "@/app/hooks/useGuildSettings";
+import { useGuildSettings } from "@/lib/hooks/useGuildSettings";
 import {
     GuildSettingsSchema,
     DefaultChannelSettingsSchema,

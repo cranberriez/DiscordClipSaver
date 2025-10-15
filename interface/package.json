@@ -9,6 +9,7 @@
         "lint": "eslint"
     },
     "dependencies": {
+        "ioredis": "^5.8.1",
         "kysely": "^0.28.8",
         "next": "15.5.4",
         "next-auth": "^4.24.11",

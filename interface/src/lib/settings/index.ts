@@ -17,4 +17,4 @@ export {
 export {
     useGuildSettings,
     type UseGuildSettingsReturn,
-} from "../../app/hooks/useGuildSettings";
+} from "../hooks/useGuildSettings";

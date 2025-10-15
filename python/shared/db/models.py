@@ -9,11 +9,11 @@ from enum import Enum
 
 class ScanStatus(str, Enum):
     """Status of message scanning for a channel"""
-    QUEUED = "queued"
-    RUNNING = "running"
-    SUCCEEDED = "succeeded"
-    FAILED = "failed"
-    CANCELLED = "cancelled"
+    QUEUED = "QUEUED"
+    RUNNING = "RUNNING"
+    SUCCEEDED = "SUCCEEDED"
+    FAILED = "FAILED"
+    CANCELLED = "CANCELLED"
 
 
 class ChannelType(str, Enum):
