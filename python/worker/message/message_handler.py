@@ -5,7 +5,7 @@ import hashlib
 import json
 import uuid
 from datetime import datetime, timedelta, timezone
-from shared.db.models import Message, Clip, FailedThumbnail
+from shared.db.models import Message, Clip, FailedThumbnail, User
 from shared.settings_resolver import get_channel_settings, ResolvedSettings
 import discord
 import logging
@@ -56,11 +56,22 @@ class MessageHandler:
         if not video_attachments:
             return 0
         
+        # Create or update user record (message author)
+        author = discord_message.author
+        await User.update_or_create(
+            id=str(author.id),
+            defaults={
+                "username": author.name,
+                "discriminator": author.discriminator or "0",  # Discord removed discriminators, default to "0"
+                "avatar_url": str(author.display_avatar.url) if author.display_avatar else None
+            }
+        )
+        
         # Create or update message record
         message_data = {
             "channel_id": channel_id,
             "guild_id": guild_id,
-            "author_id": str(discord_message.author.id),
+            "author_id": str(author.id),
             "timestamp": discord_message.created_at
         }
         

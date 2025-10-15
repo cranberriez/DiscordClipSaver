@@ -135,7 +135,7 @@ class Message(Model):
     id = fields.CharField(max_length=64, indexable=True, pk=True)  # Discord message snowflake
     guild = fields.ForeignKeyField("models.Guild", related_name="messages", indexable=True)
     channel = fields.ForeignKeyField("models.Channel", related_name="messages", indexable=True)
-    author_id = fields.CharField(max_length=64)  # Discord user snowflake
+    author = fields.ForeignKeyField("models.User", related_name="messages", indexable=True)  # Message author
     content = fields.TextField(null=True)
     timestamp = fields.DatetimeField()  # Discord message timestamp
     deleted_at = fields.DatetimeField(null=True)  # Soft delete when message removed from Discord
