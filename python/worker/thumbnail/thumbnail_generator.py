@@ -82,7 +82,7 @@ class ThumbnailGenerator:
         
         return None
     
-    async def generate_for_clip(self, clip: Clip, timestamp: float = None) -> Tuple[str, str]:
+    async def generate_for_clip(self, clip: Clip, timestamp: float = None) -> Tuple[str, str, dict]:
         """
         Generate small and large thumbnails for a clip
         
@@ -91,7 +91,8 @@ class ThumbnailGenerator:
             timestamp: Time in seconds to extract frame from (default: from env or 1.0)
             
         Returns:
-            Tuple of (small_thumbnail_path, large_thumbnail_path)
+            Tuple of (small_thumbnail_path, large_thumbnail_path, video_metadata)
+            video_metadata contains: mime_type, duration, resolution, etc.
         """
         if timestamp is None:
             timestamp = THUMBNAIL_TIMESTAMP
@@ -113,6 +114,11 @@ class ThumbnailGenerator:
             # Log actual file size
             actual_size = os.path.getsize(temp_video)
             logger.info(f"  Downloaded {actual_size:,} bytes ({actual_size / 1024 / 1024:.2f} MB)")
+            
+            # Probe video to get metadata (MIME type, duration, resolution)
+            logger.info(f"  Probing video metadata...")
+            video_metadata = await self._probe_video(temp_video)
+            logger.info(f"  Video metadata: {video_metadata}")
             
             # Extract frame
             logger.info(f"  Extracting frame at {timestamp}s...")
@@ -155,7 +161,7 @@ class ThumbnailGenerator:
             
             logger.info(f"  Thumbnail generation complete")
             
-            return (small_storage_path, large_storage_path)
+            return (small_storage_path, large_storage_path, video_metadata)
             
         except Exception as e:
             logger.error(f"Failed to generate thumbnail for clip {clip.id}: {e}", exc_info=True)
@@ -197,6 +203,104 @@ class ThumbnailGenerator:
                 logger.debug(f"Downloaded {bytes_downloaded:,} bytes (full file)")
         
         return temp_path
+    
+    async def _probe_video(self, video_path: str) -> dict:
+        """
+        Probe video file to extract metadata using ffmpeg
+        
+        Args:
+            video_path: Path to video file
+            
+        Returns:
+            Dictionary with mime_type, duration, resolution, codec info
+        """
+        try:
+            probe = ffmpeg.probe(video_path, cmd=self.ffmpeg_path.replace('ffmpeg', 'ffprobe'))
+            
+            # Extract video stream info
+            video_stream = next((s for s in probe['streams'] if s['codec_type'] == 'video'), None)
+            format_info = probe.get('format', {})
+            
+            # Determine MIME type from codec and format
+            codec_name = video_stream.get('codec_name', '') if video_stream else ''
+            format_name = format_info.get('format_name', '')
+            
+            mime_type = self._get_mime_type_from_codec(codec_name, format_name)
+            
+            # Extract duration (prefer stream duration, fallback to format duration)
+            duration = None
+            if video_stream and 'duration' in video_stream:
+                duration = float(video_stream['duration'])
+            elif 'duration' in format_info:
+                duration = float(format_info['duration'])
+            
+            # Extract resolution
+            resolution = None
+            if video_stream:
+                width = video_stream.get('width')
+                height = video_stream.get('height')
+                if width and height:
+                    resolution = f"{width}x{height}"
+            
+            return {
+                'mime_type': mime_type,
+                'duration': duration,
+                'resolution': resolution,
+                'codec': codec_name,
+                'format': format_name,
+            }
+            
+        except Exception as e:
+            logger.warning(f"Failed to probe video: {e}")
+            # Return defaults if probing fails
+            return {
+                'mime_type': 'video/mp4',
+                'duration': None,
+                'resolution': None,
+                'codec': None,
+                'format': None,
+            }
+    
+    def _get_mime_type_from_codec(self, codec: str, format_name: str) -> str:
+        """
+        Determine MIME type from codec and format information
+        
+        Args:
+            codec: Video codec name (e.g., 'h264', 'vp9')
+            format_name: Container format (e.g., 'mov,mp4,m4a', 'webm')
+            
+        Returns:
+            MIME type string
+        """
+        format_lower = format_name.lower()
+        
+        # Check codec first for better accuracy
+        # H.264/H.265 codecs are typically MP4, not QuickTime
+        if codec in ['h264', 'h265', 'hevc', 'mpeg4', 'avc1']:
+            # Even if format says "mov", these codecs indicate MP4
+            return 'video/mp4'
+        elif codec in ['vp8', 'vp9']:
+            return 'video/webm'
+        
+        # Check format for specific containers
+        if 'webm' in format_lower:
+            return 'video/webm'
+        elif 'matroska' in format_lower or 'mkv' in format_lower:
+            return 'video/x-matroska'
+        elif 'avi' in format_lower:
+            return 'video/x-msvideo'
+        elif 'flv' in format_lower:
+            return 'video/x-flv'
+        
+        # For mov,mp4 combo format (common from Discord):
+        # Prefer mp4 over quicktime for web compatibility
+        if 'mp4' in format_lower:
+            return 'video/mp4'
+        elif 'mov' in format_lower or 'quicktime' in format_lower:
+            return 'video/quicktime'
+        
+        # Default to mp4 (most common)
+        return 'video/mp4'
     
     async def _extract_frame(self, video_path: str, timestamp: float) -> str:
         """

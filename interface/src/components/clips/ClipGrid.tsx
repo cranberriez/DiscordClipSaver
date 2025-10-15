@@ -16,8 +16,9 @@ export function ClipGrid({ clips, onClipClick }: ClipGridProps) {
     const getThumbnailUrl = (clip: ClipWithMetadata): string | null => {
         const smallThumb = clip.thumbnails.find((t) => t.size_type === "small");
         if (smallThumb) {
-            // storage_path already includes the full path (e.g., "thumbnails/guild_xxx/file.webp")
-            return `/${smallThumb.storage_path}`;
+            // Use API route to serve thumbnails from storage
+            // storage_path is like "thumbnails/guild_xxx/file.webp"
+            return `/api/storage/${smallThumb.storage_path}`;
         }
         return null;
     };

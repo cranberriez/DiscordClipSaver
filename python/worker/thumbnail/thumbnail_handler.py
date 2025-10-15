@@ -50,8 +50,8 @@ class ThumbnailHandler:
             # Update status to processing
             await clip.update_from_dict({"thumbnail_status": "processing"}).save()
             
-            # Generate thumbnails
-            small_path, large_path = await self.generator.generate_for_clip(clip)
+            # Generate thumbnails and extract video metadata
+            small_path, large_path, video_metadata = await self.generator.generate_for_clip(clip)
             
             # Get file sizes for database records
             small_full_path = os.path.join(
@@ -94,8 +94,25 @@ class ThumbnailHandler:
                 }
             )
             
-            # Update clip status to completed
-            await clip.update_from_dict({"thumbnail_status": "completed"}).save()
+            # Update clip with video metadata and mark thumbnails as completed
+            update_data = {"thumbnail_status": "completed"}
+            
+            # Update MIME type if we got better info from ffmpeg probe
+            if video_metadata.get('mime_type'):
+                update_data['mime_type'] = video_metadata['mime_type']
+            
+            # Update duration if available and not already set
+            if video_metadata.get('duration') and not clip.duration:
+                update_data['duration'] = video_metadata['duration']
+            
+            # Update resolution if available and not already set
+            if video_metadata.get('resolution') and not clip.resolution:
+                update_data['resolution'] = video_metadata['resolution']
+            
+            await clip.update_from_dict(update_data).save()
+            
+            logger.info(f"Updated clip metadata: mime_type={update_data.get('mime_type')}, "
+                       f"duration={update_data.get('duration')}, resolution={update_data.get('resolution')}")
             
             logger.info(f"Successfully processed thumbnails for clip {clip.id}")
             logger.info(f"  Small: {small_path} ({small_size:,} bytes)")

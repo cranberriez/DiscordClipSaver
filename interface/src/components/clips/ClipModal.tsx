@@ -67,8 +67,9 @@ export function ClipModal({ clip, onClose }: ClipModalProps) {
     const getLargeThumbnail = (): string | null => {
         const largeThumb = clip.thumbnails.find((t) => t.size_type === "large");
         if (largeThumb) {
-            // storage_path already includes the full path (e.g., "thumbnails/guild_xxx/file.webp")
-            return `/${largeThumb.storage_path}`;
+            // Use API route to serve thumbnails from storage
+            // storage_path is like "thumbnails/guild_xxx/file.webp"
+            return `/api/storage/${largeThumb.storage_path}`;
         }
         return null;
     };

@@ -53,6 +53,8 @@ services:
         volumes:
             # Optional: mount local settings file to the same in-container path used by the image
             - ./settings.default.json:/app/settings.default.json:ro
+            # Share worker storage volume to serve thumbnails
+            - worker_storage:/app/storage:ro
 
     dcs-postgres:
         image: postgres:16-alpine

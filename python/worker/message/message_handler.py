@@ -19,6 +19,23 @@ class MessageHandler:
         """Initialize message handler with thumbnail handler"""
         self.thumbnail_handler = ThumbnailHandler()
     
+    def _guess_mime_type(self, filename: str) -> str:
+        """
+        Guess MIME type from filename extension.
+        Fallback for when Discord doesn't provide content_type.
+        """
+        ext = filename.lower().split('.')[-1]
+        mime_types = {
+            'mp4': 'video/mp4',
+            'webm': 'video/webm',
+            'mov': 'video/quicktime',
+            'avi': 'video/x-msvideo',
+            'mkv': 'video/x-matroska',
+            'flv': 'video/x-flv',
+            'm4v': 'video/x-m4v',
+        }
+        return mime_types.get(ext, 'video/mp4')  # Default to mp4
+    
     async def process_message(
         self,
         discord_message: discord.Message,
@@ -143,7 +160,7 @@ class MessageHandler:
                 "guild_id": guild_id,
                 "filename": attachment.filename,
                 "file_size": attachment.size,
-                "mime_type": attachment.content_type,
+                "mime_type": attachment.content_type or self._guess_mime_type(attachment.filename),
                 "cdn_url": attachment.url,
                 "expires_at": expires_at,
                 "thumbnail_status": "pending",
