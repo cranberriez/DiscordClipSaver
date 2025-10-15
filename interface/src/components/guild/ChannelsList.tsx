@@ -1,7 +1,8 @@
 "use client";
 
-import { useBulkUpdateChannels } from '@/lib/hooks/queries';
+import { useBulkUpdateChannels, useGuild, useChannels } from "@/lib/hooks/queries";
 import type { Channel } from "@/lib/db/types";
+import { Button } from "@/components/ui/button";
 
 type ChannelsListProps = {
     channels: Channel[];
@@ -10,14 +11,23 @@ type ChannelsListProps = {
 };
 
 export default function ChannelsList({
-    channels,
+    channels: initialChannels,
     guildId,
-    guildScanEnabled,
+    guildScanEnabled: initialGuildScanEnabled,
 }: ChannelsListProps) {
     const bulkUpdateMutation = useBulkUpdateChannels(guildId);
 
-    const enabledCount = channels.filter(c => c.message_scan_enabled).length;
-    const allEnabled = enabledCount === channels.length;
+    // Track live guild state from React Query cache
+    const { data: guild } = useGuild(guildId);
+    const guildScanEnabled =
+        guild?.message_scan_enabled ?? initialGuildScanEnabled;
+
+    // Track live channels state from React Query cache
+    const { data: channels } = useChannels(guildId, initialChannels);
+    const channelsList = channels ?? initialChannels;
+
+    const enabledCount = channelsList.filter(c => c.message_scan_enabled).length;
+    const allEnabled = enabledCount === channelsList.length;
     const allDisabled = enabledCount === 0;
 
     const handleBulkToggle = (enabled: boolean) => {
@@ -29,28 +39,38 @@ export default function ChannelsList({
             {/* Channel Controls */}
             <div className="flex items-center justify-between mb-3">
                 <h2 className="text-xl font-semibold">
-                    Channels ({channels.length})
+                    Channels ({channelsList.length})
                     <span className="text-sm text-muted-foreground ml-2">
                         {enabledCount} enabled
                     </span>
                 </h2>
 
-                {channels.length > 0 && (
+                {channelsList.length > 0 && (
                     <div className="flex gap-2">
-                        <button
+                        <Button
                             onClick={() => handleBulkToggle(true)}
-                            disabled={bulkUpdateMutation.isPending || allEnabled}
-                            className="px-4 py-2 text-sm bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:bg-gray-600 disabled:cursor-not-allowed transition-colors"
+                            disabled={
+                                bulkUpdateMutation.isPending || allEnabled
+                            }
+                            size="sm"
+                            variant="ghost"
                         >
-                            {bulkUpdateMutation.isPending ? "Updating..." : "Enable All"}
-                        </button>
-                        <button
+                            {bulkUpdateMutation.isPending
+                                ? "Updating..."
+                                : "Enable All"}
+                        </Button>
+                        <Button
                             onClick={() => handleBulkToggle(false)}
-                            disabled={bulkUpdateMutation.isPending || allDisabled}
-                            className="px-4 py-2 text-sm bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:bg-gray-600 disabled:cursor-not-allowed transition-colors"
+                            disabled={
+                                bulkUpdateMutation.isPending || allDisabled
+                            }
+                            size="sm"
+                            variant="ghost"
                         >
-                            {bulkUpdateMutation.isPending ? "Updating..." : "Disable All"}
-                        </button>
+                            {bulkUpdateMutation.isPending
+                                ? "Updating..."
+                                : "Disable All"}
+                        </Button>
                     </div>
                 )}
             </div>
@@ -60,18 +80,18 @@ export default function ChannelsList({
                     <p className="text-red-400 text-sm">
                         {bulkUpdateMutation.error instanceof Error
                             ? bulkUpdateMutation.error.message
-                            : 'Failed to update channels'}
+                            : "Failed to update channels"}
                     </p>
                 </div>
             )}
 
-            {channels.length === 0 ? (
+            {channelsList.length === 0 ? (
                 <p className="text-muted-foreground">
                     No channels found for this guild.
                 </p>
             ) : (
                 <div className="space-y-2">
-                    {channels.map(channel => (
+                    {channelsList.map(channel => (
                         <ChannelItem
                             key={channel.id}
                             channel={channel}

@@ -83,31 +83,33 @@ export function useBulkUpdateChannels(guildId: string) {
             // Cancel outgoing refetches
             await queryClient.cancelQueries({ queryKey: guildKeys.channels(guildId) });
 
-            // Snapshot previous value
-            const previousChannels = queryClient.getQueryData<Channel[]>(
+            // Snapshot previous value - the cache stores { channels: [...] } before select transform
+            const previousData = queryClient.getQueryData<{ channels: Channel[] }>(
                 guildKeys.channels(guildId)
             );
 
             // Optimistically update all channels
-            if (previousChannels) {
-                queryClient.setQueryData<Channel[]>(
+            if (previousData?.channels) {
+                queryClient.setQueryData<{ channels: Channel[] }>(
                     guildKeys.channels(guildId),
-                    previousChannels.map(channel => ({
-                        ...channel,
-                        message_scan_enabled: enabled,
-                    }))
+                    {
+                        channels: previousData.channels.map(channel => ({
+                            ...channel,
+                            message_scan_enabled: enabled,
+                        }))
+                    }
                 );
             }
 
-            return { previousChannels };
+            return { previousData };
         },
 
         // Rollback on error
         onError: (err, variables, context) => {
-            if (context?.previousChannels) {
+            if (context?.previousData) {
                 queryClient.setQueryData(
                     guildKeys.channels(guildId),
-                    context.previousChannels
+                    context.previousData
                 );
             }
         },

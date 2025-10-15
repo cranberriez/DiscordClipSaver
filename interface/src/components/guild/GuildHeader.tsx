@@ -1,6 +1,6 @@
 "use client";
 
-import { useToggleScanning } from "@/lib/hooks/queries";
+import { useToggleScanning, useGuild } from "@/lib/hooks/queries";
 import type { Guild } from "@/lib/db/types";
 import {
     Card,
@@ -12,7 +12,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
-import { Info, Image as ImageIcon } from "lucide-react";
+import { Info, Scan, CheckCircle2, XCircle } from "lucide-react";
 
 interface GuildHeaderProps {
     guildId: string;
@@ -28,12 +28,25 @@ export default function GuildHeader({
     guildId,
     guildName,
     ownerId,
-    messageScanEnabled,
+    messageScanEnabled: initialMessageScanEnabled,
     lastMessageScanAt,
     createdAt,
     iconUrl,
 }: GuildHeaderProps) {
+    // Use React Query to track live state
+    const { data: guild } = useGuild(guildId, {
+        id: guildId,
+        name: guildName,
+        owner_id: ownerId,
+        message_scan_enabled: initialMessageScanEnabled,
+        last_message_scan_at: lastMessageScanAt,
+        created_at: createdAt,
+        icon_url: iconUrl,
+    } as Guild);
+
     const toggleMutation = useToggleScanning(guildId);
+    const messageScanEnabled =
+        guild?.message_scan_enabled ?? initialMessageScanEnabled;
 
     const handleToggle = () => {
         toggleMutation.mutate(!messageScanEnabled);
@@ -61,45 +74,53 @@ export default function GuildHeader({
             )}
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <InfoCard title="Owner" value={ownerId ?? "Unclaimed"} />
-
                 {/* Message Scanning Card with Switch */}
-                <Card>
+                <Card className="md:col-span-2">
                     <CardHeader>
-                        <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-2">
-                                <CardTitle className="text-base">
-                                    Message Scanning
-                                </CardTitle>
-                                <div className="group relative">
-                                    <Info className="h-4 w-4 text-muted-foreground cursor-help" />
-                                    <div className="absolute left-0 bottom-full mb-2 hidden group-hover:block w-64 p-2 bg-popover border rounded text-xs text-popover-foreground z-10 shadow-md">
-                                        This only allows scans to happen. Use
-                                        the Scans tab to start scanning
-                                        channels.
-                                    </div>
+                        <div className="flex items-start justify-between gap-4">
+                            <div className="space-y-2 flex-1">
+                                <div className="flex items-center gap-2">
+                                    <CardTitle className="text-lg">
+                                        Message Scanning
+                                    </CardTitle>
                                 </div>
+                                <CardDescription className="flex items-start gap-2">
+                                    <Info className="h-4 w-4 mt-0.5 flex-shrink-0" />
+                                    <span>
+                                        This controls whether scans are allowed
+                                        to run. Use the Scans tab to configure
+                                        and start scanning specific channels.
+                                    </span>
+                                </CardDescription>
                             </div>
-                            <Switch
-                                checked={messageScanEnabled}
-                                onCheckedChange={handleToggle}
-                                disabled={toggleMutation.isPending}
-                            />
+                            <div className="flex items-center gap-3">
+                                <Switch
+                                    checked={messageScanEnabled}
+                                    onCheckedChange={handleToggle}
+                                    disabled={toggleMutation.isPending}
+                                    className="data-[state=checked]:bg-green-600"
+                                />
+                            </div>
                         </div>
                     </CardHeader>
                     <CardContent>
-                        <Badge
-                            variant={
-                                messageScanEnabled ? "default" : "secondary"
-                            }
-                        >
-                            {messageScanEnabled ? "Enabled" : "Disabled"}
-                        </Badge>
-                        {toggleMutation.isPending && (
-                            <p className="text-xs text-muted-foreground mt-2">
-                                Updating...
-                            </p>
-                        )}
+                        <div className="flex items-center gap-3">
+                            {messageScanEnabled ? (
+                                <CheckCircle2 className="h-5 w-5 text-green-600" />
+                            ) : (
+                                <XCircle className="h-5 w-5 text-muted-foreground" />
+                            )}
+                            <div className="flex gap-2 items-baseline">
+                                <p className="font-semibold text-lg">
+                                    {messageScanEnabled ? "Active" : "Inactive"}
+                                </p>
+                                {toggleMutation.isPending && (
+                                    <p className="text-xs text-muted-foreground">
+                                        Updating...
+                                    </p>
+                                )}
+                            </div>
+                        </div>
                     </CardContent>
                 </Card>
 
