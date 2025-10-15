@@ -6,7 +6,7 @@ generate thumbnails from video URLs.
 """
 import logging
 from shared.db.models import Clip
-#from shared.storage import get_storage_backend
+from shared.storage import get_storage_backend
 
 logger = logging.getLogger(__name__)
 
@@ -16,8 +16,8 @@ class ThumbnailGenerator:
     
     def __init__(self):
         """Initialize the thumbnail generator"""
-        #self.storage = get_storage_backend()
-        #logger.info(f"ThumbnailGenerator initialized with storage: {type(self.storage).__name__}")
+        self.storage = get_storage_backend()
+        logger.info(f"ThumbnailGenerator initialized with storage: {type(self.storage).__name__}")
     
     async def generate_for_clip(self, clip: Clip) -> bool:
         """
@@ -47,19 +47,19 @@ class ThumbnailGenerator:
         # For now, just demonstrate storage usage with a placeholder
         
         # Example storage path: thumbnails/guild_123/clip_abc.webp
-        #storage_path = f"thumbnails/guild_{clip.guild_id}/clip_{clip.id}.webp"
+        storage_path = f"thumbnails/guild_{clip.guild_id}/clip_{clip.id}.webp"
         
         # In the future, this would be actual thumbnail data
         # For now, just a placeholder
-        #placeholder_data = b"placeholder thumbnail data"
+        placeholder_data = b"placeholder thumbnail data"
         
         # Save to storage (works with local, Docker volume, or GCS)
-        #saved_path = await self.storage.save(placeholder_data, storage_path)
-        #logger.info(f"   💾 Saved thumbnail to: {saved_path}")
+        saved_path = await self.storage.save(placeholder_data, storage_path)
+        logger.info(f"   💾 Saved thumbnail to: {saved_path}")
         
         # Get public URL
-        #public_url = self.storage.get_public_url(storage_path)
-        #logger.info(f"   🔗 Public URL: {public_url}")
+        public_url = self.storage.get_public_url(storage_path)
+        logger.info(f"   🔗 Public URL: {public_url}")
         
         logger.info(f"   ✅ Thumbnail generation complete (stub)")
         
