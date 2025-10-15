@@ -17,6 +17,24 @@ services:
             # Optional: mount local settings file for rapid iteration without rebuilding image
             - ./settings.default.json:/app/settings.default.json:ro
 
+    worker:
+        build:
+            context: .
+            dockerfile: ./python/worker/Dockerfile
+        # No container_name - allows scaling with --scale worker=N
+        env_file:
+            - ./python/worker/.env
+            - ./.env.global
+        depends_on:
+            - dcs-postgres
+            - dcs-redis
+        restart: unless-stopped
+        volumes:
+            # Persist thumbnails in shared volume
+            - worker_storage:/app/storage
+        deploy:
+            replicas: 1 # Default number of workers (change to 3 for testing, 5+ for production)
+
     interface:
         build:
             context: .
@@ -76,3 +94,4 @@ networks:
 volumes:
     postgres_data:
     redis_data:
+    worker_storage:
