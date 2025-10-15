@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { getServerSession } from "next-auth";
 import { authOptions } from "./api/auth/[...nextauth]/route";
+import { Button } from "@/components/ui/button";
 
 export default async function HomePage() {
     const session = await getServerSession(authOptions);
@@ -11,12 +12,11 @@ export default async function HomePage() {
             <header className="border-b border-white/10 bg-black/20 backdrop-blur-sm">
                 <div className="container mx-auto px-4 py-4 flex items-center justify-between">
                     <h1 className="text-xl font-bold">Discord Clip Saver</h1>
-                    <Link
-                        href={session ? "/dashboard" : "/login"}
-                        className="px-4 py-2 rounded-md bg-blue-600 hover:bg-blue-700 transition-colors text-sm font-medium"
-                    >
-                        {session ? "Dashboard" : "Sign In"}
-                    </Link>
+                    <Button asChild>
+                        <Link href={session ? "/dashboard" : "/login"}>
+                            {session ? "Dashboard" : "Sign In"}
+                        </Link>
+                    </Button>
                 </div>
             </header>
 
@@ -30,12 +30,11 @@ export default async function HomePage() {
                         Automatically scan and save video clips from your
                         Discord servers. Never lose a great moment again.
                     </p>
-                    <Link
-                        href={session ? "/dashboard" : "/login"}
-                        className="inline-block px-8 py-3 rounded-lg bg-blue-600 hover:bg-blue-700 transition-colors text-lg font-semibold"
-                    >
-                        {session ? "Go to Dashboard" : "Get Started"}
-                    </Link>
+                    <Button asChild size="lg">
+                        <Link href={session ? "/dashboard" : "/login"}>
+                            {session ? "Go to Dashboard" : "Get Started"}
+                        </Link>
+                    </Button>
                 </div>
 
                 {/* Features */}

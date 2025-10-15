@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useSession } from "next-auth/react";
 import { UserMenu } from "@/components/layout/user-menu";
 import { User } from "next-auth";
+import { Button } from "@/components/ui/button";
 
 export function Navbar() {
     const { data: session } = useSession();
@@ -35,12 +36,9 @@ export function Navbar() {
                         {session ? (
                             <UserMenu user={session.user as User} />
                         ) : (
-                            <Link
-                                href="/login"
-                                className="text-sm font-medium px-4 py-2 rounded-md bg-blue-600 hover:bg-blue-700 transition-colors"
-                            >
-                                Sign In
-                            </Link>
+                            <Button asChild>
+                                <Link href="/login">Sign In</Link>
+                            </Button>
                         )}
                     </div>
                 </div>
