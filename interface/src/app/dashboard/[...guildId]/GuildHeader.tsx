@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useToggleScanning } from '@/lib/hooks/queries';
+import type { Guild } from '@/lib/db/types';
 
 interface GuildHeaderProps {
     guildId: string;
@@ -21,32 +22,10 @@ export default function GuildHeader({
     createdAt,
     iconUrl,
 }: GuildHeaderProps) {
-    const [toggling, setToggling] = useState(false);
-    const [error, setError] = useState<string | null>(null);
+    const toggleMutation = useToggleScanning(guildId);
 
-    const handleToggle = async () => {
-        setToggling(true);
-        setError(null);
-
-        try {
-            const response = await fetch(`/api/guilds/${guildId}/toggle`, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ enabled: !messageScanEnabled }),
-            });
-
-            if (!response.ok) {
-                const data = await response.json();
-                throw new Error(data.error || "Failed to toggle scanning");
-            }
-
-            // Refresh the page to show updated state
-            window.location.reload();
-        } catch (err) {
-            setError(err instanceof Error ? err.message : "Unknown error");
-        } finally {
-            setToggling(false);
-        }
+    const handleToggle = () => {
+        toggleMutation.mutate(!messageScanEnabled);
     };
 
     return (
@@ -58,9 +37,13 @@ export default function GuildHeader({
                 </p>
             </div>
 
-            {error && (
+            {toggleMutation.isError && (
                 <div className="p-3 bg-red-500/10 border border-red-500/20 rounded-lg">
-                    <p className="text-red-400 text-sm">{error}</p>
+                    <p className="text-red-400 text-sm">
+                        {toggleMutation.error instanceof Error 
+                            ? toggleMutation.error.message 
+                            : 'Failed to toggle scanning'}
+                    </p>
                 </div>
             )}
 
@@ -112,14 +95,14 @@ export default function GuildHeader({
                         </div>
                         <button
                             onClick={handleToggle}
-                            disabled={toggling}
+                            disabled={toggleMutation.isPending}
                             className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors ${
                                 messageScanEnabled
                                     ? "bg-red-600 text-white hover:bg-red-700"
                                     : "bg-green-600 text-white hover:bg-green-700"
                             } disabled:opacity-50 disabled:cursor-not-allowed`}
                         >
-                            {toggling
+                            {toggleMutation.isPending
                                 ? "Updating..."
                                 : messageScanEnabled
                                 ? "Turn Off"

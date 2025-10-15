@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useBulkUpdateChannels } from '@/lib/hooks/queries';
 import type { Channel } from "@/lib/db/types";
 
 type ChannelsListProps = {
@@ -14,39 +14,14 @@ export default function ChannelsList({
     guildId,
     guildScanEnabled,
 }: ChannelsListProps) {
-    const [bulkUpdating, setBulkUpdating] = useState(false);
-    const [error, setError] = useState<string | null>(null);
+    const bulkUpdateMutation = useBulkUpdateChannels(guildId);
 
     const enabledCount = channels.filter(c => c.message_scan_enabled).length;
     const allEnabled = enabledCount === channels.length;
     const allDisabled = enabledCount === 0;
 
-    const handleBulkToggle = async (enabled: boolean) => {
-        setBulkUpdating(true);
-        setError(null);
-
-        try {
-            const response = await fetch(
-                `/api/guilds/${guildId}/channels/bulk`,
-                {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ enabled }),
-                }
-            );
-
-            if (!response.ok) {
-                const data = await response.json();
-                throw new Error(data.error || "Failed to update channels");
-            }
-
-            // Refresh the page to show updated channels
-            window.location.reload();
-        } catch (err) {
-            setError(err instanceof Error ? err.message : "Unknown error");
-        } finally {
-            setBulkUpdating(false);
-        }
+    const handleBulkToggle = (enabled: boolean) => {
+        bulkUpdateMutation.mutate(enabled);
     };
 
     return (
@@ -64,25 +39,29 @@ export default function ChannelsList({
                     <div className="flex gap-2">
                         <button
                             onClick={() => handleBulkToggle(true)}
-                            disabled={bulkUpdating || allEnabled}
+                            disabled={bulkUpdateMutation.isPending || allEnabled}
                             className="px-4 py-2 text-sm bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:bg-gray-600 disabled:cursor-not-allowed transition-colors"
                         >
-                            {bulkUpdating ? "Updating..." : "Enable All"}
+                            {bulkUpdateMutation.isPending ? "Updating..." : "Enable All"}
                         </button>
                         <button
                             onClick={() => handleBulkToggle(false)}
-                            disabled={bulkUpdating || allDisabled}
+                            disabled={bulkUpdateMutation.isPending || allDisabled}
                             className="px-4 py-2 text-sm bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:bg-gray-600 disabled:cursor-not-allowed transition-colors"
                         >
-                            {bulkUpdating ? "Updating..." : "Disable All"}
+                            {bulkUpdateMutation.isPending ? "Updating..." : "Disable All"}
                         </button>
                     </div>
                 )}
             </div>
 
-            {error && (
+            {bulkUpdateMutation.isError && (
                 <div className="mb-3 p-3 bg-red-500/10 border border-red-500/20 rounded-lg">
-                    <p className="text-red-400 text-sm">{error}</p>
+                    <p className="text-red-400 text-sm">
+                        {bulkUpdateMutation.error instanceof Error
+                            ? bulkUpdateMutation.error.message
+                            : 'Failed to update channels'}
+                    </p>
                 </div>
             )}
 

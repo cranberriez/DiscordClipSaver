@@ -1,15 +1,16 @@
 // interface/src/app/dashboard/GuildList.tsx
-import { cookies } from "next/headers";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/app/api/auth/[...nextauth]/route";
-import { canInviteBot } from "@/lib/discord/visibility";
-import type { FullGuild, GuildRelation } from "@/lib/discord/types";
-import { GuildItemComponent } from "./GuildItemComponent";
+'use client';
 
-const baseUrl = process.env.NEXTAUTH_URL ?? "http://localhost:3000";
+import { useSession } from 'next-auth/react';
+import { useGuilds } from '@/lib/hooks/queries';
+import { canInviteBot } from '@/lib/discord/visibility';
+import type { FullGuild, GuildRelation } from '@/lib/discord/types';
+import { GuildItemComponent } from './GuildItemComponent';
 
-export default async function GuildList() {
-    const session = await getServerSession(authOptions);
+export default function GuildList() {
+    const { data: session } = useSession();
+    const { data, isLoading, error } = useGuilds();
+
     if (!session?.user?.id) {
         return (
             <p className="text-sm text-red-500">
@@ -17,39 +18,39 @@ export default async function GuildList() {
             </p>
         );
     }
-    const currentUserId = String(session.user.id);
 
-    const res = await fetch(`${baseUrl}/api/discord/user/guilds?includeDb=1`, {
-        headers: { Cookie: (await cookies()).toString() },
-        cache: "no-store",
-    });
-
-    if (!res.ok) {
-        const message =
-            res.status === 401
-                ? "You must sign in to view guilds."
-                : "Failed to load guilds.";
-        return <p className="text-sm text-red-500">{message}</p>;
+    if (isLoading) {
+        return (
+            <div className="flex items-center justify-center p-8">
+                <div className="text-gray-400">Loading guilds...</div>
+            </div>
+        );
     }
 
-    const data = await res.json();
-    const discordGuilds = Array.isArray(data) ? data : data.guilds;
-    const dbGuilds = Array.isArray(data) ? [] : (data.dbGuilds ?? []);
+    if (error) {
+        return (
+            <p className="text-sm text-red-500">
+                Failed to load guilds: {error.message}
+            </p>
+        );
+    }
 
-    if (!discordGuilds)
-        return <p className="text-sm text-red-500">Failed to load guilds.</p>;
+    const currentUserId = String(session.user.id);
+    const discordGuilds = data?.guilds ?? [];
+    const dbGuilds = data?.dbGuilds ?? [];
+
+    if (discordGuilds.length === 0) {
+        return <p className="text-sm text-red-500">No guilds found.</p>;
+    }
 
     // Build FullGuild[] by joining Discord partial guilds with optional DB rows
-    const dbById = new Map(
-        (dbGuilds as any[]).map((row: any) => [row.id, row])
-    );
-    const discordList: any[] = Array.isArray(discordGuilds)
-        ? (discordGuilds as any[]).filter(Boolean)
-        : [];
-    const items: FullGuild[] = discordList.map((dg: any) => ({
-        discord: dg,
-        db: dg?.id ? dbById.get(dg.id) : undefined,
-    }));
+    const dbById = new Map(dbGuilds.map(row => [row.id, row]));
+    const items: FullGuild[] = discordGuilds
+        .filter(Boolean)
+        .map(dg => ({
+            discord: dg,
+            db: dg?.id ? dbById.get(dg.id) : undefined,
+        }));
 
     // Categorize
     const installed: FullGuild[] = items.filter(i => i.db);

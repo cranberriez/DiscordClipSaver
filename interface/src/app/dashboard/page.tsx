@@ -1,8 +1,8 @@
 import { getServerSession } from "next-auth";
 import { authOptions } from "../api/auth/[...nextauth]/route";
 import GuildList from "./GuildList";
-import SignOut from "../components/SignOut";
-import SignIn from "../components/SignIn";
+import SignOut from "../_components/SignOut";
+import SignIn from "../_components/SignIn";
 
 export default async function Dashboard() {
     const session = await getServerSession(authOptions);

@@ -1,10 +1,7 @@
 "use client";
 
-import { useGuildScanStatuses } from "@/lib/hooks/useScanStatus";
-import {
-    startChannelScan,
-    startMultipleChannelScans,
-} from "@/lib/actions/scan";
+import { useScanStatuses, useStartScan } from '@/lib/hooks/queries';
+import { startMultipleChannelScans } from "@/lib/actions/scan";
 import { useState, useMemo } from "react";
 import type { Channel } from "@/lib/db/types";
 
@@ -17,14 +14,22 @@ export function ScansPanel({
     guildId,
     channels: serverChannels,
 }: ScansPanelProps) {
-    const { scanStatuses, loading, error, refetch } =
-        useGuildScanStatuses(guildId);
-    const [scanning, setScanning] = useState<Record<string, boolean>>({});
+    const { data: scanStatuses = [], isLoading: loading, error, refetch } = useScanStatuses(guildId);
+    const startScanMutation = useStartScan(guildId);
     const [selectedChannel, setSelectedChannel] = useState<string>("all");
     const [direction, setDirection] = useState<"backward" | "forward">(
         "backward"
     );
     const [starting, setStarting] = useState(false);
+
+    // Convert array to map for easier lookup
+    const scanStatusMap = useMemo(() => {
+        const map: Record<string, typeof scanStatuses[0]> = {};
+        scanStatuses.forEach(status => {
+            map[status.channel_id] = status;
+        });
+        return map;
+    }, [scanStatuses]);
 
     // Merge server channels with scan statuses
     const channels = useMemo(() => {
@@ -32,20 +37,20 @@ export function ScansPanel({
             channelId: channel.id,
             channelName: channel.name,
             messageScanEnabled: channel.message_scan_enabled,
-            status: scanStatuses[channel.id]?.status || null,
-            messageCount: scanStatuses[channel.id]?.message_count || 0,
+            status: scanStatusMap[channel.id]?.status || null,
+            messageCount: scanStatusMap[channel.id]?.message_count || 0,
             totalMessagesScanned:
-                scanStatuses[channel.id]?.total_messages_scanned || 0,
-            updatedAt: scanStatuses[channel.id]?.updated_at || null,
+                scanStatusMap[channel.id]?.total_messages_scanned || 0,
+            updatedAt: scanStatusMap[channel.id]?.updated_at || null,
         }));
-    }, [serverChannels, scanStatuses]);
+    }, [serverChannels, scanStatusMap]);
 
     // Debug logging
     console.log("ScansPanel Debug:", {
         guildId,
         serverChannelsLength: serverChannels.length,
         channelsLength: channels.length,
-        scanStatusesCount: Object.keys(scanStatuses).length,
+        scanStatusesCount: scanStatuses.length,
         channels,
         serverChannels: serverChannels.map(ch => ({
             id: ch.id,
@@ -63,25 +68,16 @@ export function ScansPanel({
         ch => ch.status === "RUNNING" || ch.status === "PENDING"
     ).length;
 
-    const handleStartScan = async (channelId: string) => {
+    const handleStartScan = (channelId: string) => {
         console.log("Starting scan for channel:", channelId);
-        setScanning(prev => ({ ...prev, [channelId]: true }));
-
-        const result = await startChannelScan(guildId, channelId, {
-            direction,
-            limit: 100,
-            autoContinue: true,
+        startScanMutation.mutate({
+            channelId,
+            options: {
+                direction,
+                limit: 100,
+                autoContinue: true,
+            },
         });
-
-        console.log("Scan result:", result);
-
-        if (result.success) {
-            setTimeout(() => refetch(), 1000);
-        } else {
-            alert(`Failed to start scan: ${result.error}`);
-        }
-
-        setScanning(prev => ({ ...prev, [channelId]: false }));
     };
 
     const handleStartSelected = async () => {
@@ -98,24 +94,17 @@ export function ScansPanel({
                 { direction, limit: 100, autoContinue: true }
             );
 
-            if (result.success > 0) {
-                setTimeout(() => refetch(), 1000);
-            }
-
             alert(`Started ${result.success} scans, ${result.failed} failed`);
         } else {
             // Scan selected channel
-            const result = await startChannelScan(guildId, selectedChannel, {
-                direction,
-                limit: 100,
-                autoContinue: true,
+            startScanMutation.mutate({
+                channelId: selectedChannel,
+                options: {
+                    direction,
+                    limit: 100,
+                    autoContinue: true,
+                },
             });
-
-            if (result.success) {
-                setTimeout(() => refetch(), 1000);
-            } else {
-                alert(`Failed to start scan: ${result.error}`);
-            }
         }
 
         setStarting(false);
@@ -132,7 +121,9 @@ export function ScansPanel({
     if (error) {
         return (
             <div className="p-6 border border-red-500/20 rounded-lg bg-red-500/5">
-                <p className="text-red-400">Error: {error}</p>
+                <p className="text-red-400">
+                    Error: {error instanceof Error ? error.message : 'Failed to load scan statuses'}
+                </p>
             </div>
         );
     }
@@ -379,7 +370,7 @@ export function ScansPanel({
                                         }
                                         disabled={
                                             !channel.messageScanEnabled ||
-                                            scanning[channel.channelId] ||
+                                            startScanMutation.isPending ||
                                             channel.status === "RUNNING" ||
                                             channel.status === "PENDING"
                                         }
@@ -392,7 +383,7 @@ export function ScansPanel({
                                     >
                                         {!channel.messageScanEnabled
                                             ? "Disabled"
-                                            : scanning[channel.channelId]
+                                            : startScanMutation.isPending
                                             ? "Starting..."
                                             : channel.status === "RUNNING"
                                             ? "Running..."

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useGuildSettings } from "@/lib/hooks/useGuildSettings";
+import { useGuildSettingsWithBuilder } from "@/lib/hooks/queries";
 import {
     GuildSettingsSchema,
     DefaultChannelSettingsSchema,
@@ -35,7 +35,7 @@ export default function DynamicSettingsForm({
         save,
         reset,
         resetToDefaults,
-    } = useGuildSettings(guildId);
+    } = useGuildSettingsWithBuilder(guildId);
 
     const [validationErrors, setValidationErrors] = useState<
         Record<string, string>
