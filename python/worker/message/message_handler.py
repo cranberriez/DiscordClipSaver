@@ -1,40 +1,24 @@
 """
 Message handler for processing Discord messages and extracting clips
 """
-import hashlib
-import json
-import uuid
-from datetime import datetime, timedelta, timezone
-from shared.db.models import Message, Clip, User
-from shared.settings_resolver import get_channel_settings, ResolvedSettings
-from worker.thumbnail.thumbnail_handler import ThumbnailHandler
-import discord
 import logging
+import discord
+from shared.db.models import Message, Clip, User
+from shared.settings_resolver import get_channel_settings
+from worker.thumbnail.thumbnail_handler import ThumbnailHandler
+from worker.message.utils import compute_settings_hash
+from worker.message.validators import should_process_message, filter_video_attachments
+from worker.message.clip_metadata import extract_clip_info
 
 logger = logging.getLogger(__name__)
 
 
 class MessageHandler:
+    """Handles individual message processing"""
+    
     def __init__(self):
         """Initialize message handler with thumbnail handler"""
         self.thumbnail_handler = ThumbnailHandler()
-    
-    def _guess_mime_type(self, filename: str) -> str:
-        """
-        Guess MIME type from filename extension.
-        Fallback for when Discord doesn't provide content_type.
-        """
-        ext = filename.lower().split('.')[-1]
-        mime_types = {
-            'mp4': 'video/mp4',
-            'webm': 'video/webm',
-            'mov': 'video/quicktime',
-            'avi': 'video/x-msvideo',
-            'mkv': 'video/x-matroska',
-            'flv': 'video/x-flv',
-            'm4v': 'video/x-m4v',
-        }
-        return mime_types.get(ext, 'video/mp4')  # Default to mp4
     
     async def process_message(
         self,
@@ -45,8 +29,6 @@ class MessageHandler:
         """
         Process a Discord message, extract video attachments, generate thumbnails.
 
-        Settings are fetched from the database using guild_id and channel_id.
-
         Args:
             discord_message: Discord.py message object
             channel_id: Channel snowflake
@@ -55,63 +37,24 @@ class MessageHandler:
         Returns:
             Number of clips found and processed
         """
-        # Fetch settings from database
+        # Fetch settings
         settings = await get_channel_settings(guild_id, channel_id)
-        if not discord_message.attachments:
+        
+        # Validate message should be processed
+        if not should_process_message(discord_message, settings):
             return 0
         
-        # Apply regex filter to message content if configured
-        if settings.match_regex and discord_message.content:
-            import re
-            if not re.search(settings.match_regex, discord_message.content):
-                logger.debug(f"Message {discord_message.id} doesn't match regex, skipping")
-                return 0
+        # Upsert user and message
+        await self._upsert_user(discord_message.author)
+        await self._upsert_message(discord_message, channel_id, guild_id, settings)
         
-        # Filter video attachments based on allowed MIME types
-        video_attachments = [
-            att for att in discord_message.attachments
-            if att.content_type and att.content_type in settings.allowed_mime_types
-        ]
-        
-        if not video_attachments:
-            return 0
-        
-        # Create or update user record (message author)
-        author = discord_message.author
-        await User.update_or_create(
-            id=str(author.id),
-            defaults={
-                "username": author.name,
-                "discriminator": author.discriminator or "0",  # Discord removed discriminators, default to "0"
-                "avatar_url": str(author.display_avatar.url) if author.display_avatar else None
-            }
+        # Process video attachments
+        settings_hash = compute_settings_hash(settings)
+        video_attachments = filter_video_attachments(
+            discord_message.attachments,
+            settings.allowed_mime_types
         )
         
-        # Create or update message record
-        message_data = {
-            "channel_id": channel_id,
-            "guild_id": guild_id,
-            "author_id": str(author.id),
-            "timestamp": discord_message.created_at
-        }
-        
-        # Only store content if enabled in settings
-        if settings.enable_message_content_storage:
-            message_data["content"] = discord_message.content or ""
-        else:
-            message_data["content"] = ""
-        
-        await Message.update_or_create(
-            id=str(discord_message.id),
-            defaults=message_data
-        )
-        
-        # Compute settings hash once for all clips in this message
-        settings_hash = hashlib.md5(
-            json.dumps(settings.to_dict(), sort_keys=True).encode()
-        ).hexdigest()
-        
-        # Process each video attachment
         clips_processed = 0
         for attachment in video_attachments:
             success = await self._process_attachment(
@@ -125,6 +68,42 @@ class MessageHandler:
                 clips_processed += 1
         
         return clips_processed
+    
+    async def _upsert_user(self, author: discord.User) -> None:
+        """Create or update user record"""
+        await User.update_or_create(
+            id=str(author.id),
+            defaults={
+                "username": author.name,
+                "discriminator": author.discriminator or "0",
+                "avatar_url": str(author.display_avatar.url) if author.display_avatar else None
+            }
+        )
+    
+    async def _upsert_message(
+        self,
+        discord_message: discord.Message,
+        channel_id: str,
+        guild_id: str,
+        settings
+    ) -> None:
+        """Create or update message record"""
+        message_data = {
+            "channel_id": channel_id,
+            "guild_id": guild_id,
+            "author_id": str(discord_message.author.id),
+            "timestamp": discord_message.created_at,
+            "content": (
+                discord_message.content or ""
+                if settings.enable_message_content_storage
+                else ""
+            )
+        }
+        
+        await Message.update_or_create(
+            id=str(discord_message.id),
+            defaults=message_data
+        )
     
     async def _process_attachment(
         self,
@@ -140,66 +119,44 @@ class MessageHandler:
         Returns:
             True if clip was successfully processed
         """
-        # Generate clip ID (hash of message_id + channel_id + filename + timestamp)
-        clip_id = self._generate_clip_id(
-            str(discord_message.id),
-            channel_id,
-            attachment.filename,
-            discord_message.created_at
-        )
-        
-        # Extract expiry from CDN URL
-        expires_at = self._extract_cdn_expiry(attachment.url)
+        # Extract clip metadata
+        clip_info = extract_clip_info(attachment, discord_message, channel_id)
         
         # Create or update clip record
         clip, created = await Clip.update_or_create(
-            id=clip_id,
+            id=clip_info.clip_id,
             defaults={
-                "message_id": str(discord_message.id),
+                "message_id": clip_info.message_id,
                 "channel_id": channel_id,
                 "guild_id": guild_id,
-                "filename": attachment.filename,
-                "file_size": attachment.size,
-                "mime_type": attachment.content_type or self._guess_mime_type(attachment.filename),
-                "cdn_url": attachment.url,
-                "expires_at": expires_at,
+                "filename": clip_info.filename,
+                "file_size": clip_info.file_size,
+                "mime_type": clip_info.mime_type,
+                "cdn_url": clip_info.cdn_url,
+                "expires_at": clip_info.expires_at,
                 "thumbnail_status": "pending",
-                "settings_hash": settings_hash  # Store settings hash
+                "settings_hash": settings_hash
             }
         )
         
-        # If clip already exists with same settings hash, skip thumbnail generation
-        if not created and clip.settings_hash == settings_hash and clip.thumbnail_status == "completed":
-            logger.debug(f"Clip {clip_id} already processed with same settings, skipping")
+        # Check if thumbnail generation can be skipped
+        if self._should_skip_thumbnail(clip, created, settings_hash):
+            logger.debug(
+                f"Clip {clip_info.clip_id} already processed with same settings, skipping"
+            )
             return True
         
-        # Generate thumbnails (small and large) using thumbnail handler
+        # Generate thumbnails if needed
         if created or clip.thumbnail_status in ["failed", "pending"]:
             success = await self.thumbnail_handler.process_clip(clip)
             return success
         
         return True
     
-    @staticmethod
-    def _generate_clip_id(message_id: str, channel_id: str, filename: str, timestamp: datetime) -> str:
-        """Generate unique clip ID from message data"""
-        data = f"{message_id}:{channel_id}:{filename}:{timestamp.isoformat()}"
-        return hashlib.md5(data.encode()).hexdigest()
-    
-    @staticmethod
-    def _extract_cdn_expiry(cdn_url: str) -> datetime:
-        """Extract expiry timestamp from Discord CDN URL"""
-        # Discord CDN URLs contain 'ex=' parameter with unix timestamp
-        import urllib.parse
-        parsed = urllib.parse.urlparse(cdn_url)
-        params = urllib.parse.parse_qs(parsed.query)
-        
-        if 'ex' in params:
-            try:
-                timestamp = int(params['ex'][0], 16)  # Hex timestamp
-                return datetime.fromtimestamp(timestamp)
-            except (ValueError, OverflowError):
-                pass
-        
-        # Default: 24 hours from now
-        return datetime.utcnow() + timedelta(hours=24)
+    def _should_skip_thumbnail(self, clip: Clip, created: bool, settings_hash: str) -> bool:
+        """Determine if thumbnail generation should be skipped"""
+        return (
+            not created and
+            clip.settings_hash == settings_hash and
+            clip.thumbnail_status == "completed"
+        )

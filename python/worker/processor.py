@@ -8,6 +8,7 @@ from worker.discord.bot import WorkerBot
 from worker.discord.get_message_history import get_message_history
 from worker.discord.get_message import get_message
 from worker.message.message_handler import MessageHandler
+from worker.message.batch_processor import BatchMessageProcessor
 from worker.thumbnail.thumbnail_handler import ThumbnailHandler
 from shared.db.models import Guild, Channel, ScanStatus, ChannelType
 from shared.db.repositories.channel_scan_status import (
@@ -27,8 +28,38 @@ class JobProcessor:
     def __init__(self, bot: WorkerBot, redis_client: Optional[RedisStreamClient] = None):
         self.bot = bot
         self.message_handler = MessageHandler()
+        self.batch_processor = BatchMessageProcessor()
         self.thumbnail_handler = ThumbnailHandler()
         self.redis_client = redis_client
+    
+    async def _update_scan_status_with_error(
+        self,
+        guild_id: str,
+        channel_id: str,
+        status: ScanStatus,
+        error_message: Optional[str] = None
+    ) -> None:
+        """
+        Helper to update scan status and log appropriately.
+        
+        Args:
+            guild_id: Guild snowflake
+            channel_id: Channel snowflake
+            status: New status
+            error_message: Optional error message
+        """
+        await update_scan_status(
+            guild_id=guild_id,
+            channel_id=channel_id,
+            status=status,
+            error_message=error_message
+        )
+        
+        if error_message:
+            if status == ScanStatus.FAILED:
+                logger.error(f"Scan failed for channel {channel_id}: {error_message}")
+            else:
+                logger.warning(f"Scan {status.value} for channel {channel_id}: {error_message}")
     
     async def validate_scan_enabled(self, guild_id: str, channel_id: str) -> tuple[bool, Optional[str]]:
         """
@@ -113,8 +144,7 @@ class JobProcessor:
             is_enabled, error_message = await self.validate_scan_enabled(guild_id, channel_id)
             
             if not is_enabled:
-                logger.warning(f"Scan disabled for channel {channel_id}: {error_message}")
-                await update_scan_status(
+                await self._update_scan_status_with_error(
                     guild_id=guild_id,
                     channel_id=channel_id,
                     status=ScanStatus.CANCELLED,
@@ -134,45 +164,37 @@ class JobProcessor:
             try:
                 discord_channel = await self.bot.fetch_channel(int(channel_id))
             except discord.Forbidden:
-                error_msg = "Bot does not have permission to access this channel"
-                logger.warning(f"Permission denied for channel {channel_id}: {error_msg}")
-                await update_scan_status(
+                await self._update_scan_status_with_error(
                     guild_id=guild_id,
                     channel_id=channel_id,
                     status=ScanStatus.FAILED,
-                    error_message=error_msg
+                    error_message="Bot does not have permission to access this channel"
                 )
                 return
             except discord.NotFound:
-                error_msg = "Channel not found or no longer exists"
-                logger.warning(f"Channel {channel_id} not found: {error_msg}")
-                await update_scan_status(
+                await self._update_scan_status_with_error(
                     guild_id=guild_id,
                     channel_id=channel_id,
                     status=ScanStatus.FAILED,
-                    error_message=error_msg
+                    error_message="Channel not found or no longer exists"
                 )
                 return
             except discord.HTTPException as e:
-                error_msg = f"Discord API error: {str(e)}"
-                logger.error(f"HTTP error fetching channel {channel_id}: {error_msg}")
-                await update_scan_status(
+                await self._update_scan_status_with_error(
                     guild_id=guild_id,
                     channel_id=channel_id,
                     status=ScanStatus.FAILED,
-                    error_message=error_msg
+                    error_message=f"Discord API error: {str(e)}"
                 )
                 return
             
             # Validate channel type supports message history
             if not hasattr(discord_channel, 'history'):
-                error_msg = f"Channel type '{discord_channel.type}' does not support message scanning"
-                logger.warning(f"Invalid channel type for {channel_id}: {error_msg}")
-                await update_scan_status(
+                await self._update_scan_status_with_error(
                     guild_id=guild_id,
                     channel_id=channel_id,
                     status=ScanStatus.FAILED,
-                    error_message=error_msg
+                    error_message=f"Channel type '{discord_channel.type}' does not support message scanning"
                 )
                 return
             
@@ -186,37 +208,30 @@ class JobProcessor:
                     direction=direction
                 )
             except discord.Forbidden:
-                error_msg = "Bot does not have permission to read message history in this channel"
-                logger.warning(f"Permission denied reading history for channel {channel_id}: {error_msg}")
-                await update_scan_status(
+                await self._update_scan_status_with_error(
                     guild_id=guild_id,
                     channel_id=channel_id,
                     status=ScanStatus.FAILED,
-                    error_message=error_msg
+                    error_message="Bot does not have permission to read message history in this channel"
                 )
                 return
             except discord.HTTPException as e:
-                error_msg = f"Discord API error reading history: {str(e)}"
-                logger.error(f"HTTP error reading history for channel {channel_id}: {error_msg}")
-                await update_scan_status(
+                await self._update_scan_status_with_error(
                     guild_id=guild_id,
                     channel_id=channel_id,
                     status=ScanStatus.FAILED,
-                    error_message=error_msg
+                    error_message=f"Discord API error reading history: {str(e)}"
                 )
                 return
             
             logger.info(f"Fetched {len(messages)} messages from channel {channel_id}")
             
-            # Process each message
-            total_clips = 0
-            for discord_message in messages:
-                clips_found = await self.message_handler.process_message(
-                    discord_message=discord_message,
-                    channel_id=channel_id,
-                    guild_id=guild_id
-                )
-                total_clips += clips_found
+            # Process messages in batch for better performance
+            total_clips, thumbnails_generated = await self.batch_processor.process_messages_batch(
+                messages=messages,
+                channel_id=channel_id,
+                guild_id=guild_id
+            )
             
             # Update scan counts
             await increment_scan_counts(
@@ -292,7 +307,7 @@ class JobProcessor:
             logger.error(f"Batch scan failed for channel {channel_id}: {e}", exc_info=True)
             
             # Update status to failed
-            await update_scan_status(
+            await self._update_scan_status_with_error(
                 guild_id=guild_id,
                 channel_id=channel_id,
                 status=ScanStatus.FAILED,
