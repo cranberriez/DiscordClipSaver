@@ -133,9 +133,9 @@ class JobProcessor:
         before_message_id = job_data.get("before_message_id")
         after_message_id = job_data.get("after_message_id")
         auto_continue = job_data.get("auto_continue", True)
-        rescan = job_data.get("rescan", False)
+        rescan = job_data.get("rescan", "stop")  # "stop", "continue", or "update"
         
-        logger.info(f"Processing batch scan: channel={channel_id}, direction={direction}, limit={limit}")
+        logger.info(f"Processing batch scan: channel={channel_id}, direction={direction}, limit={limit}, rescan={rescan}")
         
         try:
             # Get or create scan status
@@ -227,11 +227,11 @@ class JobProcessor:
             
             logger.info(f"Fetched {len(messages)} messages from channel {channel_id}")
             
-            # If rescan is False, check for existing messages and filter them out
+            # Handle existing messages based on rescan mode
             messages_to_process = messages
             stopped_on_duplicate = False
             
-            if not rescan and messages:
+            if messages:
                 from shared.db.models import Message as MessageModel
                 
                 # Get message IDs
@@ -246,16 +246,32 @@ class JobProcessor:
                 existing_ids = set(existing_messages)
                 
                 if existing_ids:
-                    logger.info(f"Found {len(existing_ids)} already-processed messages out of {len(messages)}")
+                    logger.info(f"Found {len(existing_ids)} already-processed messages out of {len(messages)} (rescan mode: {rescan})")
                     
-                    # Filter out existing messages
-                    messages_to_process = [msg for msg in messages if str(msg.id) not in existing_ids]
+                    if rescan == "stop":
+                        # Stop mode: Filter out existing messages and stop continuation
+                        messages_to_process = [msg for msg in messages if str(msg.id) not in existing_ids]
+                        if len(messages_to_process) < len(messages):
+                            stopped_on_duplicate = True
+                            logger.info(f"[STOP MODE] Stopping scan - encountered {len(existing_ids)} already-processed messages")
                     
-                    # If we hit existing messages, we should stop continuation
-                    # This means we've caught up to previously scanned territory
-                    if len(messages_to_process) < len(messages):
-                        stopped_on_duplicate = True
-                        logger.info(f"Stopping scan - encountered {len(existing_ids)} already-processed messages")
+                    elif rescan == "continue":
+                        # Continue mode: Skip existing messages but keep scanning
+                        messages_to_process = [msg for msg in messages if str(msg.id) not in existing_ids]
+                        # Don't set stopped_on_duplicate - we want to continue scanning
+                        logger.info(f"[CONTINUE MODE] Skipping {len(existing_ids)} already-processed messages, continuing scan")
+                    
+                    elif rescan == "update":
+                        # Update mode: Process all messages, including existing ones
+                        messages_to_process = messages
+                        logger.info(f"[UPDATE MODE] Reprocessing all {len(messages)} messages including {len(existing_ids)} existing ones")
+                    
+                    else:
+                        # Default to stop behavior for unknown modes
+                        messages_to_process = [msg for msg in messages if str(msg.id) not in existing_ids]
+                        if len(messages_to_process) < len(messages):
+                            stopped_on_duplicate = True
+                            logger.warning(f"Unknown rescan mode '{rescan}', defaulting to STOP behavior")
             
             # Process messages in batch for better performance
             total_clips, thumbnails_generated = await self.batch_processor.process_messages_batch(
@@ -363,9 +379,9 @@ class JobProcessor:
                 if not auto_continue and continuation_needed:
                     logger.info(f"Batch scan complete but auto_continue=False, not queueing continuation")
                 elif stopped_on_duplicate:
-                    logger.info(f"Batch scan stopped - reached already-scanned messages (rescan={rescan})")
+                    logger.info(f"Batch scan stopped - reached already-scanned messages (rescan mode: {rescan})")
             
-            logger.info(f"Batch scan complete: processed {len(messages_to_process)} messages (of {len(messages)} fetched), found {total_clips} clips")
+            logger.info(f"Batch scan complete: processed {len(messages_to_process)} messages (of {len(messages)} fetched), found {total_clips} clips, rescan mode: {rescan}")
             
         except Exception as e:
             logger.error(f"Batch scan failed for channel {channel_id}: {e}", exc_info=True)

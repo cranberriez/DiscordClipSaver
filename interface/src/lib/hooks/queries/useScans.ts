@@ -135,8 +135,10 @@ export function useStartScan(guildId: string) {
             channelId: string;
             options?: {
                 isUpdate?: boolean;
+                isHistorical?: boolean;
                 limit?: number;
                 autoContinue?: boolean;
+                rescan?: "stop" | "continue" | "update";
             };
         }) => {
             const result = await startChannelScan(guildId, channelId, options);

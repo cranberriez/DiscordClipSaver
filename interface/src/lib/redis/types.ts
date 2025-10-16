@@ -10,6 +10,8 @@ export interface BaseJob {
     created_at: string; // ISO datetime string
 }
 
+export type RescanMode = "stop" | "continue" | "update";
+
 export interface BatchScanJob extends BaseJob {
     type: "batch";
     direction: "forward" | "backward";
@@ -17,7 +19,7 @@ export interface BatchScanJob extends BaseJob {
     before_message_id?: string | null;
     after_message_id?: string | null;
     auto_continue: boolean;
-    rescan?: boolean; // Whether to rescan already-processed messages
+    rescan?: RescanMode; // How to handle already-processed messages
 }
 
 export interface MessageScanJob extends BaseJob {

@@ -20,8 +20,10 @@ export async function startChannelScan(
     channelId: string,
     options?: {
         isUpdate?: boolean; // If true, always scan forward from last position
+        isHistorical?: boolean; // If true, force backward scan from beginning (no backward_message_id)
         limit?: number;
         autoContinue?: boolean;
+        rescan?: "stop" | "continue" | "update"; // How to handle already-processed messages
     }
 ): Promise<ScanResult> {
     try {
@@ -58,13 +60,20 @@ export async function startChannelScan(
             };
         }
 
-        // Determine scan parameters based on isUpdate flag and existing scan status
+        // Determine scan parameters based on flags and existing scan status
         const isUpdate = options?.isUpdate ?? false;
+        const isHistorical = options?.isHistorical ?? false;
+        const rescan = options?.rescan ?? "stop";
         let direction: "forward" | "backward";
         let afterMessageId: string | undefined;
         let beforeMessageId: string | undefined;
 
-        if (isUpdate) {
+        if (isHistorical) {
+            // Historical scan: backward from beginning, ignore existing backward_message_id
+            direction = "backward";
+            beforeMessageId = undefined; // Start from newest
+            afterMessageId = undefined;
+        } else if (isUpdate) {
             // Update scan: always forward from last known position
             direction = "forward";
             afterMessageId = existingStatus?.forward_message_id || undefined;
@@ -92,6 +101,7 @@ export async function startChannelScan(
             afterMessageId,
             beforeMessageId,
             autoContinue: options?.autoContinue ?? true,
+            rescan,
         });
 
         return { success: true, jobId, messageId };
@@ -112,8 +122,10 @@ export async function startMultipleChannelScans(
     channelIds: string[],
     options?: {
         isUpdate?: boolean;
+        isHistorical?: boolean;
         limit?: number;
         autoContinue?: boolean;
+        rescan?: "stop" | "continue" | "update";
     }
 ): Promise<{
     success: number;

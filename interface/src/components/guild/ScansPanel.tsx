@@ -37,6 +37,7 @@ export function ScansPanel({
     const startScanMutation = useStartScan(guildId);
     const [startingUnscanned, setStartingUnscanned] = useState(false);
     const [startingUpdate, setStartingUpdate] = useState(false);
+    const [startingHistorical, setStartingHistorical] = useState(false);
 
     // Convert array to map for easier lookup
     const scanStatusMap = useMemo(() => {
@@ -130,11 +131,11 @@ export function ScansPanel({
             return { ...old, statuses };
         });
         
-        // Start the scans (isUpdate: false = initial/continuation scan)
+        // Start the scans (isUpdate: false = initial/continuation scan, rescan: "stop")
         const result = await startMultipleChannelScans(
             guildId,
             channelIds,
-            { isUpdate: false, limit: 100, autoContinue: true }
+            { isUpdate: false, limit: 100, autoContinue: true, rescan: "stop" }
         );
 
         alert(`Started ${result.success} scans, ${result.failed} failed`);
@@ -189,11 +190,11 @@ export function ScansPanel({
             return { ...old, statuses };
         });
         
-        // Start the scans (isUpdate: true = forward scan from last position)
+        // Start the scans (isUpdate: true = forward scan from last position, rescan: "stop")
         const result = await startMultipleChannelScans(
             guildId,
             channelIds,
-            { isUpdate: true, limit: 100, autoContinue: true }
+            { isUpdate: true, limit: 100, autoContinue: true, rescan: "stop" }
         );
 
         alert(`Started ${result.success} update scans, ${result.failed} failed`);
@@ -201,6 +202,87 @@ export function ScansPanel({
         // Refetch to get actual server state
         refetch();
         setStartingUpdate(false);
+    };
+
+    const handleHistoricalScan = async (rescanMode: "stop" | "continue" | "update") => {
+        setStartingHistorical(true);
+
+        // Historical scan: backward from the beginning for all enabled channels
+        const toScan = channels.filter(ch => ch.messageScanEnabled);
+        
+        const channelIds = toScan.map(ch => ch.channelId);
+        
+        if (channelIds.length === 0) {
+            alert("No channels enabled for scanning");
+            setStartingHistorical(false);
+            return;
+        }
+        
+        const modeLabels = {
+            stop: "Normal (stops on duplicates)",
+            continue: "Skip Existing (continues past duplicates)",
+            update: "Force Update (reprocesses all messages)"
+        };
+        
+        // Confirm for expensive update mode
+        if (rescanMode === "update") {
+            const confirmed = confirm(
+                `⚠️ FORCE UPDATE MODE\n\n` +
+                `This will reprocess ALL messages in ${channelIds.length} channels, ` +
+                `even if they've already been scanned. This is expensive and should only ` +
+                `be used if settings have changed.\n\n` +
+                `Thumbnails will NOT be regenerated if they already exist.\n\n` +
+                `Continue?`
+            );
+            if (!confirmed) {
+                setStartingHistorical(false);
+                return;
+            }
+        }
+        
+        // Optimistically update scan statuses to PENDING
+        queryClient.setQueryData(guildKeys.scanStatuses(guildId), (old: any) => {
+            if (!old?.statuses) return old;
+            
+            const statuses = [...old.statuses] as ChannelScanStatus[];
+            
+            channelIds.forEach(channelId => {
+                const existingIndex = statuses.findIndex(s => s.channel_id === channelId);
+                const optimisticStatus: ChannelScanStatus = {
+                    channel_id: channelId,
+                    guild_id: guildId,
+                    status: 'PENDING',
+                    message_count: existingIndex >= 0 ? statuses[existingIndex].message_count : 0,
+                    total_messages_scanned: existingIndex >= 0 ? statuses[existingIndex].total_messages_scanned : 0,
+                    forward_message_id: existingIndex >= 0 ? statuses[existingIndex].forward_message_id : null,
+                    backward_message_id: existingIndex >= 0 ? statuses[existingIndex].backward_message_id : null,
+                    created_at: existingIndex >= 0 ? statuses[existingIndex].created_at : new Date(),
+                    updated_at: new Date(),
+                    error_message: null,
+                };
+                
+                if (existingIndex >= 0) {
+                    statuses[existingIndex] = optimisticStatus;
+                } else {
+                    statuses.push(optimisticStatus);
+                }
+            });
+            
+            return { ...old, statuses };
+        });
+        
+        // Start historical scans (backward from beginning with specified rescan mode)
+        const result = await startMultipleChannelScans(
+            guildId,
+            channelIds,
+            { isUpdate: false, isHistorical: true, limit: 100, autoContinue: true, rescan: rescanMode }
+        );
+
+        alert(`Started ${result.success} historical scans (${modeLabels[rescanMode]}), ${result.failed} failed`);
+        
+        // Refetch to get actual server state
+        refetch();
+        setStartingHistorical(false);
     };
 
     if (loading) {
@@ -317,6 +399,7 @@ export function ScansPanel({
                         disabled={
                             startingUnscanned ||
                             startingUpdate ||
+                            startingHistorical ||
                             unscannedOrFailedCount === 0
                         }
                         className="w-full"
@@ -339,6 +422,7 @@ export function ScansPanel({
                         disabled={
                             startingUnscanned ||
                             startingUpdate ||
+                            startingHistorical ||
                             channels.filter(ch => ch.messageScanEnabled).length === 0
                         }
                         className="w-full"
@@ -353,6 +437,77 @@ export function ScansPanel({
                     <p className="text-xs text-muted-foreground">
                         Forward scan from the last known position to catch new messages.
                         Continues until reaching the newest message or current end.
+                    </p>
+                </CardContent>
+            </Card>
+
+            {/* Historical Scan Panel */}
+            <Card>
+                <CardHeader>
+                    <CardTitle>Historical Scan</CardTitle>
+                    <CardDescription>
+                        Backward scan from the beginning to establish or correct scan boundaries
+                    </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                    {/* Normal Historical Scan */}
+                    <Button
+                        onClick={() => handleHistoricalScan("stop")}
+                        disabled={
+                            startingUnscanned ||
+                            startingUpdate ||
+                            startingHistorical ||
+                            channels.filter(ch => ch.messageScanEnabled).length === 0
+                        }
+                        className="w-full"
+                        size="lg"
+                        variant="outline"
+                    >
+                        {startingHistorical ? "Starting..." : "Normal Scan (Stop on Duplicates)"}
+                    </Button>
+                    <p className="text-xs text-muted-foreground">
+                        Scans backward from channel start, stops when encountering already-scanned messages. Most efficient.
+                    </p>
+
+                    {/* Skip Existing Historical Scan */}
+                    <Button
+                        onClick={() => handleHistoricalScan("continue")}
+                        disabled={
+                            startingUnscanned ||
+                            startingUpdate ||
+                            startingHistorical ||
+                            channels.filter(ch => ch.messageScanEnabled).length === 0
+                        }
+                        className="w-full"
+                        size="lg"
+                        variant="outline"
+                    >
+                        {startingHistorical ? "Starting..." : "Skip Existing (Continue Past Duplicates)"}
+                    </Button>
+                    <p className="text-xs text-muted-foreground">
+                        Scans backward from channel start, skips already-scanned messages but continues scanning.
+                        Use to establish correct boundaries without reprocessing.
+                    </p>
+
+                    {/* Force Update Historical Scan */}
+                    <Button
+                        onClick={() => handleHistoricalScan("update")}
+                        disabled={
+                            startingUnscanned ||
+                            startingUpdate ||
+                            startingHistorical ||
+                            channels.filter(ch => ch.messageScanEnabled).length === 0
+                        }
+                        className="w-full"
+                        size="lg"
+                        variant="destructive"
+                    >
+                        {startingHistorical ? "Starting..." : "⚠️ Force Update (Reprocess All)"}
+                    </Button>
+                    <p className="text-xs text-muted-foreground">
+                        Scans backward from channel start, reprocesses ALL messages including existing ones.
+                        <strong className="text-destructive"> Expensive operation!</strong> Use only after settings changes.
+                        Thumbnails are never regenerated if they already exist.
                     </p>
                 </CardContent>
             </Card>
