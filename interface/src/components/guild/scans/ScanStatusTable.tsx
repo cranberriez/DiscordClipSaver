@@ -1,13 +1,10 @@
-import {
-    Card,
-    CardHeader,
-    CardTitle,
-} from "@/components/ui/card";
+import { Card, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { RefreshCw, AlertCircle } from "lucide-react";
 import { StatusBadge } from "./StatusBadge";
 import type { ChannelWithStatus } from "./types";
+import { formatRelativeTime } from "@/lib/utils/time";
 
 interface ScanStatusTableProps {
     channels: ChannelWithStatus[];
@@ -49,6 +46,9 @@ export function ScanStatusTable({
                             </th>
                             <th className="text-right p-3 font-semibold text-sm">
                                 Scanned
+                            </th>
+                            <th className="text-right p-3 font-semibold text-sm">
+                                Last Scan
                             </th>
                             <th className="text-right p-3 font-semibold text-sm">
                                 Actions
@@ -94,6 +94,9 @@ export function ScanStatusTable({
                                 </td>
                                 <td className="p-3 text-right text-muted-foreground text-sm">
                                     {channel.totalMessagesScanned || "-"}
+                                </td>
+                                <td className="p-3 text-right text-muted-foreground text-sm">
+                                    {formatRelativeTime(channel.updatedAt)}
                                 </td>
                                 <td className="p-3 text-right">
                                     <Button
