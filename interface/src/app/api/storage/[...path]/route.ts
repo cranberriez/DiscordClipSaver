@@ -69,8 +69,9 @@ export async function GET(
             contentType = "video/webm";
         }
         
-        // Use Blob as body to satisfy BodyInit typing
-        const blob = new Blob([fileBuffer], { type: contentType });
+        // Convert Buffer to Uint8Array for Blob compatibility
+        const uint8Array = new Uint8Array(fileBuffer);
+        const blob = new Blob([uint8Array], { type: contentType });
 
         // Return file with appropriate headers
         return new NextResponse(blob, {
