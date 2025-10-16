@@ -5,13 +5,12 @@ import type { Guild } from "@/lib/db/types";
 import {
     Card,
     CardContent,
-    CardDescription,
+    CardAction,
     CardHeader,
     CardTitle,
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Switch } from "@/components/ui/switch";
 import { Info, Scan, CheckCircle2, XCircle } from "lucide-react";
 
 interface GuildHeaderProps {
@@ -53,12 +52,26 @@ export default function GuildHeader({
     };
 
     return (
-        <div className="space-y-6">
-            <div>
-                <h1 className="text-3xl font-bold mb-2">{guildName}</h1>
-                <p className="text-sm text-muted-foreground">
-                    Guild ID: {guildId}
-                </p>
+        <div className="flex flex-col md:flex-row gap-4">
+            <div className="flex items-center gap-4">
+                {iconUrl && (
+                    <div>
+                        <img
+                            src={iconUrl}
+                            alt={`${guildName} icon`}
+                            className="w-32 h-32 rounded-xl"
+                        />
+                    </div>
+                )}
+                <div className="flex flex-col gap-2">
+                    <h1 className="text-3xl font-bold">{guildName}</h1>
+                    <p className="text-sm text-muted-foreground">
+                        Guild ID: {guildId}
+                    </p>
+                    {ownerId === guild?.owner_id && (
+                        <Badge variant="destructive">Owner</Badge>
+                    )}
+                </div>
             </div>
 
             {toggleMutation.isError && (
@@ -73,102 +86,85 @@ export default function GuildHeader({
                 </Card>
             )}
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {/* Message Scanning Card with Switch */}
-                <Card className="md:col-span-2">
-                    <CardHeader>
-                        <div className="flex items-start justify-between gap-4">
-                            <div className="space-y-2 flex-1">
-                                <div className="flex items-center gap-2">
-                                    <CardTitle className="text-lg">
-                                        Message Scanning
-                                    </CardTitle>
-                                </div>
-                                <CardDescription className="flex items-start gap-2">
-                                    <Info className="h-4 w-4 mt-0.5 flex-shrink-0" />
-                                    <span>
-                                        This controls whether scans are allowed
-                                        to run. Use the Scans tab to configure
-                                        and start scanning specific channels.
-                                    </span>
-                                </CardDescription>
-                            </div>
-                            <div className="flex items-center gap-3">
-                                <Switch
-                                    checked={messageScanEnabled}
-                                    onCheckedChange={handleToggle}
-                                    disabled={toggleMutation.isPending}
-                                    className="data-[state=checked]:bg-green-600"
-                                />
-                            </div>
-                        </div>
-                    </CardHeader>
-                    <CardContent>
-                        <div className="flex items-center gap-3">
-                            {messageScanEnabled ? (
-                                <CheckCircle2 className="h-5 w-5 text-green-600" />
-                            ) : (
-                                <XCircle className="h-5 w-5 text-muted-foreground" />
-                            )}
-                            <div className="flex gap-2 items-baseline">
-                                <p className="font-semibold text-lg">
-                                    {messageScanEnabled ? "Active" : "Inactive"}
-                                </p>
-                                {toggleMutation.isPending && (
-                                    <p className="text-xs text-muted-foreground">
-                                        Updating...
-                                    </p>
-                                )}
-                            </div>
-                        </div>
-                    </CardContent>
-                </Card>
-
-                <InfoCard
-                    title="Last Message Scan"
-                    value={
-                        lastMessageScanAt
-                            ? new Date(lastMessageScanAt).toLocaleString()
-                            : "Never"
-                    }
-                />
-                <InfoCard
-                    title="Created At"
-                    value={new Date(createdAt).toLocaleString()}
-                />
-            </div>
-
-            {iconUrl && (
-                <div className="mt-6">
-                    <h2 className="text-xl font-semibold mb-2">Guild Icon</h2>
-                    <img
-                        src={iconUrl}
-                        alt={`${guildName} icon`}
-                        className="w-32 h-32 rounded-xl"
-                    />
-                </div>
-            )}
+            <GuildScanningCard
+                messageScanEnabled={messageScanEnabled}
+                handleToggle={handleToggle}
+                toggleMutation={toggleMutation}
+            />
         </div>
     );
 }
 
-function InfoCard({
-    title,
-    value,
-    valueClass = "text-foreground",
+function GuildScanningCard({
+    messageScanEnabled,
+    handleToggle,
+    toggleMutation,
 }: {
-    title: string;
-    value: string;
-    valueClass?: string;
+    messageScanEnabled: boolean;
+    handleToggle: () => void;
+    toggleMutation: any;
 }) {
     return (
-        <Card>
+        <Card className="flex-1 md:h-32 py-4 gap-3">
             <CardHeader>
-                <CardDescription>{title}</CardDescription>
+                <CardTitle className="text-lg">Message Scanning</CardTitle>
+                <CardAction>
+                    <ToggleGuildScanning
+                        messageScanEnabled={messageScanEnabled}
+                        handleToggle={handleToggle}
+                        toggleMutation={toggleMutation}
+                    />
+                </CardAction>
             </CardHeader>
-            <CardContent>
-                <p className={`text-lg font-semibold ${valueClass}`}>{value}</p>
+            <CardContent className="flex items-center gap-2 text-sm text-muted-foreground">
+                <Info className="h-4 w-4 mt-0.5 flex-shrink-0" />
+                <span>
+                    This controls whether scans are allowed to run. Use the
+                    Scans tab to configure and start scanning specific channels.
+                </span>
             </CardContent>
         </Card>
+    );
+}
+
+function ToggleGuildScanning({
+    messageScanEnabled,
+    handleToggle,
+    toggleMutation,
+}: {
+    messageScanEnabled: boolean;
+    handleToggle: () => void;
+    toggleMutation: any;
+}) {
+    return (
+        <Button
+            onClick={handleToggle}
+            disabled={toggleMutation.isPending}
+            variant="ghost"
+            className={`relative min-w-[140px] px-4 transition-all cursor-pointer ${
+                messageScanEnabled
+                    ? "border border-green-400/40 bg-green-950/30 hover:bg-green-950/30! text-green-400 shadow-[0_0_12px_rgba(74,222,128,0.15)] hover:shadow-[0_0_16px_rgba(74,222,128,0.25)]"
+                    : "border border-red-400/40 bg-red-950/30 hover:bg-red-950/30! text-red-400 shadow-[0_0_12px_rgba(248,113,113,0.15)] hover:shadow-[0_0_16px_rgba(248,113,113,0.25)]"
+            }`}
+        >
+            <div className="absolute left-3 top-1/2 -translate-y-1/2">
+                {messageScanEnabled ? (
+                    <CheckCircle2 className="h-4 w-4" />
+                ) : (
+                    <XCircle className="h-4 w-4" />
+                )}
+            </div>
+            <span
+                className={`font-semibold uppercase tracking-wider flex items-center ${
+                    toggleMutation.isPending ? "text-xs" : ""
+                }`}
+            >
+                {toggleMutation.isPending
+                    ? "Updating..."
+                    : messageScanEnabled
+                    ? "Active"
+                    : "Inactive"}
+            </span>
+        </Button>
     );
 }
