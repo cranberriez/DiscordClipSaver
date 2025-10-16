@@ -17,7 +17,7 @@ export type {
     NewGuildSettings,
     GuildSettingsUpdate,
 } from "./schemas/guild_settings.kysely";
-export type { Channel } from "./schemas/channel.kysely";
+export type { Channel, ChannelType } from "./schemas/channel.kysely";
 export type {
     ScanStatus,
     ChannelScanStatus,

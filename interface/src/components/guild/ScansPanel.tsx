@@ -47,6 +47,7 @@ export function ScansPanel({
         return serverChannels.map(channel => ({
             channelId: channel.id,
             channelName: channel.name,
+            channelType: channel.type,
             messageScanEnabled: channel.message_scan_enabled,
             status: scanStatusMap[channel.id]?.status || null,
             messageCount: scanStatusMap[channel.id]?.message_count || 0,
