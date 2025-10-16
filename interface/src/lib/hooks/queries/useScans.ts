@@ -148,14 +148,63 @@ export function useStartScan(guildId: string) {
             return result;
         },
 
-        // Invalidate scan statuses after starting a scan
+        // Optimistic update: immediately show PENDING status
+        onMutate: async ({ channelId }) => {
+            // Cancel any outgoing refetches to avoid overwriting our optimistic update
+            await queryClient.cancelQueries({ queryKey: guildKeys.scanStatuses(guildId) });
+
+            // Snapshot the previous value
+            const previousStatuses = queryClient.getQueryData(guildKeys.scanStatuses(guildId));
+
+            // Optimistically update the cache
+            queryClient.setQueryData(guildKeys.scanStatuses(guildId), (old: any) => {
+                if (!old?.statuses) return old;
+
+                const statuses = old.statuses as ChannelScanStatus[];
+                const existingIndex = statuses.findIndex(s => s.channel_id === channelId);
+
+                const optimisticStatus: ChannelScanStatus = {
+                    channel_id: channelId,
+                    guild_id: guildId,
+                    status: 'PENDING',
+                    message_count: existingIndex >= 0 ? statuses[existingIndex].message_count : 0,
+                    total_messages_scanned: existingIndex >= 0 ? statuses[existingIndex].total_messages_scanned : 0,
+                    forward_message_id: existingIndex >= 0 ? statuses[existingIndex].forward_message_id : null,
+                    backward_message_id: existingIndex >= 0 ? statuses[existingIndex].backward_message_id : null,
+                    created_at: existingIndex >= 0 ? statuses[existingIndex].created_at : new Date(),
+                    updated_at: new Date(),
+                    error_message: null,
+                };
+
+                if (existingIndex >= 0) {
+                    // Update existing status
+                    const newStatuses = [...statuses];
+                    newStatuses[existingIndex] = optimisticStatus;
+                    return { ...old, statuses: newStatuses };
+                } else {
+                    // Add new status
+                    return { ...old, statuses: [...statuses, optimisticStatus] };
+                }
+            });
+
+            // Return context with previous value for rollback on error
+            return { previousStatuses };
+        },
+
+        // Invalidate scan statuses after starting a scan to get real server state
         onSuccess: () => {
-            // Invalidate to refetch immediately
+            // Invalidate to refetch the actual server state
             queryClient.invalidateQueries({ queryKey: guildKeys.scanStatuses(guildId) });
         },
 
-        onError: (error) => {
+        // Rollback on error
+        onError: (error, variables, context) => {
             console.error('Failed to start scan:', error);
+            
+            // Rollback to previous state
+            if (context?.previousStatuses) {
+                queryClient.setQueryData(guildKeys.scanStatuses(guildId), context.previousStatuses);
+            }
         },
     });
 }

@@ -3,7 +3,9 @@
 import { useScanStatuses, useStartScan } from "@/lib/hooks/queries";
 import { startMultipleChannelScans } from "@/lib/actions/scan";
 import { useState, useMemo } from "react";
-import type { Channel } from "@/lib/db/types";
+import { useQueryClient } from "@tanstack/react-query";
+import { guildKeys } from "@/lib/hooks/queries/useGuilds";
+import type { Channel, ChannelScanStatus } from "@/lib/db/types";
 import {
     Card,
     CardContent,
@@ -25,6 +27,7 @@ export function ScansPanel({
     guildId,
     channels: serverChannels,
 }: ScansPanelProps) {
+    const queryClient = useQueryClient();
     const {
         data: scanStatuses = [],
         isLoading: loading,
@@ -91,15 +94,53 @@ export function ScansPanel({
             const unscanned = channels.filter(
                 ch => !ch.status && ch.messageScanEnabled
             );
+            
+            const channelIds = unscanned.map(ch => ch.channelId);
+            
+            // Optimistically update scan statuses to PENDING immediately
+            queryClient.setQueryData(guildKeys.scanStatuses(guildId), (old: any) => {
+                if (!old?.statuses) return old;
+                
+                const statuses = [...old.statuses] as ChannelScanStatus[];
+                
+                channelIds.forEach(channelId => {
+                    const existingIndex = statuses.findIndex(s => s.channel_id === channelId);
+                    const optimisticStatus: ChannelScanStatus = {
+                        channel_id: channelId,
+                        guild_id: guildId,
+                        status: 'PENDING',
+                        message_count: existingIndex >= 0 ? statuses[existingIndex].message_count : 0,
+                        total_messages_scanned: existingIndex >= 0 ? statuses[existingIndex].total_messages_scanned : 0,
+                        forward_message_id: existingIndex >= 0 ? statuses[existingIndex].forward_message_id : null,
+                        backward_message_id: existingIndex >= 0 ? statuses[existingIndex].backward_message_id : null,
+                        created_at: existingIndex >= 0 ? statuses[existingIndex].created_at : new Date(),
+                        updated_at: new Date(),
+                        error_message: null,
+                    };
+                    
+                    if (existingIndex >= 0) {
+                        statuses[existingIndex] = optimisticStatus;
+                    } else {
+                        statuses.push(optimisticStatus);
+                    }
+                });
+                
+                return { ...old, statuses };
+            });
+            
+            // Start the scans
             const result = await startMultipleChannelScans(
                 guildId,
-                unscanned.map(ch => ch.channelId),
+                channelIds,
                 { direction, limit: 100, autoContinue: true }
             );
 
             alert(`Started ${result.success} scans, ${result.failed} failed`);
+            
+            // Refetch to get actual server state
+            refetch();
         } else {
-            // Scan selected channel
+            // Scan selected channel - mutation handles optimistic updates
             startScanMutation.mutate({
                 channelId: selectedChannel,
                 options: {
