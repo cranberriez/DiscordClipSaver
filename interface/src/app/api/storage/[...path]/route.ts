@@ -69,8 +69,11 @@ export async function GET(
             contentType = "video/webm";
         }
         
+        // Use Blob as body to satisfy BodyInit typing
+        const blob = new Blob([fileBuffer], { type: contentType });
+
         // Return file with appropriate headers
-        return new NextResponse(fileBuffer, {
+        return new NextResponse(blob, {
             headers: {
                 "Content-Type": contentType,
                 "Cache-Control": "public, max-age=31536000, immutable",

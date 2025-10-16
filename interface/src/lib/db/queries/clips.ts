@@ -19,14 +19,18 @@ export async function getClipsByChannelId(
         .selectAll("clip")
         .where("clip.channel_id", "=", channelId)
         .where("clip.deleted_at", "is", null)
-        .orderBy("clip.created_at", "desc")
+        .orderBy("clip.created_at", "asc")
         .limit(limit)
         .offset(offset)
         .execute();
 
+    if (clips.length === 0) {
+        return [];
+    }
+
     // Fetch related messages and thumbnails
-    const clipIds = clips.map((c) => c.id);
-    const messageIds = clips.map((c) => c.message_id);
+    const clipIds = clips.map(c => c.id);
+    const messageIds = clips.map(c => c.message_id);
 
     const [messages, thumbnails] = await Promise.all([
         getDb()
@@ -43,7 +47,7 @@ export async function getClipsByChannelId(
     ]);
 
     // Create lookup maps
-    const messageMap = new Map(messages.map((m) => [m.id, m]));
+    const messageMap = new Map(messages.map(m => [m.id, m]));
     const thumbnailMap = new Map<string, Thumbnail[]>();
     for (const thumb of thumbnails) {
         if (!thumbnailMap.has(thumb.clip_id)) {
@@ -53,7 +57,7 @@ export async function getClipsByChannelId(
     }
 
     // Combine data
-    return clips.map((clip) => ({
+    return clips.map(clip => ({
         ...clip,
         message: messageMap.get(clip.message_id)!,
         thumbnails: thumbnailMap.get(clip.id) || [],
@@ -63,7 +67,9 @@ export async function getClipsByChannelId(
 /**
  * Get a single clip by ID with full metadata
  */
-export async function getClipById(clipId: string): Promise<ClipWithMetadata | null> {
+export async function getClipById(
+    clipId: string
+): Promise<ClipWithMetadata | null> {
     const clip = await getDb()
         .selectFrom("clip")
         .selectAll()
@@ -125,10 +131,12 @@ export async function updateClipCdnUrl(
 /**
  * Get clip count for a channel
  */
-export async function getClipCountByChannelId(channelId: string): Promise<number> {
+export async function getClipCountByChannelId(
+    channelId: string
+): Promise<number> {
     const result = await getDb()
         .selectFrom("clip")
-        .select((eb) => eb.fn.count<number>("id").as("count"))
+        .select(eb => eb.fn.count<number>("id").as("count"))
         .where("channel_id", "=", channelId)
         .where("deleted_at", "is", null)
         .executeTakeFirst();
