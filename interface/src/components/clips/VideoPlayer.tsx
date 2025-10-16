@@ -19,8 +19,8 @@ interface VideoPlayerProps {
 export function VideoPlayer({ src, poster, title, onError }: VideoPlayerProps) {
     const playerRef = useRef<any>(null);
 
-    // Transform Discord CDN URLs to media.discordapp.net for CORS support
-    const videoSrc = src.replace("cdn.discordapp.com", "media.discordapp.net");
+    // Use the CDN URL as-is (no CORS transformation needed without crossOrigin attribute)
+    const videoSrc = src;
 
     useEffect(() => {
         const player = playerRef.current;
@@ -80,7 +80,6 @@ export function VideoPlayer({ src, poster, title, onError }: VideoPlayerProps) {
                 type: "video/mp4",
             }}
             poster={poster}
-            crossOrigin
             playsInline
         >
             <MediaProvider />
