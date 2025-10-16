@@ -32,6 +32,8 @@ class BatchScanJob(BaseJob):
     after_message_id: Optional[str] = None   # For forward scan
     # Whether to automatically queue continuation jobs until channel is fully scanned
     auto_continue: bool = True  # Default to True for historical scans
+    # Whether to rescan already-processed messages (True) or stop when encountering them (False)
+    rescan: bool = False  # Default to False - stop on duplicates for efficiency
 
 
 class MessageScanJob(BaseJob):

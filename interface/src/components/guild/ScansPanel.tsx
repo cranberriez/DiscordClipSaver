@@ -16,7 +16,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import { Info, RefreshCw, Play, ArrowDown, ArrowUp, AlertCircle } from "lucide-react";
+import { Info, RefreshCw, Play, AlertCircle } from "lucide-react";
 
 interface ScansPanelProps {
     guildId: string;
@@ -35,11 +35,8 @@ export function ScansPanel({
         refetch,
     } = useScanStatuses(guildId);
     const startScanMutation = useStartScan(guildId);
-    const [selectedChannel, setSelectedChannel] = useState<string>("all");
-    const [direction, setDirection] = useState<"backward" | "forward">(
-        "backward"
-    );
-    const [starting, setStarting] = useState(false);
+    const [startingUnscanned, setStartingUnscanned] = useState(false);
+    const [startingUpdate, setStartingUpdate] = useState(false);
 
     // Convert array to map for easier lookup
     const scanStatusMap = useMemo(() => {
@@ -65,93 +62,145 @@ export function ScansPanel({
         }));
     }, [serverChannels, scanStatusMap]);
 
-    const unscannedCount = channels.filter(
-        ch => !ch.status && ch.messageScanEnabled
+    const unscannedOrFailedCount = channels.filter(
+        ch => (!ch.status || ch.status === "FAILED") && ch.messageScanEnabled
     ).length;
     const activeScans = channels.filter(
         ch => ch.status === "RUNNING" || ch.status === "PENDING"
     ).length;
-    const failedScans = channels.filter(
-        ch => ch.status === "FAILED"
+    const successfulScans = channels.filter(
+        ch => ch.status === "SUCCEEDED" && ch.messageScanEnabled
     ).length;
 
-    const handleStartScan = (channelId: string) => {
+    const handleStartScan = (channelId: string, isUpdate: boolean = false) => {
         startScanMutation.mutate({
             channelId,
             options: {
-                direction,
+                isUpdate,
                 limit: 100,
                 autoContinue: true,
             },
         });
     };
 
-    const handleStartSelected = async () => {
-        setStarting(true);
+    const handleScanUnscannedOrFailed = async () => {
+        setStartingUnscanned(true);
 
-        if (selectedChannel === "all") {
-            // Scan all unscanned channels that have scanning enabled
-            const unscanned = channels.filter(
-                ch => !ch.status && ch.messageScanEnabled
-            );
-            
-            const channelIds = unscanned.map(ch => ch.channelId);
-            
-            // Optimistically update scan statuses to PENDING immediately
-            queryClient.setQueryData(guildKeys.scanStatuses(guildId), (old: any) => {
-                if (!old?.statuses) return old;
-                
-                const statuses = [...old.statuses] as ChannelScanStatus[];
-                
-                channelIds.forEach(channelId => {
-                    const existingIndex = statuses.findIndex(s => s.channel_id === channelId);
-                    const optimisticStatus: ChannelScanStatus = {
-                        channel_id: channelId,
-                        guild_id: guildId,
-                        status: 'PENDING',
-                        message_count: existingIndex >= 0 ? statuses[existingIndex].message_count : 0,
-                        total_messages_scanned: existingIndex >= 0 ? statuses[existingIndex].total_messages_scanned : 0,
-                        forward_message_id: existingIndex >= 0 ? statuses[existingIndex].forward_message_id : null,
-                        backward_message_id: existingIndex >= 0 ? statuses[existingIndex].backward_message_id : null,
-                        created_at: existingIndex >= 0 ? statuses[existingIndex].created_at : new Date(),
-                        updated_at: new Date(),
-                        error_message: null,
-                    };
-                    
-                    if (existingIndex >= 0) {
-                        statuses[existingIndex] = optimisticStatus;
-                    } else {
-                        statuses.push(optimisticStatus);
-                    }
-                });
-                
-                return { ...old, statuses };
-            });
-            
-            // Start the scans
-            const result = await startMultipleChannelScans(
-                guildId,
-                channelIds,
-                { direction, limit: 100, autoContinue: true }
-            );
-
-            alert(`Started ${result.success} scans, ${result.failed} failed`);
-            
-            // Refetch to get actual server state
-            refetch();
-        } else {
-            // Scan selected channel - mutation handles optimistic updates
-            startScanMutation.mutate({
-                channelId: selectedChannel,
-                options: {
-                    direction,
-                    limit: 100,
-                    autoContinue: true,
-                },
-            });
+        // Scan channels that are unscanned or failed
+        const toScan = channels.filter(
+            ch => (!ch.status || ch.status === "FAILED") && ch.messageScanEnabled
+        );
+        
+        const channelIds = toScan.map(ch => ch.channelId);
+        
+        if (channelIds.length === 0) {
+            alert("No unscanned or failed channels found");
+            setStartingUnscanned(false);
+            return;
         }
+        
+        // Optimistically update scan statuses to PENDING immediately
+        queryClient.setQueryData(guildKeys.scanStatuses(guildId), (old: any) => {
+            if (!old?.statuses) return old;
+            
+            const statuses = [...old.statuses] as ChannelScanStatus[];
+            
+            channelIds.forEach(channelId => {
+                const existingIndex = statuses.findIndex(s => s.channel_id === channelId);
+                const optimisticStatus: ChannelScanStatus = {
+                    channel_id: channelId,
+                    guild_id: guildId,
+                    status: 'PENDING',
+                    message_count: existingIndex >= 0 ? statuses[existingIndex].message_count : 0,
+                    total_messages_scanned: existingIndex >= 0 ? statuses[existingIndex].total_messages_scanned : 0,
+                    forward_message_id: existingIndex >= 0 ? statuses[existingIndex].forward_message_id : null,
+                    backward_message_id: existingIndex >= 0 ? statuses[existingIndex].backward_message_id : null,
+                    created_at: existingIndex >= 0 ? statuses[existingIndex].created_at : new Date(),
+                    updated_at: new Date(),
+                    error_message: null,
+                };
+                
+                if (existingIndex >= 0) {
+                    statuses[existingIndex] = optimisticStatus;
+                } else {
+                    statuses.push(optimisticStatus);
+                }
+            });
+            
+            return { ...old, statuses };
+        });
+        
+        // Start the scans (isUpdate: false = initial/continuation scan)
+        const result = await startMultipleChannelScans(
+            guildId,
+            channelIds,
+            { isUpdate: false, limit: 100, autoContinue: true }
+        );
 
-        setStarting(false);
+        alert(`Started ${result.success} scans, ${result.failed} failed`);
+        
+        // Refetch to get actual server state
+        refetch();
+        setStartingUnscanned(false);
+    };
+
+    const handleUpdateAllChannels = async () => {
+        setStartingUpdate(true);
+
+        // Update scan for all enabled channels (forward scan from last known position)
+        const toUpdate = channels.filter(ch => ch.messageScanEnabled);
+        
+        const channelIds = toUpdate.map(ch => ch.channelId);
+        
+        if (channelIds.length === 0) {
+            alert("No channels enabled for scanning");
+            setStartingUpdate(false);
+            return;
+        }
+        
+        // Optimistically update scan statuses to PENDING immediately
+        queryClient.setQueryData(guildKeys.scanStatuses(guildId), (old: any) => {
+            if (!old?.statuses) return old;
+            
+            const statuses = [...old.statuses] as ChannelScanStatus[];
+            
+            channelIds.forEach(channelId => {
+                const existingIndex = statuses.findIndex(s => s.channel_id === channelId);
+                const optimisticStatus: ChannelScanStatus = {
+                    channel_id: channelId,
+                    guild_id: guildId,
+                    status: 'PENDING',
+                    message_count: existingIndex >= 0 ? statuses[existingIndex].message_count : 0,
+                    total_messages_scanned: existingIndex >= 0 ? statuses[existingIndex].total_messages_scanned : 0,
+                    forward_message_id: existingIndex >= 0 ? statuses[existingIndex].forward_message_id : null,
+                    backward_message_id: existingIndex >= 0 ? statuses[existingIndex].backward_message_id : null,
+                    created_at: existingIndex >= 0 ? statuses[existingIndex].created_at : new Date(),
+                    updated_at: new Date(),
+                    error_message: null,
+                };
+                
+                if (existingIndex >= 0) {
+                    statuses[existingIndex] = optimisticStatus;
+                } else {
+                    statuses.push(optimisticStatus);
+                }
+            });
+            
+            return { ...old, statuses };
+        });
+        
+        // Start the scans (isUpdate: true = forward scan from last position)
+        const result = await startMultipleChannelScans(
+            guildId,
+            channelIds,
+            { isUpdate: true, limit: 100, autoContinue: true }
+        );
+
+        alert(`Started ${result.success} update scans, ${result.failed} failed`);
+        
+        // Refetch to get actual server state
+        refetch();
+        setStartingUpdate(false);
     };
 
     if (loading) {
@@ -238,105 +287,73 @@ export function ScansPanel({
                             </p>
                             <div className="mt-2 flex gap-4 text-xs text-muted-foreground">
                                 <span>
-                                    • <strong>{unscannedCount}</strong> unscanned
+                                    • <strong>{unscannedOrFailedCount}</strong> unscanned/failed
                                     channels
                                 </span>
                                 <span>
                                     • <strong>{activeScans}</strong> active scans
                                 </span>
-                                {failedScans > 0 && (
-                                    <span className="text-destructive">
-                                        • <strong>{failedScans}</strong> failed
-                                    </span>
-                                )}
+                                <span>
+                                    • <strong>{successfulScans}</strong> scanned channels
+                                </span>
                             </div>
                         </div>
                     </div>
                 </CardContent>
             </Card>
 
-            {/* Start New Scan Panel */}
+            {/* Bulk Scan Actions Panel */}
             <Card>
                 <CardHeader>
-                    <CardTitle>Start New Scan</CardTitle>
+                    <CardTitle>Bulk Scan Actions</CardTitle>
                     <CardDescription>
-                        Configure and start a new message scan
+                        Start scans for multiple channels at once
                     </CardDescription>
                 </CardHeader>
-                <CardContent className="space-y-4">
-                    {/* Channel Selector */}
-                    <div className="space-y-2">
-                        <Label htmlFor="channel-select">Channel</Label>
-                        <select
-                            id="channel-select"
-                            value={selectedChannel}
-                            onChange={e => setSelectedChannel(e.target.value)}
-                            className="w-full px-3 py-2 bg-background border rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-ring [&>option]:bg-background [&>optgroup]:bg-muted"
-                        >
-                            <option value="all">
-                                All Unscanned Channels ({unscannedCount})
-                            </option>
-                            <optgroup label="Individual Channels">
-                                {channels.map(ch => (
-                                    <option
-                                        key={ch.channelId}
-                                        value={ch.channelId}
-                                        disabled={!ch.messageScanEnabled}
-                                    >
-                                        #{ch.channelName}{" "}
-                                        {!ch.messageScanEnabled
-                                            ? "(Disabled)"
-                                            : ch.status
-                                            ? `(${ch.status})`
-                                            : "(Not scanned)"}
-                                    </option>
-                                ))}
-                            </optgroup>
-                        </select>
-                    </div>
-
-                    {/* Direction Toggle */}
-                    <div className="space-y-2">
-                        <Label>Scan Direction</Label>
-                        <div className="flex gap-2">
-                            <Button
-                                type="button"
-                                variant={direction === "backward" ? "default" : "outline"}
-                                onClick={() => setDirection("backward")}
-                                className="flex-1"
-                            >
-                                <ArrowDown className="h-4 w-4" />
-                                Newest First
-                            </Button>
-                            <Button
-                                type="button"
-                                variant={direction === "forward" ? "default" : "outline"}
-                                onClick={() => setDirection("forward")}
-                                className="flex-1"
-                            >
-                                <ArrowUp className="h-4 w-4" />
-                                Oldest First
-                            </Button>
-                        </div>
-                    </div>
-
-                    {/* Start Button */}
+                <CardContent className="space-y-3">
+                    {/* Scan Unscanned/Failed Button */}
                     <Button
-                        onClick={handleStartSelected}
+                        onClick={handleScanUnscannedOrFailed}
                         disabled={
-                            starting ||
-                            (selectedChannel === "all" && unscannedCount === 0)
+                            startingUnscanned ||
+                            startingUpdate ||
+                            unscannedOrFailedCount === 0
                         }
                         className="w-full"
                         size="lg"
+                        variant="default"
                     >
                         <Play className="h-4 w-4" />
-                        {starting
+                        {startingUnscanned
                             ? "Starting..."
-                            : selectedChannel === "all"
-                            ? `Start Scanning ${unscannedCount} Channels`
-                            : "Start Scan"}
+                            : `Scan Unscanned or Failed Channels (${unscannedOrFailedCount})`}
                     </Button>
+                    <p className="text-xs text-muted-foreground">
+                        Scans channels that have never been scanned or previously failed.
+                        Uses channel default scan direction (forward from oldest or backward from newest).
+                    </p>
+
+                    {/* Update All Channels Button */}
+                    <Button
+                        onClick={handleUpdateAllChannels}
+                        disabled={
+                            startingUnscanned ||
+                            startingUpdate ||
+                            channels.filter(ch => ch.messageScanEnabled).length === 0
+                        }
+                        className="w-full"
+                        size="lg"
+                        variant="secondary"
+                    >
+                        <RefreshCw className="h-4 w-4" />
+                        {startingUpdate
+                            ? "Starting..."
+                            : `Scan and Update All Channels (${channels.filter(ch => ch.messageScanEnabled).length})`}
+                    </Button>
+                    <p className="text-xs text-muted-foreground">
+                        Forward scan from the last known position to catch new messages.
+                        Continues until reaching the newest message or current end.
+                    </p>
                 </CardContent>
             </Card>
 

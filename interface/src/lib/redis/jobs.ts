@@ -77,6 +77,7 @@ export async function startBatchScan(params: {
     beforeMessageId?: string;
     afterMessageId?: string;
     autoContinue?: boolean;
+    rescan?: boolean;
 }): Promise<{ jobId: string; messageId: string }> {
     const {
         guildId,
@@ -86,6 +87,7 @@ export async function startBatchScan(params: {
         beforeMessageId = null,
         afterMessageId = null,
         autoContinue = true,
+        rescan = false,
     } = params;
     
     const job: BatchScanJob = {
@@ -98,6 +100,7 @@ export async function startBatchScan(params: {
         before_message_id: beforeMessageId ?? null,
         after_message_id: afterMessageId ?? null,
         auto_continue: autoContinue,
+        rescan,
         created_at: new Date().toISOString(),
     };
     

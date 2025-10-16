@@ -17,6 +17,7 @@ export interface BatchScanJob extends BaseJob {
     before_message_id?: string | null;
     after_message_id?: string | null;
     auto_continue: boolean;
+    rescan?: boolean; // Whether to rescan already-processed messages
 }
 
 export interface MessageScanJob extends BaseJob {

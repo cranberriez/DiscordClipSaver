@@ -112,7 +112,7 @@ export function useChannelScanStatus(guildId: string, channelId: string) {
  *   const handleStart = () => {
  *     startScan.mutate({ 
  *       channelId,
- *       options: { direction: 'backward', limit: 100 }
+ *       options: { isUpdate: false, limit: 100 }
  *     });
  *   };
  *   
@@ -134,7 +134,7 @@ export function useStartScan(guildId: string) {
         }: {
             channelId: string;
             options?: {
-                direction?: 'forward' | 'backward';
+                isUpdate?: boolean;
                 limit?: number;
                 autoContinue?: boolean;
             };

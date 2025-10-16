@@ -19,7 +19,7 @@ export async function startChannelScan(
     guildId: string,
     channelId: string,
     options?: {
-        direction?: "forward" | "backward";
+        isUpdate?: boolean; // If true, always scan forward from last position
         limit?: number;
         autoContinue?: boolean;
     }
@@ -51,19 +51,46 @@ export async function startChannelScan(
         // Check if scan is already running
         const existingStatus = await getChannelScanStatus(guildId, channelId);
 
-        if (existingStatus?.status === "RUNNING") {
+        if (existingStatus?.status === "RUNNING" || existingStatus?.status === "PENDING") {
             return {
                 success: false,
                 error: "Scan is already running for this channel",
             };
         }
 
+        // Determine scan parameters based on isUpdate flag and existing scan status
+        const isUpdate = options?.isUpdate ?? false;
+        let direction: "forward" | "backward";
+        let afterMessageId: string | undefined;
+        let beforeMessageId: string | undefined;
+
+        if (isUpdate) {
+            // Update scan: always forward from last known position
+            direction = "forward";
+            afterMessageId = existingStatus?.forward_message_id || undefined;
+        } else {
+            // Initial/continuation scan: use channel settings or continue from last position
+            if (existingStatus?.forward_message_id || existingStatus?.backward_message_id) {
+                // Has scan history - continue from where we left off
+                // TODO: Read channel scan_mode setting to determine preferred direction
+                // For now, default to forward continuation
+                direction = "forward";
+                afterMessageId = existingStatus.forward_message_id || undefined;
+            } else {
+                // First scan - use channel default scan_mode setting
+                // TODO: Read from channel settings, for now default to forward
+                direction = "forward";
+            }
+        }
+
         // Start the scan
         const { jobId, messageId } = await startBatchScan({
             guildId,
             channelId,
-            direction: options?.direction || "backward",
+            direction,
             limit: options?.limit || 100,
+            afterMessageId,
+            beforeMessageId,
             autoContinue: options?.autoContinue ?? true,
         });
 
@@ -84,7 +111,7 @@ export async function startMultipleChannelScans(
     guildId: string,
     channelIds: string[],
     options?: {
-        direction?: "forward" | "backward";
+        isUpdate?: boolean;
         limit?: number;
         autoContinue?: boolean;
     }

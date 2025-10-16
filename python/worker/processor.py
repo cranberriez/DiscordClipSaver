@@ -133,6 +133,7 @@ class JobProcessor:
         before_message_id = job_data.get("before_message_id")
         after_message_id = job_data.get("after_message_id")
         auto_continue = job_data.get("auto_continue", True)
+        rescan = job_data.get("rescan", False)
         
         logger.info(f"Processing batch scan: channel={channel_id}, direction={direction}, limit={limit}")
         
@@ -226,9 +227,39 @@ class JobProcessor:
             
             logger.info(f"Fetched {len(messages)} messages from channel {channel_id}")
             
+            # If rescan is False, check for existing messages and filter them out
+            messages_to_process = messages
+            stopped_on_duplicate = False
+            
+            if not rescan and messages:
+                from shared.db.models import Message as MessageModel
+                
+                # Get message IDs
+                message_ids = [str(msg.id) for msg in messages]
+                
+                # Check which messages already exist
+                existing_messages = await MessageModel.filter(
+                    id__in=message_ids,
+                    channel_id=channel_id
+                ).values_list('id', flat=True)
+                
+                existing_ids = set(existing_messages)
+                
+                if existing_ids:
+                    logger.info(f"Found {len(existing_ids)} already-processed messages out of {len(messages)}")
+                    
+                    # Filter out existing messages
+                    messages_to_process = [msg for msg in messages if str(msg.id) not in existing_ids]
+                    
+                    # If we hit existing messages, we should stop continuation
+                    # This means we've caught up to previously scanned territory
+                    if len(messages_to_process) < len(messages):
+                        stopped_on_duplicate = True
+                        logger.info(f"Stopping scan - encountered {len(existing_ids)} already-processed messages")
+            
             # Process messages in batch for better performance
             total_clips, thumbnails_generated = await self.batch_processor.process_messages_batch(
-                messages=messages,
+                messages=messages_to_process,
                 channel_id=channel_id,
                 guild_id=guild_id
             )
@@ -237,34 +268,64 @@ class JobProcessor:
             await increment_scan_counts(
                 guild_id=guild_id,
                 channel_id=channel_id,
-                messages_scanned=len(messages),
+                messages_scanned=len(messages_to_process),
                 clips_found=total_clips
             )
             
             # Track message IDs for continuation
             continuation_needed = False
             if messages:
+                # Check if this is the first scan (both IDs are null)
+                is_first_scan = (
+                    scan_status.forward_message_id is None and 
+                    scan_status.backward_message_id is None
+                )
+                
                 if direction == "backward":
                     # Oldest message is the last in the list
                     oldest_message_id = str(messages[-1].id)
-                    await update_scan_status(
-                        guild_id=guild_id,
-                        channel_id=channel_id,
-                        backward_message_id=oldest_message_id
-                    )
-                    # If we got a full batch, there might be more messages
-                    continuation_needed = len(messages) >= limit
+                    newest_message_id = str(messages[0].id)
+                    
+                    if is_first_scan:
+                        # First scan: set BOTH boundaries
+                        await update_scan_status(
+                            guild_id=guild_id,
+                            channel_id=channel_id,
+                            backward_message_id=oldest_message_id,
+                            forward_message_id=newest_message_id
+                        )
+                    else:
+                        # Continuation: only update backward boundary
+                        await update_scan_status(
+                            guild_id=guild_id,
+                            channel_id=channel_id,
+                            backward_message_id=oldest_message_id
+                        )
+                    # Continue if we got a full batch AND didn't hit duplicates
+                    continuation_needed = len(messages) >= limit and not stopped_on_duplicate
                     
                 elif direction == "forward":
                     # Newest message is the last in the list
                     newest_message_id = str(messages[-1].id)
-                    await update_scan_status(
-                        guild_id=guild_id,
-                        channel_id=channel_id,
-                        forward_message_id=newest_message_id
-                    )
-                    # If we got a full batch, there might be more messages
-                    continuation_needed = len(messages) >= limit
+                    oldest_message_id = str(messages[0].id)
+                    
+                    if is_first_scan:
+                        # First scan: set BOTH boundaries
+                        await update_scan_status(
+                            guild_id=guild_id,
+                            channel_id=channel_id,
+                            forward_message_id=newest_message_id,
+                            backward_message_id=oldest_message_id
+                        )
+                    else:
+                        # Continuation: only update forward boundary
+                        await update_scan_status(
+                            guild_id=guild_id,
+                            channel_id=channel_id,
+                            forward_message_id=newest_message_id
+                        )
+                    # Continue if we got a full batch AND didn't hit duplicates
+                    continuation_needed = len(messages) >= limit and not stopped_on_duplicate
             
             # Queue continuation job if needed and allowed
             if continuation_needed and auto_continue and self.redis_client:
@@ -277,7 +338,8 @@ class JobProcessor:
                     limit=limit,
                     before_message_id=oldest_message_id if direction == "backward" else before_message_id,
                     after_message_id=newest_message_id if direction == "forward" else after_message_id,
-                    auto_continue=True  # Preserve auto_continue for continuation jobs
+                    auto_continue=True,  # Preserve auto_continue for continuation jobs
+                    rescan=rescan  # Preserve rescan flag
                 )
                 
                 await self.redis_client.push_job(continuation_job.model_dump(mode='json'))
@@ -300,8 +362,10 @@ class JobProcessor:
                 
                 if not auto_continue and continuation_needed:
                     logger.info(f"Batch scan complete but auto_continue=False, not queueing continuation")
+                elif stopped_on_duplicate:
+                    logger.info(f"Batch scan stopped - reached already-scanned messages (rescan={rescan})")
             
-            logger.info(f"Batch scan complete: processed {len(messages)} messages, found {total_clips} clips")
+            logger.info(f"Batch scan complete: processed {len(messages_to_process)} messages (of {len(messages)} fetched), found {total_clips} clips")
             
         except Exception as e:
             logger.error(f"Batch scan failed for channel {channel_id}: {e}", exc_info=True)
