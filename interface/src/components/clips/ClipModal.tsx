@@ -41,14 +41,19 @@ export function ClipModal({ clip, onClose }: ClipModalProps) {
                 method: "POST",
             });
 
-            if (!response.ok) throw new Error("Failed to refresh CDN URL");
+            if (!response.ok) {
+                const errorData = await response.json();
+                const errorMsg = errorData.details || errorData.error || "Failed to refresh CDN URL";
+                throw new Error(errorMsg);
+            }
 
             const data = await response.json();
             setVideoUrl(data.cdn_url);
             setIsExpired(false);
         } catch (error) {
             console.error("Error refreshing CDN URL:", error);
-            alert("Failed to refresh video URL. Please try again.");
+            const errorMsg = error instanceof Error ? error.message : "Unknown error";
+            alert(`Failed to refresh video URL: ${errorMsg}\n\nPlease check that the bot is running and try again.`);
         } finally {
             setRefreshing(false);
         }
@@ -93,21 +98,16 @@ export function ClipModal({ clip, onClose }: ClipModalProps) {
                                 <p className="text-sm text-muted-foreground text-center px-4">
                                     This may be due to an expired URL or unsupported video codec (HEVC/H.265).
                                 </p>
-                                <div className="flex gap-2">
-                                    <Button
-                                        onClick={refreshCdnUrl}
-                                        disabled={refreshing}
-                                        variant="outline"
-                                    >
-                                        {refreshing ? "Refreshing..." : "Refresh URL"}
-                                    </Button>
-                                    <Button
-                                        onClick={() => window.open(videoUrl, '_blank')}
-                                        variant="default"
-                                    >
-                                        Download Video
-                                    </Button>
-                                </div>
+                                <p className="text-sm text-muted-foreground text-center px-4">
+                                    Click "Refresh URL" to get a fresh CDN link from Discord.
+                                </p>
+                                <Button
+                                    onClick={refreshCdnUrl}
+                                    disabled={refreshing}
+                                    variant="default"
+                                >
+                                    {refreshing ? "Refreshing..." : "Refresh URL"}
+                                </Button>
                             </div>
                         ) : (
                             <VideoPlayer

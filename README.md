@@ -49,4 +49,11 @@ The interface requires the bot to be running to function.
 
 1. Navigate to the interface folder with `cd /interface`
 2. Install the dependencies with `npm install`
-3. Run the interface with `npm run dev`
+3. Create a `.env` file with required variables:
+   ```env
+   BOT_API_URL=http://127.0.0.1:8000
+   # ... other environment variables from .env.global
+   ```
+4. Run the interface with `npm run dev`
+
+**Note:** When running in Docker, `BOT_API_URL` is automatically set to `http://bot:8000` in `docker-compose.yml`.

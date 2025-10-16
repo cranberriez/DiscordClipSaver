@@ -39,7 +39,17 @@ export async function POST(
         }
 
         // Call the bot's FastAPI endpoint to get fresh CDN URLs
-        const botApiUrl = process.env.BOT_API_URL || "http://localhost:8000";
+        // Must be set in .env: http://bot:8000 (Docker) or http://127.0.0.1:8000 (local)
+        const botApiUrl = process.env.BOT_API_URL;
+        if (!botApiUrl) {
+            console.error("BOT_API_URL environment variable is not set");
+            return NextResponse.json(
+                { error: "Bot API URL not configured" },
+                { status: 500 }
+            );
+        }
+        console.log(`Calling bot API at: ${botApiUrl}/refresh-cdn`);
+        
         const response = await fetch(`${botApiUrl}/refresh-cdn`, {
             method: "POST",
             headers: {
@@ -85,8 +95,20 @@ export async function POST(
         });
     } catch (error) {
         console.error("Failed to refresh CDN URL:", error);
+        
+        // Provide more detailed error information
+        const errorMessage = error instanceof Error ? error.message : "Unknown error";
+        const errorCause = error instanceof Error && 'cause' in error 
+            ? JSON.stringify(error.cause) 
+            : "No cause";
+        
+        console.error("Error details:", { message: errorMessage, cause: errorCause });
+        
         return NextResponse.json(
-            { error: "Failed to refresh CDN URL" },
+            { 
+                error: "Failed to refresh CDN URL",
+                details: errorMessage 
+            },
             { status: 500 }
         );
     }

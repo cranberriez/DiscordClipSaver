@@ -33,7 +33,7 @@ services:
             # Persist thumbnails in shared volume
             - worker_storage:/app/storage
         deploy:
-            replicas: 1 # Default number of workers (change to 3 for testing, 5+ for production)
+            replicas: 3 # Default number of workers (change to 3 for testing, 5+ for production)
 
     interface:
         build:
@@ -43,6 +43,8 @@ services:
         env_file:
             - ./interface/.env
             - ./.env.global
+        environment:
+            - BOT_API_URL=http://bot:8000
         ports:
             - "3000:3000"
         depends_on:
