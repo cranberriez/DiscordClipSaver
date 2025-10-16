@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import {
     Dialog,
     DialogContent,
@@ -24,19 +24,14 @@ interface ClipModalProps {
 
 export function ClipModal({ clip, onClose }: ClipModalProps) {
     const [videoUrl, setVideoUrl] = useState<string>(clip.cdn_url);
-    const [isExpired, setIsExpired] = useState(false);
+    const [hasPlaybackError, setHasPlaybackError] = useState(false);
     const [refreshing, setRefreshing] = useState(false);
+    const [autoRefreshed, setAutoRefreshed] = useState(false);
 
-    useEffect(() => {
-        // Check if URL is expired
-        const expiresAt = new Date(clip.expires_at);
-        const now = new Date();
-        setIsExpired(expiresAt < now);
-    }, [clip.expires_at]);
-
-    const refreshCdnUrl = async () => {
+    const refreshCdnUrl = useCallback(async () => {
         try {
             setRefreshing(true);
+            setHasPlaybackError(false);
             const response = await fetch(`/api/clips/${clip.id}/refresh-cdn`, {
                 method: "POST",
             });
@@ -49,15 +44,27 @@ export function ClipModal({ clip, onClose }: ClipModalProps) {
 
             const data = await response.json();
             setVideoUrl(data.cdn_url);
-            setIsExpired(false);
         } catch (error) {
             console.error("Error refreshing CDN URL:", error);
             const errorMsg = error instanceof Error ? error.message : "Unknown error";
             alert(`Failed to refresh video URL: ${errorMsg}\n\nPlease check that the bot is running and try again.`);
+            setHasPlaybackError(true);
         } finally {
             setRefreshing(false);
         }
-    };
+    }, [clip.id]);
+
+    useEffect(() => {
+        // Auto-refresh if URL is expired
+        const expiresAt = new Date(clip.expires_at);
+        const now = new Date();
+        const isExpired = expiresAt < now;
+        
+        if (isExpired && !autoRefreshed) {
+            setAutoRefreshed(true);
+            refreshCdnUrl();
+        }
+    }, [clip.expires_at, autoRefreshed, refreshCdnUrl]);
 
     const formatDate = (date: Date | string): string => {
         return new Date(date).toLocaleString();
@@ -90,31 +97,42 @@ export function ClipModal({ clip, onClose }: ClipModalProps) {
                 <div className="space-y-6">
                     {/* Video Player */}
                     <div className="relative">
-                        {isExpired ? (
+                        {refreshing ? (
+                            <div className="aspect-video bg-muted rounded-lg flex flex-col items-center justify-center gap-4">
+                                <p className="text-muted-foreground text-center px-4">
+                                    Refreshing video URL...
+                                </p>
+                            </div>
+                        ) : hasPlaybackError ? (
                             <div className="aspect-video bg-muted rounded-lg flex flex-col items-center justify-center gap-4">
                                 <p className="text-muted-foreground text-center px-4">
                                     Video cannot be played
                                 </p>
                                 <p className="text-sm text-muted-foreground text-center px-4">
-                                    This may be due to an expired URL or unsupported video codec (HEVC/H.265).
+                                    This may be due to an unsupported video codec (HEVC/H.265) or a playback error.
                                 </p>
-                                <p className="text-sm text-muted-foreground text-center px-4">
-                                    Click "Refresh URL" to get a fresh CDN link from Discord.
-                                </p>
-                                <Button
-                                    onClick={refreshCdnUrl}
-                                    disabled={refreshing}
-                                    variant="default"
-                                >
-                                    {refreshing ? "Refreshing..." : "Refresh URL"}
-                                </Button>
+                                <div className="flex gap-2">
+                                    <Button
+                                        onClick={refreshCdnUrl}
+                                        disabled={refreshing}
+                                        variant="outline"
+                                    >
+                                        Retry
+                                    </Button>
+                                    <Button
+                                        onClick={() => window.open(videoUrl, '_blank')}
+                                        variant="default"
+                                    >
+                                        Download Video
+                                    </Button>
+                                </div>
                             </div>
                         ) : (
                             <VideoPlayer
                                 src={videoUrl}
                                 poster={getLargeThumbnail() || undefined}
                                 title={clip.filename}
-                                onError={() => setIsExpired(true)}
+                                onError={() => setHasPlaybackError(true)}
                             />
                         )}
                     </div>
