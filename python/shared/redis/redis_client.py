@@ -14,7 +14,7 @@ class RedisStreamClient:
     """Manages Redis stream for job queue"""
     
     STREAM_PREFIX = "jobs"
-    STREAM_MAXLEN = int(os.getenv("REDIS_STREAM_MAXLEN", "100"))
+    STREAM_MAXLEN = int(os.getenv("REDIS_STREAM_MAXLEN", "10000"))
     
     def __init__(
         self, 

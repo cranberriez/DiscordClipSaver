@@ -168,36 +168,71 @@ success_count, failure_count = await bulk_operations.bulk_upsert_users(users_dat
 
 ---
 
-### [HIGH-4] Reading Only 1 Job at a Time from Redis
+### [HIGH-4] Reading Only 1 Job at a Time from Redis ✅ COMPLETED
 
 **Priority**: High | **Impact**: 10x more Redis calls | **Effort**: 30min  
-**Files**: `python/worker/main.py:102`
+**Files**: `python/worker/main.py:100-105`  
+**Completed**: 2025-10-16
 
-**Issue**: `read_jobs(count=1)` = excessive round-trips.
+**Issue**: Worker reads only 1 job at a time from Redis, leading to excessive round-trips and underutilized async processing.
 
-**Fix**: Increase to `count=10` (configurable via env var).
+**Implementation**:
+- ✅ Changed default from `count=1` to `count=10`
+- ✅ Made configurable via `WORKER_JOB_BATCH_SIZE` env var
+- ✅ Added to `.env.global.example`
+
+**Performance Gain**: 10x fewer Redis round-trips
+
+**Code**:
+```python
+job_batch_size = int(os.getenv("WORKER_JOB_BATCH_SIZE", "10"))
+jobs = await self.redis.read_jobs(count=job_batch_size, block=5000)
+```
 
 ---
 
-### [HIGH-5] N+1 Query in Thumbnail Generation
+### [HIGH-5] N+1 Query in Thumbnail Generation ✅ COMPLETED
 
 **Priority**: High | **Impact**: N queries instead of 1 | **Effort**: 30min  
-**Files**: `python/worker/message/batch_processor.py:158-164`
+**Files**: `python/worker/message/batch_processor.py:158-171`  
+**Completed**: 2025-10-16
 
-**Issue**: Fetching clips individually in loop.
+**Issue**: Fetching clips individually in loop after batch processing.
 
-**Fix**: Bulk fetch clips before loop: `clips = await Clip.filter(id__in=clip_ids)`
+**Implementation**:
+- ✅ Added bulk fetch before loop: `clips = await Clip.filter(id__in=clip_ids).all()`
+- ✅ Created dict mapping for O(1) lookups
+- ✅ Changed from N queries to 1 query
+
+**Performance Gain**: N clips needing thumbnails = 1 query instead of N queries
+
+**Code**:
+```python
+# Bulk fetch clips to avoid N+1 query pattern
+clip_ids = [c.id for c in context.clips_needing_thumbnails]
+clips = await Clip.filter(id__in=clip_ids).all()
+clips_map = {c.id: c for c in clips}
+```
 
 ---
 
-### [HIGH-6] Stream Maxlen Too Small
+### [HIGH-6] Stream Maxlen Too Small ✅ COMPLETED
 
 **Priority**: High | **Impact**: Job loss under high load | **Effort**: 5min  
-**Files**: `python/shared/redis/redis_client.py:17`
+**Files**: 
+- `python/shared/redis/redis_client.py:17`
+- `.env.global.example`
 
-**Issue**: Default 100 = only ~10 seconds of buffer at high throughput.
+**Completed**: 2025-10-16
 
-**Fix**: Increase to 10,000 (memory impact: ~20MB, negligible).
+**Issue**: Default 100 = only ~10 seconds of buffer at high throughput. Jobs could be evicted before workers claim them.
+
+**Implementation**:
+- ✅ Increased default from 100 to 10,000
+- ✅ Updated `.env.global.example` with comment
+- ✅ Memory impact: ~20MB for 10k jobs (negligible)
+
+**Performance Gain**: ~15-20 minutes of job buffer instead of ~10 seconds
 
 ---
 
@@ -250,28 +285,28 @@ Add tracemalloc to identify leaks and high-memory operations.
 ## Summary
 
 **Total Issues**: 19 (3 Critical, 6 High, 6 Medium, 3 Low)  
-**Completed**: 4 (3 Critical, 1 Medium) ✅  
-**Remaining Effort**: ~24-30 hours
+**Completed**: 7 (3 Critical, 3 High, 1 Medium) ✅  
+**Remaining Effort**: ~17-23 hours
 
 **Completed Issues** ✅:
-
 1. ✅ [CRITICAL-1] Database connection pooling (1h)
 2. ✅ [CRITICAL-2] Download timeouts (30min)
 3. ✅ [CRITICAL-3] Bulk database operations (4h)
-4. ✅ [MED-3] Batch operation failure tracking (included in #3)
+4. ✅ [HIGH-4] Job batch size increase (5min)
+5. ✅ [HIGH-5] N+1 thumbnail query fix (30min)
+6. ✅ [HIGH-6] Stream maxlen increase (5min)
+7. ✅ [MED-3] Batch operation failure tracking (included in #3)
 
 **Performance Improvements Achieved**:
+- ✅ **Batch operations**: 70-90% faster (N queries → 1 query)
+- ✅ **Workers won't hang**: Download timeouts prevent stalled connections
+- ✅ **Proper connection pooling**: Scales with multiple workers
+- ✅ **Redis throughput**: 10x fewer round-trips with job batching
+- ✅ **Job buffer**: 100x larger stream (10k vs 100 jobs)
+- ✅ **Thumbnail queries**: Fixed N+1 pattern
+- ✅ **Better error tracking**: Success/failure counts for all batch operations
 
--   ✅ **Batch operations**: 70-90% faster (N queries → 1 query)
--   ✅ **Workers won't hang**: Download timeouts prevent stalled connections
--   ✅ **Proper connection pooling**: Scales with multiple workers
--   ✅ **Better error tracking**: Success/failure counts for all batch operations
-
-**Next Quick Wins** (Recommended order):
-
-1. [HIGH-4] Job batch size increase (5min) - Easy config change
-2. [HIGH-6] Stream maxlen increase (5min) - Easy config change
-3. [HIGH-3] Aiohttp session reuse (2h) - 50% faster downloads
-4. [HIGH-2] Settings cache (2h) - Eliminates repeated queries
-5. [HIGH-1] Replace KEYS with SCAN (2h) - Stops Redis blocking
-6. [HIGH-5] Fix N+1 thumbnail query (30min) - One query instead of N
+**Remaining High Priority** (Recommended order):
+1. [HIGH-3] Aiohttp session reuse (2h) - 50% faster downloads
+2. [HIGH-2] Settings cache (2h) - Eliminates repeated queries
+3. [HIGH-1] Replace KEYS with SCAN (2h) - Stops Redis blocking

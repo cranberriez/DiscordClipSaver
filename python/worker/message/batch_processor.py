@@ -155,8 +155,13 @@ class BatchMessageProcessor:
             f"Generating thumbnails for {len(context.clips_needing_thumbnails)} clips"
         )
         
+        # Bulk fetch clips to avoid N+1 query pattern
+        clip_ids = [c.id for c in context.clips_needing_thumbnails]
+        clips = await Clip.filter(id__in=clip_ids).all()
+        clips_map = {c.id: c for c in clips}
+        
         for clip_data in context.clips_needing_thumbnails:
-            clip = await Clip.get_or_none(id=clip_data.id)
+            clip = clips_map.get(clip_data.id)
             if clip:
                 success = await self.thumbnail_handler.process_clip(clip)
                 if success:

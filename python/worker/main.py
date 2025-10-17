@@ -96,10 +96,13 @@ class Worker:
         logger.info("Starting job processing loop...")
         self.running = True
         
+        # Job batch size (configurable via env var)
+        job_batch_size = int(os.getenv("WORKER_JOB_BATCH_SIZE", "10"))
+        
         while self.running:
             try:
                 # Read jobs from Redis stream (blocks for 5 seconds)
-                jobs = await self.redis.read_jobs(count=1, block=5000)
+                jobs = await self.redis.read_jobs(count=job_batch_size, block=5000)
                 
                 if not jobs:
                     # No jobs available, continue loop
