@@ -9,6 +9,7 @@ Coordinates between the thumbnail generator and database models to:
 """
 import logging
 import os
+import aiofiles.os
 import uuid
 from datetime import datetime, timezone, timedelta
 from typing import Tuple, Optional
@@ -67,8 +68,18 @@ class ThumbnailHandler:
                 large_path
             )
             
-            small_size = os.path.getsize(small_full_path) if os.path.exists(small_full_path) else 0
-            large_size = os.path.getsize(large_full_path) if os.path.exists(large_full_path) else 0
+            # Get file sizes asynchronously
+            try:
+                small_stat = await aiofiles.os.stat(small_full_path)
+                small_size = small_stat.st_size
+            except FileNotFoundError:
+                small_size = 0
+            
+            try:
+                large_stat = await aiofiles.os.stat(large_full_path)
+                large_size = large_stat.st_size
+            except FileNotFoundError:
+                large_size = 0
             
             # Create or update small thumbnail record
             await Thumbnail.update_or_create(
@@ -175,19 +186,29 @@ class ThumbnailHandler:
             
             logger.info(f"Created failed thumbnail record for clip {clip.id}: next retry in 5 minutes")
     
-    async def retry_failed_thumbnails(self) -> int:
+    async def retry_failed_thumbnails(self, clip_ids: Optional[list[str]] = None) -> int:
         """
         Retry failed thumbnail generations that are due for retry
+        
+        Args:
+            clip_ids: Optional list of specific clip IDs to retry. If None, retries all eligible.
         
         Returns:
             Number of thumbnails successfully retried
         """
         now = datetime.now(timezone.utc)
         
-        # Get failed thumbnails that are due for retry
-        failed = await FailedThumbnail.filter(
-            next_retry_at__lte=now
-        ).prefetch_related('clip').limit(10)  # Process 10 at a time
+        # Build query for failed thumbnails
+        query = FailedThumbnail.filter(next_retry_at__lte=now)
+        
+        # If specific clip IDs provided, filter to only those
+        if clip_ids:
+            query = query.filter(clip_id__in=clip_ids)
+            logger.info(f"Retrying {len(clip_ids)} specific clip(s): {clip_ids}")
+        
+        # Get failed thumbnails (limit to 10 at a time if no specific IDs)
+        limit = len(clip_ids) if clip_ids else 10
+        failed = await query.prefetch_related('clip').limit(limit)
         
         if not failed:
             logger.debug("No failed thumbnails due for retry")

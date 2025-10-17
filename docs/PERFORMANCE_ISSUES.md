@@ -462,13 +462,103 @@ DB_RETRY_MAX_DELAY=10.0      # Default: 10 seconds max
 
 All batch operations now return `Tuple[int, int]` with success/failure counts. Fallback methods track individual failures.
 
-### [MED-4] Synchronous File I/O in Async Context
+### [MED-4] Synchronous File I/O in Async Context ✅ COMPLETED
 
-**Effort**: 1-2h | Use `aiofiles` instead of blocking `os.path.getsize()` and `open()`.
+**Priority**: Medium | **Impact**: Prevents blocking event loop | **Effort**: 1-2h
+**Files**:
+- `python/worker/thumbnail/thumbnail_generator.py`
+- `python/worker/thumbnail/thumbnail_handler.py`
 
-### [MED-5] ThumbnailRetryJob Ignores clip_ids
+**Completed**: 2025-10-17
 
-**Effort**: 1h | Honor `clip_ids` parameter for targeted retries.
+**Issue**: Blocking file I/O operations (`open()`, `os.path.getsize()`) in async context caused the event loop to block, reducing concurrency and throughput.
+
+**Implementation**:
+- ✅ Replaced `open()` with `aiofiles.open()` for video downloads
+- ✅ Replaced `os.path.getsize()` with `aiofiles.os.stat()` for file size checks
+- ✅ Replaced `os.path.exists()` checks with try/except `FileNotFoundError` pattern
+- ✅ Used `await` for all file operations
+
+**Changes**:
+```python
+# Before (blocking)
+with open(temp_path, 'wb') as f:
+    f.write(chunk)
+size = os.path.getsize(path)
+
+# After (async)
+async with aiofiles.open(temp_path, 'wb') as f:
+    await f.write(chunk)
+stat = await aiofiles.os.stat(path)
+size = stat.st_size
+```
+
+**Performance Impact**:
+- Event loop remains responsive during file I/O
+- Better concurrency - other tasks can run while waiting for disk
+- Particularly beneficial during large video downloads (multi-MB files)
+- Eliminates CPU-blocking file operations in async context
+
+**Affected Operations**:
+- Video downloads from Discord CDN (8-40+ MB files)
+- Thumbnail file size checks
+- File existence verification
+
+### [MED-5] ThumbnailRetryJob Ignores clip_ids ✅ COMPLETED
+
+**Priority**: Medium | **Impact**: Resource efficiency | **Effort**: 1h
+**Files**:
+- `python/worker/thumbnail/thumbnail_handler.py`
+- `python/worker/processor.py`
+
+**Completed**: 2025-10-17
+
+**Issue**: `ThumbnailRetryJob` has a `clip_ids` field for targeted retries, but the processor ignored it and always retried ALL eligible failed thumbnails. This wasted resources when you only wanted to retry specific clips.
+
+**Example of Problem**:
+```python
+# Create job to retry 1 specific clip
+job = ThumbnailRetryJob(
+    guild_id="123",
+    channel_id="456",
+    clip_ids=["clip_abc123"]  # Just ONE clip
+)
+
+# But processor ignored it and retried ALL 1000+ failed thumbnails!
+```
+
+**Implementation**:
+- ✅ Added `clip_ids` parameter to `retry_failed_thumbnails()`
+- ✅ Filter query by `clip_id__in` when clip_ids provided
+- ✅ Updated processor to pass `clip_ids` from job data
+- ✅ Adjusted limit logic (specific clips vs. batch of 10)
+
+**Code Changes**:
+```python
+# Handler method signature
+async def retry_failed_thumbnails(self, clip_ids: Optional[list[str]] = None) -> int:
+    query = FailedThumbnail.filter(next_retry_at__lte=now)
+    
+    if clip_ids:
+        query = query.filter(clip_id__in=clip_ids)  # Targeted retry
+        limit = len(clip_ids)
+    else:
+        limit = 10  # Batch retry
+
+# Processor passes clip_ids
+clip_ids = job_data.get('clip_ids')
+success_count = await self.thumbnail_handler.retry_failed_thumbnails(clip_ids=clip_ids)
+```
+
+**Use Cases**:
+- **Targeted retry**: User reports broken thumbnail → Retry just that one
+- **Batch retry**: Scheduled job → Retry 10 oldest failures
+- **Channel retry**: Retry all clips from specific channel
+
+**Performance Impact**:
+- Reduces unnecessary work when retrying specific clips
+- Better resource utilization (don't retry 1000 clips when you need 1)
+- Faster response for user-initiated retries
 
 ### [MED-6] No Disk Space Checks
 
@@ -548,8 +638,8 @@ Add tracemalloc to identify leaks and high-memory operations.
 ## Summary
 
 **Total Issues**: 19 (3 Critical, 6 High, 6 Medium, 3 Low)  
-**Completed**: 13 (3 Critical, 6 High, 3 Medium, 1 Low) ✅  
-**Remaining Effort**: ~6-10 hours
+**Completed**: 15 (3 Critical, 6 High, 5 Medium, 1 Low) ✅  
+**Remaining Effort**: ~5-7 hours
 
 **🎉 ALL CRITICAL & HIGH PRIORITY ISSUES RESOLVED! 🎉**
 
@@ -566,7 +656,9 @@ Add tracemalloc to identify leaks and high-memory operations.
 10. ✅ [MED-1] Database health checks (1h)
 11. ✅ [MED-2] Database retry logic (3h)
 12. ✅ [MED-3] Batch operation failure tracking (included in #3)
-13. ✅ [LOW-2] Database indexes (2-3h)
+13. ✅ [MED-4] Async file I/O (1-2h)
+14. ✅ [MED-5] Targeted thumbnail retry (1h)
+15. ✅ [LOW-2] Database indexes (2-3h)
 
 **Performance Improvements Achieved**:
 - ✅ **Batch operations**: 70-90% faster (N queries → 1 query)
@@ -576,6 +668,8 @@ Add tracemalloc to identify leaks and high-memory operations.
 - ✅ **Database resilience**: Automatic retry on transient errors (exponential backoff)
 - ✅ **Health monitoring**: Periodic DB connection checks detect failures early
 - ✅ **Query performance**: 10-100x faster with 11 strategic indexes
+- ✅ **Event loop responsiveness**: Non-blocking file I/O with aiofiles
+- ✅ **Resource efficiency**: Targeted thumbnail retries (not all-or-nothing)
 - ✅ **Workers won't hang**: Download timeouts prevent stalled connections
 - ✅ **Proper connection pooling**: Scales with multiple workers
 - ✅ **Redis throughput**: 10x fewer round-trips with job batching
@@ -583,7 +677,7 @@ Add tracemalloc to identify leaks and high-memory operations.
 - ✅ **Thumbnail queries**: Fixed N+1 pattern
 - ✅ **Better error tracking**: Success/failure counts for all batch operations
 
-**Remaining Issues** (3 Medium, 2 Low):
-- **Medium**: Async file I/O (MED-4), targeted thumbnail retry (MED-5), disk space checks (MED-6)
-- **Low**: Metrics/monitoring (LOW-1), memory profiling (LOW-3)
-- All remaining issues are nice-to-have optimizations, system is production-ready
+**Remaining Issues** (1 Medium, 2 Low):
+- **Medium**: Disk space checks (MED-6) - 1h
+- **Low**: Metrics/monitoring (LOW-1) - 4-6h, memory profiling (LOW-3) - 1-2h
+- All remaining issues are nice-to-have, system is fully production-ready

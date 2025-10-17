@@ -15,6 +15,8 @@ from pathlib import Path
 from io import BytesIO
 from typing import Tuple
 import aiohttp
+import aiofiles
+import aiofiles.os
 import ffmpeg
 from PIL import Image
 from shared.db.models import Clip, Thumbnail
@@ -127,8 +129,9 @@ class ThumbnailGenerator:
             logger.info(f"  Downloading video from CDN...")
             temp_video = await self._download_video(clip.cdn_url)
             
-            # Log actual file size
-            actual_size = os.path.getsize(temp_video)
+            # Log actual file size (async stat)
+            stat_result = await aiofiles.os.stat(temp_video)
+            actual_size = stat_result.st_size
             logger.info(f"  Downloaded {actual_size:,} bytes ({actual_size / 1024 / 1024:.2f} MB)")
             
             # Probe video to get metadata (MIME type, duration, resolution)
@@ -219,9 +222,9 @@ class ThumbnailGenerator:
                 response.raise_for_status()
                 
                 bytes_downloaded = 0
-                with open(temp_path, 'wb') as f:
+                async with aiofiles.open(temp_path, 'wb') as f:
                     async for chunk in response.content.iter_chunked(8192):
-                        f.write(chunk)
+                        await f.write(chunk)
                         bytes_downloaded += len(chunk)
                 
                 logger.debug(f"Downloaded {bytes_downloaded:,} bytes (full file, reused connection)")

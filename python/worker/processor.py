@@ -510,13 +510,18 @@ class JobProcessor:
         Process thumbnail retry job - retry failed thumbnail generation
         
         Args:
-            job_data: ThumbnailRetryJob data
+            job_data: ThumbnailRetryJob data with optional clip_ids for targeted retry
         """
-        logger.info("Processing thumbnail retry job")
+        clip_ids = job_data.get('clip_ids')
+        
+        if clip_ids:
+            logger.info(f"Processing thumbnail retry job for {len(clip_ids)} specific clip(s)")
+        else:
+            logger.info("Processing thumbnail retry job (all eligible clips)")
         
         try:
-            # Use thumbnail handler to retry failed thumbnails
-            success_count = await self.thumbnail_handler.retry_failed_thumbnails()
+            # Pass clip_ids to handler for targeted retry
+            success_count = await self.thumbnail_handler.retry_failed_thumbnails(clip_ids=clip_ids)
             logger.info(f"Thumbnail retry complete: {success_count} thumbnails successfully generated")
         except Exception as e:
             logger.error(f"Thumbnail retry job failed: {e}", exc_info=True)
