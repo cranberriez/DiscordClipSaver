@@ -374,13 +374,14 @@ class RedisStreamClient:
         except redis_async.ResponseError:
             return {'length': 0, 'exists': False}
     
-    async def peek_jobs(self, stream_name: str, count: int = 10) -> List[Dict[str, Any]]:
+    async def peek_jobs(self, stream_name: str, count: int = 10, reverse: bool = False) -> List[Dict[str, Any]]:
         """
         Peek at jobs in a stream without consuming them (for monitoring/interface)
         
         Args:
             stream_name: Name of the stream to peek
             count: Number of jobs to peek at
+            reverse: If True, get newest jobs first (default: oldest first)
             
         Returns:
             List of job data with metadata
@@ -389,8 +390,11 @@ class RedisStreamClient:
             raise RuntimeError("Redis not connected")
         
         try:
-            # Use XRANGE to read without consuming
-            messages = await self.client.xrange(stream_name, '-', '+', count=count)
+            # Use XRANGE (oldest first) or XREVRANGE (newest first) to read without consuming
+            if reverse:
+                messages = await self.client.xrevrange(stream_name, '+', '-', count=count)
+            else:
+                messages = await self.client.xrange(stream_name, '-', '+', count=count)
             
             jobs = []
             for message_id, data in messages:
@@ -415,6 +419,116 @@ class RedisStreamClient:
             return jobs
         except redis_async.ResponseError:
             return []
+    
+    async def get_pending_jobs_info(self, stream_name: str, consumer_group: Optional[str] = None) -> Dict[str, Any]:
+        """
+        Get information about pending (claimed but not acknowledged) jobs
+        Useful for monitoring which jobs are being processed
+        
+        Args:
+            stream_name: Name of the stream
+            consumer_group: Consumer group name (uses self.consumer_group if not provided)
+            
+        Returns:
+            Dictionary with pending job statistics
+        """
+        if not self.connected:
+            raise RuntimeError("Redis not connected")
+        
+        group = consumer_group or self.consumer_group
+        if not group:
+            return {'error': 'No consumer group specified'}
+        
+        try:
+            # Get pending summary
+            pending_info = await self.client.xpending(stream_name, group)
+            
+            # pending_info format: [count, min_id, max_id, consumers]
+            # consumers format: [[consumer_name, pending_count], ...]
+            
+            result = {
+                'total_pending': pending_info[0] if pending_info else 0,
+                'oldest_pending_id': pending_info[1] if len(pending_info) > 1 else None,
+                'newest_pending_id': pending_info[2] if len(pending_info) > 2 else None,
+                'consumers': []
+            }
+            
+            # Parse consumer info
+            if len(pending_info) > 3 and pending_info[3]:
+                for consumer_data in pending_info[3]:
+                    result['consumers'].append({
+                        'name': consumer_data[0],
+                        'pending_count': consumer_data[1]
+                    })
+            
+            return result
+        except redis_async.ResponseError as e:
+            return {'error': str(e), 'total_pending': 0}
+    
+    async def get_guild_job_stats(self, guild_id: str) -> Dict[str, Any]:
+        """
+        Get comprehensive job statistics for a guild (for interface monitoring)
+        
+        Args:
+            guild_id: Guild ID to get stats for
+            
+        Returns:
+            Dictionary with job statistics across all job types
+        """
+        if not self.connected:
+            raise RuntimeError("Redis not connected")
+        
+        # Find all streams for this guild
+        pattern = f"{self.STREAM_PREFIX}:guild:{guild_id}:*"
+        streams = await self.client.keys(pattern)
+        
+        stats = {
+            'guild_id': guild_id,
+            'streams': [],
+            'total_queued': 0,
+            'total_pending': 0,
+            'recent_jobs': []
+        }
+        
+        for stream_name in streams:
+            try:
+                # Get stream info
+                info = await self.client.xinfo_stream(stream_name)
+                stream_length = info.get('length', 0)
+                
+                # Extract job type from stream name (jobs:guild:123:message_scan -> message_scan)
+                job_type = stream_name.split(':')[-1] if ':' in stream_name else 'unknown'
+                
+                stream_stats = {
+                    'stream_name': stream_name,
+                    'job_type': job_type,
+                    'queued_count': stream_length,
+                    'pending_count': 0
+                }
+                
+                # Get pending info if we have a consumer group
+                if self.consumer_group:
+                    pending_info = await self.get_pending_jobs_info(stream_name, self.consumer_group)
+                    stream_stats['pending_count'] = pending_info.get('total_pending', 0)
+                    stream_stats['consumers'] = pending_info.get('consumers', [])
+                
+                stats['streams'].append(stream_stats)
+                stats['total_queued'] += stream_length
+                stats['total_pending'] += stream_stats['pending_count']
+                
+                # Get a few recent jobs from this stream
+                recent = await self.peek_jobs(stream_name, count=5, reverse=True)
+                stats['recent_jobs'].extend(recent[:5])  # Limit to 5 per stream
+                
+            except Exception as e:
+                logger.debug(f"Could not get stats for stream {stream_name}: {e}")
+                continue
+        
+        # Sort recent jobs by message ID (timestamp-based) descending
+        stats['recent_jobs'].sort(key=lambda x: x['message_id'], reverse=True)
+        stats['recent_jobs'] = stats['recent_jobs'][:20]  # Keep only 20 most recent
+        
+        return stats
     
     async def __aenter__(self):
         """Context manager entry"""
