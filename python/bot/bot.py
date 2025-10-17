@@ -7,7 +7,7 @@ from shared.redis.redis import MessageDeletionJob
 # ----- Discord bot -----
 intents = discord.Intents.default()
 intents.message_content = True  # Required for message.content access
-intents.members = True  # Required for member events (on_member_update, on_member_join, etc.)
+# intents.members = True  # TODO: Enable in Discord Developer Portal when implementing member events
 
 bot = discord.Client(intents=intents)
 
@@ -60,11 +60,16 @@ async def on_guild_channel_delete(channel: discord.abc.GuildChannel):
 
 
 # --- User Events ---
+# NOTE: These events require SERVER MEMBERS INTENT to be enabled in Discord Developer Portal
+# Currently disabled - enable intents.members = True above when ready to implement
+
 @bot.event
 async def on_user_update(before: discord.User, after: discord.User):
     """
     Called when a user updates their profile (username, avatar, discriminator).
     This is a global event - not guild-specific.
+    
+    ⚠️ Requires SERVER MEMBERS INTENT enabled in Discord Developer Portal
     """
     # TODO: Update user record in database (username, avatar_url, discriminator)
     pass
