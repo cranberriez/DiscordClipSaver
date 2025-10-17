@@ -29,8 +29,8 @@ export function ChannelsList({
         guild?.message_scan_enabled ?? initialGuildScanEnabled;
 
     // Track live channels state from React Query cache
-    const { data: channels } = useChannels(guildId, initialChannels);
-    const channelsList = channels ?? initialChannels;
+    const { data } = useChannels(guildId, initialChannels);
+    const channelsList = data?.channels ?? initialChannels;
 
     // Group channels by type and sort alphabetically by name within each group
     const groupedChannels = useMemo(

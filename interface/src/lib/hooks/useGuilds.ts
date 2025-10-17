@@ -3,7 +3,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api/client";
 import type { Guild } from "@/lib/db/types";
-import { guildKeys } from "@/lib/queries";
+import { guildKeys, guildQuery, guildsQuery } from "@/lib/queries";
 
 // ============================================================================
 // Queries
@@ -31,10 +31,7 @@ import { guildKeys } from "@/lib/queries";
  * ```
  */
 export function useGuilds() {
-    return useQuery({
-        queryKey: guildKeys.list(),
-        queryFn: api.guilds.list,
-    });
+    return useQuery(guildsQuery());
 }
 
 /**
@@ -49,14 +46,7 @@ export function useGuilds() {
  * @param initialData - Optional initial data from Server Component
  */
 export function useGuild(guildId: string, initialData?: Guild) {
-    return useQuery({
-        queryKey: guildKeys.detail(guildId),
-        queryFn: () => api.guilds.get(guildId),
-        enabled: !!guildId,
-        initialData,
-        // Don't refetch if we have initial data from server
-        staleTime: initialData ? Infinity : 60 * 1000,
-    });
+    return useQuery(guildQuery(guildId));
 }
 
 // ============================================================================

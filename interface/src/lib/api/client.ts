@@ -7,16 +7,14 @@
 
 import { signOut } from "next-auth/react";
 import type {
-    GuildsListResponse,
-    ToggleScanningResponse,
-    ChannelsListResponse,
-    ChannelStatsResponse,
+    GuildSettingsResponse,
     ScanStatusesResponse,
     SingleScanStatusResponse,
-    GuildSettingsResponse,
-    UpdateGuildSettingsPayload,
 } from "../types/types";
 import type { Guild } from "@/lib/db/types";
+import { GuildsListResponse, ToggleScanningResponse } from "./guild";
+import { UpdateGuildSettingsPayload } from "../schema/guild-settings.schema";
+import { ChannelsListResponse, ChannelStatsResponse } from "./channels";
 
 // ============================================================================
 // Error Handling
@@ -84,7 +82,7 @@ export const api = {
          * GET /api/discord/user/guilds?includeDb=1
          */
         list: () =>
-            apiRequest<GuildsListResponse>(
+            apiRequest<GuildsListResponse[]>(
                 "/api/discord/user/guilds?includeDb=1"
             ),
 
@@ -205,14 +203,4 @@ export const api = {
                 }
             ),
     },
-};
-
-// ============================================================================
-// Type Exports for Convenience
-// ============================================================================
-
-export type {
-    GuildsListResponse,
-    ToggleScanningResponse,
-    ScanStatusesResponse,
 };

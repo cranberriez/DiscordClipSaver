@@ -1,7 +1,7 @@
 import type {
     GuildSettings,
     DefaultChannelSettings,
-} from "@/lib/validation/guild-settings.schema";
+} from "@/lib/schema/guild-settings.schema";
 
 /**
  * Builder pattern for collecting guild settings changes.

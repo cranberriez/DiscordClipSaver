@@ -14,7 +14,7 @@ import {
 import { Separator } from "@/components/ui/separator";
 import { AlertTriangle, Loader2 } from "lucide-react";
 import { useChannelStats } from "@/lib/hooks";
-import { guildKeys } from "@/lib/hooks/useGuilds";
+import { guildKeys } from "@/lib/queries/guild";
 
 interface DangerZoneProps {
     guildId: string;
@@ -80,9 +80,10 @@ export function DangerZone({ guildId, guildName }: DangerZoneProps) {
             }
 
             // Invalidate channel stats cache to refetch updated counts
-            await queryClient.invalidateQueries({
-                queryKey: guildKeys.channelStats(guildId),
-            });
+            // TODO: Implement this once we have dedicated routes for channel stats
+            // await queryClient.invalidateQueries({
+            //     queryKey: guildKeys.channelStats(guildId),
+            // });
             router.refresh();
         } catch (error: any) {
             console.error("Failed to purge channel:", error);
@@ -143,9 +144,10 @@ export function DangerZone({ guildId, guildName }: DangerZoneProps) {
             console.log(message);
 
             // Invalidate channel stats cache to refetch updated counts
-            await queryClient.invalidateQueries({
-                queryKey: guildKeys.channelStats(guildId),
-            });
+            // TODO: Implement this once we have dedicated routes for channel stats
+            // await queryClient.invalidateQueries({
+            //     queryKey: guildKeys.channelStats(guildId),
+            // });
             router.refresh();
         } catch (error: any) {
             console.error("Failed to purge all channels:", error);

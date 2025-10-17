@@ -5,7 +5,7 @@ import { useGuildSettingsWithBuilder } from "@/lib/hooks";
 import {
     GuildSettingsSchema,
     DefaultChannelSettingsSchema,
-} from "@/lib/validation/guild-settings.schema";
+} from "@/lib/schema/guild-settings.schema";
 import {
     normalizeTimezone,
     getTimezoneDisplay,

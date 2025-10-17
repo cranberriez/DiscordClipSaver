@@ -1,4 +1,9 @@
-"use server";
+import { queryOptions } from "@tanstack/react-query";
+import type { GuildSettingsResponse } from "../types/types";
+import { getGuilds, getGuild, getGuildSettings } from "../api/guild";
+import type { GuildsListResponse } from "../api/guild";
+import type { Guild } from "@/lib/db/types";
+import { toggleScanning } from "../api/guild";
 
 // ============================================================================
 // Query Keys Factory
@@ -12,14 +17,39 @@
  */
 export const guildKeys = {
     all: ["guilds"] as const,
-    lists: () => [...guildKeys.all, "list"] as const,
-    list: (filters?: unknown) => [...guildKeys.lists(), filters] as const,
-    details: () => [...guildKeys.all, "detail"] as const,
-    detail: (id: string) => [...guildKeys.details(), id] as const,
-    channels: (id: string) => [...guildKeys.detail(id), "channels"] as const,
-    channelStats: (id: string) =>
-        [...guildKeys.detail(id), "channel-stats"] as const,
-    scanStatuses: (id: string) =>
-        [...guildKeys.detail(id), "scan-statuses"] as const,
-    settings: (id: string) => [...guildKeys.detail(id), "settings"] as const,
+    list: (params?: unknown) =>
+        [...guildKeys.all, "list", params ?? {}] as const,
+    detail: (guildId: string) => [...guildKeys.all, guildId] as const,
+    settings: (guildId: string) =>
+        [...guildKeys.detail(guildId), "settings"] as const,
 };
+
+// ============================================================================
+// Queries
+// ============================================================================
+
+export const guildsQuery = () =>
+    queryOptions<GuildsListResponse[]>({
+        queryKey: guildKeys.list(),
+        queryFn: () => getGuilds(),
+        staleTime: 60_000,
+    });
+
+export const guildQuery = (guildId: string) =>
+    queryOptions<Guild>({
+        queryKey: guildKeys.detail(guildId),
+        queryFn: () => getGuild(guildId),
+        enabled: !!guildId,
+        staleTime: 60_000,
+    });
+
+export const guildSettingsQuery = (guildId: string) =>
+    queryOptions<GuildSettingsResponse>({
+        queryKey: guildKeys.settings(guildId),
+        queryFn: () => getGuildSettings(guildId),
+        enabled: !!guildId,
+        staleTime: 60_000,
+    });
+
+export const toggleGuildScanning = async (guildId: string, enabled: boolean) =>
+    toggleScanning(guildId, enabled);

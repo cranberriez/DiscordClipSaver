@@ -8,7 +8,7 @@ import { GuildSettingsBuilder } from "@/lib/react-query/guild-settings-builder";
 import type {
     GuildSettings,
     DefaultChannelSettings,
-} from "@/lib/validation/guild-settings.schema";
+} from "@/lib/schema/guild-settings.schema";
 
 // ============================================================================
 // Queries

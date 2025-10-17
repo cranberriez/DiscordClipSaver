@@ -5,6 +5,7 @@ import { api } from "@/lib/api/client";
 import { guildKeys } from "@/lib/queries";
 import { startChannelScan } from "@/lib/actions/scan";
 import type { ChannelScanStatus } from "@/lib/db/types";
+import { scanStatusesQuery, scanStatusQuery } from "../queries/scans";
 
 // ============================================================================
 // Queries
@@ -39,26 +40,7 @@ import type { ChannelScanStatus } from "@/lib/db/types";
  * ```
  */
 export function useScanStatuses(guildId: string) {
-    return useQuery({
-        queryKey: guildKeys.scanStatuses(guildId),
-        queryFn: () => api.scans.statuses(guildId),
-        enabled: !!guildId,
-        // Transform to just return statuses array
-        select: data => data.statuses,
-        // Smart polling: only poll when scans are running
-        refetchInterval: query => {
-            // query.state.data is the raw API response before select transform
-            const data = query.state.data as
-                | { statuses: ChannelScanStatus[] }
-                | undefined;
-            const statuses = data?.statuses;
-            const hasRunningScans = statuses?.some(
-                s => s.status === "RUNNING" || s.status === "PENDING"
-            );
-            // Poll every 5 seconds if scans are running, otherwise don't poll
-            return hasRunningScans ? 5000 : false;
-        },
-    });
+    return useQuery(scanStatusesQuery(guildId));
 }
 
 /**
@@ -80,24 +62,7 @@ export function useScanStatuses(guildId: string) {
  * ```
  */
 export function useChannelScanStatus(guildId: string, channelId: string) {
-    return useQuery({
-        queryKey: [...guildKeys.scanStatuses(guildId), channelId],
-        queryFn: () => api.scans.status(guildId, channelId),
-        enabled: !!guildId && !!channelId,
-        // Transform to just return status
-        select: data => data.status,
-        // Poll if scan is running
-        refetchInterval: query => {
-            // query.state.data is the raw API response before select transform
-            const data = query.state.data as
-                | { status: ChannelScanStatus | null }
-                | undefined;
-            const status = data?.status;
-            const isRunning =
-                status?.status === "RUNNING" || status?.status === "PENDING";
-            return isRunning ? 5000 : false;
-        },
-    });
+    return useQuery(scanStatusQuery(guildId, channelId));
 }
 
 // ============================================================================

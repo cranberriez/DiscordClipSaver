@@ -1,15 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireGuildAccess } from "@/lib/middleware/auth";
 import { updateGuildMessageScanEnabled } from "@/lib/db";
-import { z } from "zod";
-
-const ToggleSchema = z.object({
-    enabled: z.boolean(),
-});
+import { ToggleSchema } from "@/lib/schema/guild-toggle.schema";
 
 /**
  * POST /api/guilds/[guildId]/toggle
- * 
+ *
  * Toggle message scanning for the entire guild.
  * Requires guild ownership.
  */
