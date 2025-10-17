@@ -1,4 +1,4 @@
-import GuildList from "@/components/dashboard/GuildList";
+import GuildList from "@/features/dashboard/components/GuildList";
 
 export default async function DashboardPage() {
     return (

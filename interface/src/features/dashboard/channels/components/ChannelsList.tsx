@@ -20,7 +20,7 @@ type ChannelsListProps = {
     guildScanEnabled: boolean;
 };
 
-export default function ChannelsList({
+export function ChannelsList({
     channels: initialChannels,
     guildId,
     guildScanEnabled: initialGuildScanEnabled,

@@ -4,7 +4,6 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
     AlertDialog,
-    AlertDialogAction,
     AlertDialogCancel,
     AlertDialogContent,
     AlertDialogDescription,
@@ -22,37 +21,43 @@ interface PurgeButtonProps {
      * Text to display on the button
      */
     label: string;
-    
+
     /**
      * Dialog title
      */
     title: string;
-    
+
     /**
      * Dialog description
      */
     description: string;
-    
+
     /**
      * Text user must type to confirm (e.g., "DELETE GUILD")
      */
     confirmText: string;
-    
+
     /**
      * Function to call when confirmed
      */
     onConfirm: () => Promise<void>;
-    
+
     /**
      * Optional stats to show (e.g., "This will delete 1,234 clips")
      */
     stats?: string;
-    
+
     /**
      * Button variant
      */
-    variant?: "default" | "destructive" | "outline" | "secondary" | "ghost" | "link";
-    
+    variant?:
+        | "default"
+        | "destructive"
+        | "outline"
+        | "secondary"
+        | "ghost"
+        | "link";
+
     /**
      * Button size
      */
@@ -61,7 +66,7 @@ interface PurgeButtonProps {
 
 /**
  * Reusable purge button with confirmation dialog
- * 
+ *
  * Features:
  * - Type-to-confirm safety mechanism
  * - Loading states
@@ -100,9 +105,12 @@ export function PurgeButton({
             setInputValue("");
         } catch (err: any) {
             const errorMessage = err.message || "Failed to perform operation";
-            
+
             // Check if this is a cooldown error (contains "cooldown" or "Try again in")
-            if (errorMessage.toLowerCase().includes("cooldown") || errorMessage.includes("Try again in")) {
+            if (
+                errorMessage.toLowerCase().includes("cooldown") ||
+                errorMessage.includes("Try again in")
+            ) {
                 setCooldownWarning(errorMessage);
             } else {
                 setError(errorMessage);
@@ -142,13 +150,18 @@ export function PurgeButton({
                             )}
                             <div className="space-y-2">
                                 <Label htmlFor="confirm-input">
-                                    Type <span className="font-mono font-bold">{confirmText}</span> to
-                                    confirm:
+                                    Type{" "}
+                                    <span className="font-mono font-bold">
+                                        {confirmText}
+                                    </span>{" "}
+                                    to confirm:
                                 </Label>
                                 <Input
                                     id="confirm-input"
                                     value={inputValue}
-                                    onChange={(e) => setInputValue(e.target.value)}
+                                    onChange={e =>
+                                        setInputValue(e.target.value)
+                                    }
                                     placeholder={confirmText}
                                     disabled={isLoading}
                                     className="font-mono"
@@ -163,24 +176,31 @@ export function PurgeButton({
                                 </div>
                             )}
                             {error && (
-                                <div className="text-sm font-medium text-destructive">{error}</div>
+                                <div className="text-sm font-medium text-destructive">
+                                    {error}
+                                </div>
                             )}
                         </div>
                     </AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter>
-                    <AlertDialogCancel onClick={handleCancel} disabled={isLoading}>
+                    <AlertDialogCancel
+                        onClick={handleCancel}
+                        disabled={isLoading}
+                    >
                         Cancel
                     </AlertDialogCancel>
                     <Button
-                        onClick={(e) => {
+                        onClick={e => {
                             e.preventDefault();
                             handleConfirm();
                         }}
                         disabled={!isConfirmEnabled}
                         className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
                     >
-                        {isLoading && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+                        {isLoading && (
+                            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        )}
                         Confirm Delete
                     </Button>
                 </AlertDialogFooter>

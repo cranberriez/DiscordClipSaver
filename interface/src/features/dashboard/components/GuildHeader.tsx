@@ -23,7 +23,7 @@ interface GuildHeaderProps {
     iconUrl: string | null;
 }
 
-export default function GuildHeader({
+export function GuildHeader({
     guildId,
     guildName,
     ownerId,

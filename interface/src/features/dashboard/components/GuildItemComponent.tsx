@@ -1,6 +1,5 @@
 import type { FullGuild, GuildRelation } from "@/lib/discord/types";
 import Link from "next/link";
-import DebugButton from "./debugButton";
 
 export function GuildItemComponent({
     guild,
@@ -25,7 +24,6 @@ export function GuildItemComponent({
                     ID: {id}
                     {owner ? ` (owner: ${owner})` : ""}
                 </p>
-                <DebugButton guild={guild} />
             </div>
             <div className="flex flex-col ml-auto">
                 <p className="text-xs text-muted-foreground">{relation}</p>

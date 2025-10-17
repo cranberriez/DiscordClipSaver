@@ -1,6 +1,6 @@
 import { getChannelsByGuildId } from "@/lib/db/queries/channels";
 import { getSingleGuildById } from "@/lib/db/queries/guilds";
-import ChannelsList from "@/components/guild/ChannelsList";
+import { ChannelsList } from "@/features/dashboard/channels";
 
 type PageProps = {
     params: Promise<{ guildId: string }>;

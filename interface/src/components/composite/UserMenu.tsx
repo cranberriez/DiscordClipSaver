@@ -13,11 +13,7 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { LogOut } from "lucide-react";
 
-interface UserMenuProps {
-    user: User;
-}
-
-export function UserMenu({ user }: UserMenuProps) {
+export function UserMenu({ user }: { user: User }) {
     return (
         <DropdownMenu>
             <DropdownMenuTrigger asChild>

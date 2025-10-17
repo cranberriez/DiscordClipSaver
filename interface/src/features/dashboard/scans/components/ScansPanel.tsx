@@ -11,7 +11,7 @@ import {
     HistoricalScanPanel,
     ScanStatusTable,
     type ChannelWithStatus,
-} from "./scans";
+} from "../../features/dashboard/scans";
 
 interface ScansPanelProps {
     guildId: string;

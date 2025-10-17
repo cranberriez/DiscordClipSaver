@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useSession } from "next-auth/react";
-import { UserMenu } from "@/components/layout/UserMenu";
+import { UserMenu } from "./UserMenu";
 import { User } from "next-auth";
 import { Button } from "@/components/ui/button";
 

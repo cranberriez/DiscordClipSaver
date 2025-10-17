@@ -2,9 +2,11 @@ import { getAuthInfo } from "@/lib/auth";
 import { getSingleGuildById } from "@/lib/db/queries/guilds";
 import { redirect } from "next/navigation";
 import Link from "next/link";
-import GuildHeader from "@/components/guild/GuildHeader";
-import { GuildTabNav } from "@/components/guild/GuildTabNav";
-import { DeletedGuildBanner } from "@/components/guild/DeletedGuildBanner";
+import {
+    GuildHeader,
+    GuildTabNav,
+    DeletedGuildBanner,
+} from "@/features/dashboard/";
 
 type LayoutProps = {
     children: React.ReactNode;
