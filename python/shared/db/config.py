@@ -44,7 +44,7 @@ def get_tortoise_config() -> Dict[str, Any]:
         DB_MAX_QUERIES: Max queries before connection recycling (default: 50000)
         DB_MAX_IDLE_TIME: Max idle time in seconds (default: 300)
     
-    Important: Ensure PostgreSQL max_connections > (num_workers × DB_POOL_MAX)
+    Important: Ensure PostgreSQL max_connections > (num_workers x DB_POOL_MAX)
     Default PostgreSQL max_connections is usually 100.
     """
     # Check if DATABASE_URL is explicitly set (legacy mode)

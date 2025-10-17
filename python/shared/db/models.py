@@ -90,6 +90,9 @@ class Channel(Model):
     class Meta:
         unique_together=("guild", "id")
         table="channel"
+        indexes=[
+            ("guild_id", "message_scan_enabled"),  # Channel queries by guild filtered by scan status
+        ]
 
 
 class ChannelSettings(Model):
@@ -128,6 +131,10 @@ class ChannelScanStatus(Model):
     class Meta:
         unique_together=("guild", "channel")
         table="channel_scan_status"
+        indexes=[
+            ("channel_id",),                # Scan status lookup by channel (very common)
+            ("guild_id", "status"),         # Scan monitoring by guild and status
+        ]
 
 
 class Message(Model):
@@ -145,6 +152,10 @@ class Message(Model):
     class Meta:
         unique_together=("guild", "channel", "id")
         table="message"
+        indexes=[
+            ("channel_id", "timestamp"),  # Message queries by channel ordered by timestamp
+            ("guild_id", "channel_id"),   # Message queries filtered by guild and channel
+        ]
 
 class Clip(Model):
     """Individual video attachment extracted from a message"""
@@ -173,6 +184,12 @@ class Clip(Model):
     class Meta:
         unique_together=("guild", "channel", "message", "id")
         table="clip"
+        indexes=[
+            ("channel_id", "created_at"),      # Clip pagination by channel
+            ("guild_id", "channel_id"),        # Clip filtering by guild and channel
+            ("thumbnail_status",),             # Thumbnail retry queries
+            ("expires_at",),                   # CDN URL refresh queries
+        ]
 
 class Thumbnail(Model):
     """Generated thumbnail for a clip"""
@@ -205,6 +222,9 @@ class FailedThumbnail(Model):
 
     class Meta:
         table="failed_thumbnail"
+        indexes=[
+            ("next_retry_at",),  # Thumbnails ready for retry
+        ]
 
 class InstallIntent(Model):
     """Short-lived OAuth state for bot installation"""

@@ -6,7 +6,7 @@ import logging
 import os
 import signal
 from dotenv import load_dotenv
-from shared.db.utils import init_db, close_db
+from shared.db.utils import init_db, close_db, start_health_check_loop
 from worker.discord.bot import WorkerBot
 from shared.redis.redis_client import RedisStreamClient
 from worker.processor import JobProcessor
@@ -45,6 +45,7 @@ class Worker:
         self.running = False
         self.shutdown_event = asyncio.Event()
         self.worker_id = worker_id
+        self.health_check_task = None
         
         logger.info(f"🔧 Worker #{worker_id} initialized (consumer: {consumer_name})")
     
@@ -70,6 +71,12 @@ class Worker:
             redis_client=self.redis
         )
         
+        # Start database health check loop
+        health_check_interval = int(os.getenv("DB_HEALTH_CHECK_INTERVAL", "60"))
+        self.health_check_task = asyncio.create_task(
+            start_health_check_loop(interval_seconds=health_check_interval)
+        )
+        
         logger.info("Worker initialized successfully")
         
         return bot_task
@@ -79,6 +86,14 @@ class Worker:
         logger.info("Shutting down worker...")
         
         self.running = False
+        
+        # Cancel health check task
+        if self.health_check_task and not self.health_check_task.done():
+            self.health_check_task.cancel()
+            try:
+                await self.health_check_task
+            except asyncio.CancelledError:
+                pass
         
         # Close processor and its handlers (releases aiohttp sessions)
         if self.processor:
