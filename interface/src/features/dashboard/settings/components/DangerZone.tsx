@@ -13,8 +13,8 @@ import {
 } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { AlertTriangle, Loader2 } from "lucide-react";
-import { useChannelStats } from "@/lib/hooks/queries";
-import { guildKeys } from "@/lib/hooks/queries/useGuilds";
+import { useChannelStats } from "@/lib/hooks";
+import { guildKeys } from "@/lib/hooks/useGuilds";
 
 interface DangerZoneProps {
     guildId: string;

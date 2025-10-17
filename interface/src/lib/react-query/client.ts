@@ -1,11 +1,11 @@
 /**
  * Type-safe API Client
- * 
+ *
  * Centralized API client for making requests to our Next.js API routes.
  * Uses Kysely-generated types for full type safety.
  */
 
-import { signOut } from 'next-auth/react';
+import { signOut } from "next-auth/react";
 import type {
     GuildsListResponse,
     ToggleScanningResponse,
@@ -15,21 +15,17 @@ import type {
     SingleScanStatusResponse,
     GuildSettingsResponse,
     UpdateGuildSettingsPayload,
-} from './types';
-import type { Guild } from '@/lib/db/types';
+} from "./types";
+import type { Guild } from "@/lib/db/types";
 
 // ============================================================================
 // Error Handling
 // ============================================================================
 
 export class APIError extends Error {
-    constructor(
-        message: string,
-        public status: number,
-        public data?: unknown
-    ) {
+    constructor(message: string, public status: number, public data?: unknown) {
         super(message);
-        this.name = 'APIError';
+        this.name = "APIError";
     }
 }
 
@@ -43,29 +39,29 @@ async function apiRequest<T>(
 ): Promise<T> {
     const response = await fetch(endpoint, {
         headers: {
-            'Content-Type': 'application/json',
+            "Content-Type": "application/json",
             ...options?.headers,
         },
-        credentials: 'include', // Include cookies for NextAuth
+        credentials: "include", // Include cookies for NextAuth
         ...options,
     });
 
     // Handle authentication errors
     if (response.status === 401) {
         // Session expired or invalid - sign out and redirect
-        await signOut({ callbackUrl: '/dashboard' });
-        throw new APIError('Authentication required', 401);
+        await signOut({ callbackUrl: "/dashboard" });
+        throw new APIError("Authentication required", 401);
     }
 
     if (response.status === 403) {
         // Authenticated but not authorized
-        throw new APIError('Access denied', 403);
+        throw new APIError("Access denied", 403);
     }
 
     if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
         throw new APIError(
-            errorData.error || 'Request failed',
+            errorData.error || "Request failed",
             response.status,
             errorData
         );
@@ -89,7 +85,7 @@ export const api = {
          */
         list: () =>
             apiRequest<GuildsListResponse>(
-                '/api/discord/user/guilds?includeDb=1'
+                "/api/discord/user/guilds?includeDb=1"
             ),
 
         /**
@@ -100,7 +96,9 @@ export const api = {
         get: async (guildId: string): Promise<Guild> => {
             // This would need a dedicated API route
             // For now, we'll use the existing pattern from your code
-            throw new Error('Not implemented - use direct DB query in Server Component');
+            throw new Error(
+                "Not implemented - use direct DB query in Server Component"
+            );
         },
 
         /**
@@ -111,7 +109,7 @@ export const api = {
             apiRequest<ToggleScanningResponse>(
                 `/api/guilds/${guildId}/toggle`,
                 {
-                    method: 'POST',
+                    method: "POST",
                     body: JSON.stringify({ enabled }),
                 }
             ),
@@ -126,9 +124,7 @@ export const api = {
          * GET /api/guilds/[guildId]/channels
          */
         list: (guildId: string) =>
-            apiRequest<ChannelsListResponse>(
-                `/api/guilds/${guildId}/channels`
-            ),
+            apiRequest<ChannelsListResponse>(`/api/guilds/${guildId}/channels`),
 
         /**
          * Get all channels with clip counts for a guild
@@ -144,13 +140,14 @@ export const api = {
          * POST /api/guilds/[guildId]/channels/bulk
          */
         bulkUpdate: (guildId: string, enabled: boolean) =>
-            apiRequest<{ success: boolean; updated_count: number; enabled: boolean }>(
-                `/api/guilds/${guildId}/channels/bulk`,
-                {
-                    method: 'POST',
-                    body: JSON.stringify({ enabled }),
-                }
-            ),
+            apiRequest<{
+                success: boolean;
+                updated_count: number;
+                enabled: boolean;
+            }>(`/api/guilds/${guildId}/channels/bulk`, {
+                method: "POST",
+                body: JSON.stringify({ enabled }),
+            }),
     },
 
     // ========================================================================
@@ -203,7 +200,7 @@ export const api = {
             apiRequest<GuildSettingsResponse>(
                 `/api/guilds/${guildId}/settings`,
                 {
-                    method: 'PATCH',
+                    method: "PATCH",
                     body: JSON.stringify(payload),
                 }
             ),
@@ -214,4 +211,8 @@ export const api = {
 // Type Exports for Convenience
 // ============================================================================
 
-export type { GuildsListResponse, ToggleScanningResponse, ScanStatusesResponse };
+export type {
+    GuildsListResponse,
+    ToggleScanningResponse,
+    ScanStatusesResponse,
+};

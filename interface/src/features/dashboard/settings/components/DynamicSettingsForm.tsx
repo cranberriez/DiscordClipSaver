@@ -1,11 +1,11 @@
 "use client";
 
 import { useState } from "react";
-import { useGuildSettingsWithBuilder } from "@/lib/hooks/queries";
+import { useGuildSettingsWithBuilder } from "@/lib/hooks";
 import {
     GuildSettingsSchema,
     DefaultChannelSettingsSchema,
-} from "@/lib/schemas/guild-settings.schema";
+} from "@/lib/validation/guild-settings.schema";
 import {
     normalizeTimezone,
     getTimezoneDisplay,

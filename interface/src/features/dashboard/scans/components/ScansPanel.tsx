@@ -1,6 +1,6 @@
 "use client";
 
-import { useScanStatuses, useStartScan } from "@/lib/hooks/queries";
+import { useScanStatuses, useStartScan } from "@/lib/hooks";
 import { startMultipleChannelScans } from "@/lib/actions/scan";
 import { useState, useMemo } from "react";
 import type { Channel } from "@/lib/db/types";
@@ -11,7 +11,7 @@ import {
     HistoricalScanPanel,
     ScanStatusTable,
     type ChannelWithStatus,
-} from "../../features/dashboard/scans";
+} from "../index";
 
 interface ScansPanelProps {
     guildId: string;

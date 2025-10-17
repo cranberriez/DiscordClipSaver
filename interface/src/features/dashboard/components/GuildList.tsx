@@ -1,11 +1,11 @@
 // interface/src/app/dashboard/GuildList.tsx
-'use client';
+"use client";
 
-import { useSession } from 'next-auth/react';
-import { useGuilds } from '@/lib/hooks/queries';
-import { canInviteBot } from '@/lib/discord/visibility';
-import type { FullGuild, GuildRelation } from '@/lib/discord/types';
-import { GuildItemComponent } from './GuildItemComponent';
+import { useSession } from "next-auth/react";
+import { useGuilds } from "@/lib/hooks";
+import { canInviteBot } from "@/lib/discord/visibility";
+import type { FullGuild, GuildRelation } from "@/lib/discord/types";
+import { GuildItemComponent } from "./GuildItemComponent";
 
 export default function GuildList() {
     const { data: session } = useSession();
@@ -45,12 +45,10 @@ export default function GuildList() {
 
     // Build FullGuild[] by joining Discord partial guilds with optional DB rows
     const dbById = new Map(dbGuilds.map(row => [row.id, row]));
-    const items: FullGuild[] = discordGuilds
-        .filter(Boolean)
-        .map(dg => ({
-            discord: dg,
-            db: dg?.id ? dbById.get(dg.id) : undefined,
-        }));
+    const items: FullGuild[] = discordGuilds.filter(Boolean).map(dg => ({
+        discord: dg,
+        db: dg?.id ? dbById.get(dg.id) : undefined,
+    }));
 
     // Categorize
     const installed: FullGuild[] = items.filter(i => i.db);

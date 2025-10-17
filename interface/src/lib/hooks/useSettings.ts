@@ -2,13 +2,13 @@
 
 import { useState, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { api } from "@/lib/api/client";
+import { api } from "@/lib/react-query/client";
 import { guildKeys } from "./useGuilds";
 import { GuildSettingsBuilder } from "@/lib/schemas/guild-settings-builder";
 import type {
     GuildSettings,
     DefaultChannelSettings,
-} from "@/lib/schemas/guild-settings.schema";
+} from "@/lib/validation/guild-settings.schema";
 
 // ============================================================================
 // Queries

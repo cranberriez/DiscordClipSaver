@@ -1,5 +1,5 @@
 import { getChannelsByGuildId } from "@/lib/db/queries/channels";
-import { ScansPanel } from "@/components/guild/ScansPanel";
+import { ScansPanel } from "@/features/dashboard/scans";
 
 type PageProps = {
     params: Promise<{ guildId: string }>;

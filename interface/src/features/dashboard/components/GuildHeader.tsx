@@ -1,6 +1,6 @@
 "use client";
 
-import { useToggleScanning, useGuild } from "@/lib/hooks/queries";
+import { useToggleScanning, useGuild } from "@/lib/hooks";
 import type { Guild } from "@/lib/db/types";
 import {
     Card,

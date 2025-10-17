@@ -5,7 +5,7 @@ import {
     UpdateGuildSettingsPayloadSchema,
     GuildSettingsSchema,
     DefaultChannelSettingsSchema,
-} from "@/lib/schemas/guild-settings.schema";
+} from "@/lib/validation/guild-settings.schema";
 
 /**
  * GET /api/guilds/[guildId]/settings

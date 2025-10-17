@@ -1,11 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
-import {
-    useBulkUpdateChannels,
-    useGuild,
-    useChannels,
-} from "@/lib/hooks/queries";
+import { useBulkUpdateChannels, useGuild, useChannels } from "@/lib/hooks";
 import type { Channel } from "@/lib/db/types";
 import { Button } from "@/components/ui/button";
 import {
