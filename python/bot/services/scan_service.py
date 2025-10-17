@@ -188,6 +188,33 @@ class ScanService:
         await self.redis_client.push_job(job.model_dump(mode='json'))
         
         logger.debug(f"Queued message scan job for message {message.id} in channel {message.channel.id}")
+    
+    async def handle_message_deletion(self, guild_id: str, channel_id: str, message_id: str):
+        """
+        Handle a message deletion from Discord.
+        Creates a MessageDeletionJob for worker to clean up database and storage.
+        
+        Args:
+            guild_id: Discord guild snowflake
+            channel_id: Discord channel snowflake
+            message_id: Discord message snowflake
+        """
+        if not self.redis_client:
+            logger.warning("Redis client not configured, cannot handle message deletion")
+            return
+        
+        # Import here to avoid circular dependency
+        from shared.redis.redis import MessageDeletionJob
+        
+        job = MessageDeletionJob(
+            guild_id=guild_id,
+            channel_id=channel_id,
+            message_id=message_id
+        )
+        
+        await self.redis_client.push_job(job.model_dump(mode='json'))
+        
+        logger.info(f"Queued deletion job for message {message_id}")
 
 
 # Singleton instance

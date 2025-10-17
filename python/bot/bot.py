@@ -2,7 +2,6 @@ import discord
 from bot.services.container import guild_service, channel_service
 from bot.services.scan_service import get_scan_service
 from bot.logger import logger
-from shared.redis.redis import MessageDeletionJob
 
 # ----- Discord bot -----
 intents = discord.Intents.default()
@@ -155,21 +154,14 @@ async def on_raw_message_delete(payload: discord.RawMessageDeleteEvent):
     if not payload.guild_id:
         return
     
-    # Queue deletion job for worker to handle
+    # Queue deletion job via scan service
     # Worker will: delete from DB, delete thumbnails from storage
-    job = MessageDeletionJob(
+    scan_service = get_scan_service()
+    await scan_service.handle_message_deletion(
         guild_id=str(payload.guild_id),
         channel_id=str(payload.channel_id),
         message_id=str(payload.message_id)
     )
-    
-    scan_service = get_scan_service()
-    await scan_service._redis_client.push_job(
-        stream_name=f"jobs:guild:{payload.guild_id}",
-        job=job
-    )
-    
-    logger.info(f"Queued deletion job for message {payload.message_id}")
 
 
 @bot.event
