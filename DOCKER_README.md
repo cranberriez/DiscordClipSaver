@@ -10,11 +10,12 @@ docker-compose up --build
 ```
 
 This starts:
-- **Bot** (Discord bot + API server) on port 8000
-- **Worker** (Job processor) - 1 instance by default
-- **Interface** (Web UI) on port 3000
-- **Redis** (Job queue) on port 6379
-- **PostgreSQL** (Database) on port 5432
+
+-   **Bot** (Discord bot + API server) on port 8000
+-   **Worker** (Job processor) - 1 instance by default
+-   **Interface** (Web UI) on port 3000
+-   **Redis** (Job queue) on port 6379
+-   **PostgreSQL** (Database) on port 5432
 
 ### 2. Scale Workers
 
@@ -33,11 +34,13 @@ Each worker will process jobs from the Redis queue independently.
 ### 3. Run Specific Services
 
 **Start only bot and dependencies:**
+
 ```bash
 docker-compose up bot dcs-postgres dcs-redis
 ```
 
 **Start only worker and dependencies:**
+
 ```bash
 docker-compose up worker dcs-postgres dcs-redis
 ```
@@ -56,12 +59,14 @@ docker-compose up worker dcs-postgres dcs-redis
 Edit `.env.global`:
 
 **Local Storage (Default):**
+
 ```bash
 STORAGE_TYPE=local
 STORAGE_PATH=/app/storage
 ```
 
 **Google Cloud Storage:**
+
 ```bash
 STORAGE_TYPE=gcs
 GCS_BUCKET_NAME=my-discord-clips-bucket
@@ -70,9 +75,10 @@ GOOGLE_APPLICATION_CREDENTIALS=/app/gcp-key.json
 ```
 
 Then mount the service account key:
+
 ```yaml
 volumes:
-  - ./gcp-key.json:/app/gcp-key.json:ro
+    - ./gcp-key.json:/app/gcp-key.json:ro
 ```
 
 ## Useful Commands
@@ -162,40 +168,43 @@ docker-compose up --scale worker=10 -d
 ### 2. Resource Limits
 
 Add to `docker-compose.yml`:
+
 ```yaml
 worker:
-  deploy:
-    resources:
-      limits:
-        cpus: '1.0'
-        memory: 512M
-      reservations:
-        cpus: '0.5'
-        memory: 256M
+    deploy:
+        resources:
+            limits:
+                cpus: "1.0"
+                memory: 512M
+            reservations:
+                cpus: "0.5"
+                memory: 256M
 ```
 
 ### 3. Health Checks
 
 Add to worker service:
+
 ```yaml
 healthcheck:
-  test: ["CMD", "python", "-c", "import sys; sys.exit(0)"]
-  interval: 30s
-  timeout: 10s
-  retries: 3
-  start_period: 40s
+    test: ["CMD", "python", "-c", "import sys; sys.exit(0)"]
+    interval: 30s
+    timeout: 10s
+    retries: 3
+    start_period: 40s
 ```
 
 ### 4. Logging
 
 Configure logging driver:
+
 ```yaml
 worker:
-  logging:
-    driver: "json-file"
-    options:
-      max-size: "10m"
-      max-file: "3"
+    logging:
+        driver: "json-file"
+        options:
+            max-size: "10m"
+            max-file: "3"
 ```
 
 ## Troubleshooting
@@ -203,24 +212,27 @@ worker:
 ### Worker Not Processing Jobs
 
 1. Check worker is running:
-   ```bash
-   docker-compose ps worker
-   ```
+
+    ```bash
+    docker-compose ps worker
+    ```
 
 2. Check worker logs:
-   ```bash
-   docker-compose logs worker | grep ERROR
-   ```
+
+    ```bash
+    docker-compose logs worker | grep ERROR
+    ```
 
 3. Verify Redis connection:
-   ```bash
-   docker exec -it dcs-redis redis-cli PING
-   ```
+
+    ```bash
+    docker exec -it dcs-redis redis-cli PING
+    ```
 
 4. Check pending jobs:
-   ```bash
-   docker exec -it dcs-redis redis-cli XINFO STREAM "jobs:guild:YOUR_GUILD_ID:batch"
-   ```
+    ```bash
+    docker exec -it dcs-redis redis-cli XINFO STREAM "jobs:guild:YOUR_GUILD_ID:batch"
+    ```
 
 ### Database Connection Issues
 
@@ -252,22 +264,24 @@ docker exec -it dcs-postgres psql -U discord -d discord_clip_saver -c "ALTER TAB
 ### Worker Crashes on Startup
 
 1. Check environment variables:
-   ```bash
-   docker-compose config
-   ```
+
+    ```bash
+    docker-compose config
+    ```
 
 2. Check if all dependencies are available:
-   ```bash
-   docker-compose up dcs-postgres dcs-redis
-   # Wait for them to be ready, then:
-   docker-compose up worker
-   ```
+
+    ```bash
+    docker-compose up dcs-postgres dcs-redis
+    # Wait for them to be ready, then:
+    docker-compose up worker
+    ```
 
 3. Rebuild without cache:
-   ```bash
-   docker-compose build --no-cache worker
-   docker-compose up worker
-   ```
+    ```bash
+    docker-compose build --no-cache worker
+    docker-compose up worker
+    ```
 
 ## Architecture
 
@@ -297,11 +311,11 @@ docker exec -it dcs-postgres psql -U discord -d discord_clip_saver -c "ALTER TAB
 └─────────────┘     └──────────────┘
 ```
 
-- **Bot** receives Discord events, pushes jobs to Redis
-- **Redis** queues jobs for processing
-- **Worker(s)** pull jobs, process messages, generate thumbnails
-- **Storage** persists thumbnails (local volume or cloud)
-- **PostgreSQL** stores all metadata
+-   **Bot** receives Discord events, pushes jobs to Redis
+-   **Redis** queues jobs for processing
+-   **Worker(s)** pull jobs, process messages, generate thumbnails
+-   **Storage** persists thumbnails (local volume or cloud)
+-   **PostgreSQL** stores all metadata
 
 ## Next Steps
 
