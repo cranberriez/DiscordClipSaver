@@ -14,6 +14,7 @@ class RedisStreamClient:
     """Manages Redis stream for job queue"""
     
     STREAM_PREFIX = "jobs"
+    STREAM_MAXLEN = int(os.getenv("REDIS_STREAM_MAXLEN", "100"))
     
     def __init__(
         self, 
@@ -121,8 +122,8 @@ class RedisStreamClient:
         message_id = await self.client.xadd(
             name=stream_name,
             fields=serialized_data,
-            maxlen=100,  # Keep last 100 jobs per stream
-            approximate=True  # More efficient, allows ~10k-10.1k
+            maxlen=self.STREAM_MAXLEN,
+            approximate=True  # More efficient, allows slight overflow for performance
         )
         
         logger.info(f"Pushed job {job_data.get('job_id', 'unknown')} to stream {stream_name}: {message_id}")
