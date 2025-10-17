@@ -39,10 +39,13 @@ async def upsert_channels_for_guild(guild_id: str, snapshots: Iterable[Any]) -> 
             },
         )
         if not created:
-            # Unsoft delete
-            obj.deleted_at = None
-
             update_needed = False
+            
+            # Check if deleted_at needs to be cleared BEFORE modifying it
+            if obj.deleted_at is not None:
+                obj.deleted_at = None
+                update_needed = True
+            
             if obj.guild_id != guild.id:
                 obj.guild = guild
                 update_needed = True
@@ -55,9 +58,7 @@ async def upsert_channels_for_guild(guild_id: str, snapshots: Iterable[Any]) -> 
             if obj.nsfw != nsfw:
                 obj.nsfw = nsfw
                 update_needed = True
-            if obj.deleted_at is not None:
-                obj.deleted_at = None
-                update_needed = True
+            
             if update_needed:
                 await obj.save()
 
