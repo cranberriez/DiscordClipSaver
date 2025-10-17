@@ -4,8 +4,13 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { RefreshCw, AlertCircle } from "lucide-react";
 import { StatusBadge } from "./StatusBadge";
-import type { ChannelWithStatus, ChannelType } from "./types";
+import type { ChannelWithStatus } from "./types";
 import { formatRelativeTime } from "@/lib/utils/time";
+import {
+    groupChannelsByType,
+    getSortedChannelTypes,
+    ChannelTypeHeader,
+} from "@/lib/utils/channels";
 
 interface ScanStatusTableProps {
     channels: ChannelWithStatus[];
@@ -20,40 +25,14 @@ export function ScanStatusTable({
     onRefresh,
     onStartScan,
 }: ScanStatusTableProps) {
-    // Group channels by type and sort alphabetically within each group
-    const groupedChannels = useMemo(() => {
-        const groups: Record<ChannelType, ChannelWithStatus[]> = {
-            text: [],
-            voice: [],
-            forum: [],
-            category: [],
-        };
+    // Group channels by type and sort alphabetically by name within each group
+    const groupedChannels = useMemo(
+        () => groupChannelsByType(channels, "channelName"),
+        [channels]
+    );
 
-        // Group channels by type
-        channels.forEach(channel => {
-            groups[channel.channelType].push(channel);
-        });
-
-        // Sort each group alphabetically by name
-        Object.keys(groups).forEach(type => {
-            groups[type as ChannelType].sort((a, b) =>
-                a.channelName.localeCompare(b.channelName)
-            );
-        });
-
-        return groups;
-    }, [channels]);
-
-    // Get channel type label for display
-    const getTypeLabel = (type: ChannelType): string => {
-        const labels: Record<ChannelType, string> = {
-            text: "Text Channels",
-            voice: "Voice Channels",
-            forum: "Forum Channels",
-            category: "Categories",
-        };
-        return labels[type];
-    };
+    // Get sorted channel types based on configured display order
+    const sortedChannelTypes = useMemo(() => getSortedChannelTypes(), []);
 
     return (
         <Card className="overflow-hidden">
@@ -92,14 +71,7 @@ export function ScanStatusTable({
                         </tr>
                     </thead>
                     <tbody>
-                        {(
-                            [
-                                "text",
-                                "voice",
-                                "forum",
-                                "category",
-                            ] as ChannelType[]
-                        ).map(type => {
+                        {sortedChannelTypes.map(type => {
                             const channelsOfType = groupedChannels[type];
                             if (channelsOfType.length === 0) return null;
 
@@ -109,9 +81,9 @@ export function ScanStatusTable({
                                     <tr>
                                         <td
                                             colSpan={6}
-                                            className="p-3 bg-muted/30 font-semibold text-sm text-muted-foreground"
+                                            className="p-3 bg-muted/30"
                                         >
-                                            {getTypeLabel(type)}
+                                            <ChannelTypeHeader type={type} />
                                         </td>
                                     </tr>
                                     {/* Channel rows */}
@@ -123,8 +95,7 @@ export function ScanStatusTable({
                                             <td className="p-3">
                                                 <div className="flex flex-col gap-1">
                                                     <div className="flex items-center gap-2">
-                                                        <span className="font-mono text-sm">
-                                                            #
+                                                        <span className="font-mono text-base">
                                                             {
                                                                 channel.channelName
                                                             }
@@ -192,8 +163,6 @@ export function ScanStatusTable({
                                                 >
                                                     {!channel.messageScanEnabled
                                                         ? "Disabled"
-                                                        : isPending
-                                                        ? "Starting..."
                                                         : channel.status ===
                                                           "RUNNING"
                                                         ? "Running..."

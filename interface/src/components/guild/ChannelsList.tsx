@@ -1,8 +1,18 @@
 "use client";
 
-import { useBulkUpdateChannels, useGuild, useChannels } from "@/lib/hooks/queries";
+import { useMemo } from "react";
+import {
+    useBulkUpdateChannels,
+    useGuild,
+    useChannels,
+} from "@/lib/hooks/queries";
 import type { Channel } from "@/lib/db/types";
 import { Button } from "@/components/ui/button";
+import {
+    groupChannelsByType,
+    getSortedChannelTypes,
+    ChannelTypeHeader,
+} from "@/lib/utils/channels";
 
 type ChannelsListProps = {
     channels: Channel[];
@@ -26,7 +36,18 @@ export default function ChannelsList({
     const { data: channels } = useChannels(guildId, initialChannels);
     const channelsList = channels ?? initialChannels;
 
-    const enabledCount = channelsList.filter(c => c.message_scan_enabled).length;
+    // Group channels by type and sort alphabetically by name within each group
+    const groupedChannels = useMemo(
+        () => groupChannelsByType(channelsList, "name"),
+        [channelsList]
+    );
+
+    // Get sorted channel types based on configured display order
+    const sortedChannelTypes = useMemo(() => getSortedChannelTypes(), []);
+
+    const enabledCount = channelsList.filter(
+        c => c.message_scan_enabled
+    ).length;
     const allEnabled = enabledCount === channelsList.length;
     const allDisabled = enabledCount === 0;
 
@@ -90,14 +111,30 @@ export default function ChannelsList({
                     No channels found for this guild.
                 </p>
             ) : (
-                <div className="space-y-2">
-                    {channelsList.map(channel => (
-                        <ChannelItem
-                            key={channel.id}
-                            channel={channel}
-                            guildScanEnabled={guildScanEnabled}
-                        />
-                    ))}
+                <div className="space-y-4">
+                    {sortedChannelTypes.map(type => {
+                        const channelsOfType = groupedChannels[type];
+                        if (channelsOfType.length === 0) return null;
+
+                        return (
+                            <div key={type} className="space-y-2">
+                                {/* Channel type header */}
+                                <div className="px-3 py-2 bg-muted/30 rounded-lg">
+                                    <ChannelTypeHeader type={type} />
+                                </div>
+                                {/* Channels of this type */}
+                                <div className="space-y-2">
+                                    {channelsOfType.map(channel => (
+                                        <ChannelItem
+                                            key={channel.id}
+                                            channel={channel}
+                                            guildScanEnabled={guildScanEnabled}
+                                        />
+                                    ))}
+                                </div>
+                            </div>
+                        );
+                    })}
                 </div>
             )}
         </div>

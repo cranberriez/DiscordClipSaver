@@ -6,7 +6,7 @@ export type { ChannelType };
 export interface ChannelWithStatus {
     channelId: string;
     channelName: string;
-    channelType: ChannelType;
+    type: ChannelType;
     messageScanEnabled: boolean;
     status: string | null;
     messageCount: number;
