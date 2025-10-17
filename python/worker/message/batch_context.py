@@ -3,7 +3,7 @@ Batch processing context to hold shared data and reduce database calls
 """
 from dataclasses import dataclass, field
 from typing import Dict, Set, List, Optional
-from datetime import datetime
+from datetime import datetime, timezone
 from shared.settings_resolver import ResolvedSettings
 import discord
 
@@ -143,7 +143,7 @@ class BatchContext:
                 # Same settings and thumbnail already exists - skip
                 self.thumbnails_skipped += 1
                 # Still update CDN URL if expired
-                if existing_clip.expires_at < datetime.utcnow():
+                if existing_clip.expires_at < datetime.now(timezone.utc):
                     self.clips_to_upsert[clip_id] = ClipData(
                         id=clip_id,
                         message_id=message_id,

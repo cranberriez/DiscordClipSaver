@@ -5,6 +5,7 @@ Requires ffmpeg to be installed on the system:
 - Docker: Installed via Dockerfile
 - Local: See worker/README.md for platform-specific installation
 """
+import asyncio
 import logging
 import os
 import shutil
@@ -178,31 +179,54 @@ class ThumbnailGenerator:
     
     async def _download_video(self, url: str) -> str:
         """
-        Download full video from URL to temporary file
+        Download full video from URL to temporary file with timeout protection
         
         Args:
             url: Video URL (Discord CDN)
             
         Returns:
             Path to temporary video file
+            
+        Raises:
+            asyncio.TimeoutError: If download exceeds timeout
+            aiohttp.ClientError: On HTTP errors
         """
         # Create temporary file
         temp_fd, temp_path = tempfile.mkstemp(suffix='.mp4')
         os.close(temp_fd)
         
-        async with aiohttp.ClientSession() as session:
-            async with session.get(url) as response:
-                response.raise_for_status()
-                
-                bytes_downloaded = 0
-                with open(temp_path, 'wb') as f:
-                    async for chunk in response.content.iter_chunked(8192):
-                        f.write(chunk)
-                        bytes_downloaded += len(chunk)
-                
-                logger.debug(f"Downloaded {bytes_downloaded:,} bytes (full file)")
+        # Configure timeout (default: 5 minutes total, 10 seconds to connect)
+        timeout = aiohttp.ClientTimeout(
+            total=int(os.getenv("VIDEO_DOWNLOAD_TIMEOUT", "300")),
+            connect=int(os.getenv("VIDEO_DOWNLOAD_CONNECT_TIMEOUT", "10"))
+        )
         
-        return temp_path
+        try:
+            async with aiohttp.ClientSession(timeout=timeout) as session:
+                async with session.get(url) as response:
+                    response.raise_for_status()
+                    
+                    bytes_downloaded = 0
+                    with open(temp_path, 'wb') as f:
+                        async for chunk in response.content.iter_chunked(8192):
+                            f.write(chunk)
+                            bytes_downloaded += len(chunk)
+                    
+                    logger.debug(f"Downloaded {bytes_downloaded:,} bytes (full file)")
+            
+            return temp_path
+            
+        except asyncio.TimeoutError:
+            # Clean up temp file on timeout
+            if os.path.exists(temp_path):
+                os.unlink(temp_path)
+            logger.error(f"Video download timed out after {timeout.total}s: {url[:100]}...")
+            raise
+        except Exception as e:
+            # Clean up temp file on any error
+            if os.path.exists(temp_path):
+                os.unlink(temp_path)
+            raise
     
     async def _probe_video(self, video_path: str) -> dict:
         """

@@ -2,10 +2,11 @@
 Batch database operations for efficient bulk inserts/updates
 """
 import logging
+from collections import Counter
 from typing import List, Dict
-from shared.db.models import User, Message, Clip, Thumbnail
+from shared.db.models import Clip, Thumbnail
+from shared.db.repositories import bulk_operations
 from worker.message.batch_context import BatchContext, ClipMetadata
-from tortoise.exceptions import IntegrityError
 
 logger = logging.getLogger(__name__)
 
@@ -52,110 +53,107 @@ class BatchDatabaseOperations:
     @staticmethod
     async def bulk_upsert_users(context: BatchContext) -> int:
         """
-        Bulk upsert users.
+        Bulk upsert users via shared repository.
         
         Args:
             context: BatchContext with users to upsert
             
         Returns:
-            Number of users upserted
+            Number of users successfully upserted
         """
         if not context.users_to_upsert:
             return 0
         
-        users_data = list(context.users_to_upsert.values())
+        # Convert to list of dicts for repository
+        users_data = [
+            {
+                'id': user.id,
+                'username': user.username,
+                'discriminator': user.discriminator,
+                'avatar_url': user.avatar_url
+            }
+            for user in context.users_to_upsert.values()
+        ]
         
-        # Use bulk_create with on_conflict to handle upserts
-        for user_data in users_data:
-            try:
-                await User.update_or_create(
-                    id=user_data.id,
-                    defaults={
-                        "username": user_data.username,
-                        "discriminator": user_data.discriminator,
-                        "avatar_url": user_data.avatar_url
-                    }
-                )
-            except Exception as e:
-                logger.error(f"Failed to upsert user {user_data.id}: {e}")
+        success_count, failure_count = await bulk_operations.bulk_upsert_users(users_data)
         
-        logger.debug(f"Upserted {len(users_data)} users")
-        return len(users_data)
+        if failure_count > 0:
+            logger.warning(f"Bulk upsert users: {success_count} succeeded, {failure_count} failed")
+        
+        return success_count
     
     @staticmethod
     async def bulk_upsert_messages(context: BatchContext) -> int:
         """
-        Bulk upsert messages.
+        Bulk upsert messages via shared repository.
         
         Args:
             context: BatchContext with messages to upsert
             
         Returns:
-            Number of messages upserted
+            Number of messages successfully upserted
         """
         if not context.messages_to_upsert:
             return 0
         
-        messages_data = list(context.messages_to_upsert.values())
+        # Convert to list of dicts for repository
+        messages_data = [
+            {
+                'id': msg.id,
+                'guild_id': msg.guild_id,
+                'channel_id': msg.channel_id,
+                'author_id': msg.author_id,
+                'content': msg.content,
+                'timestamp': msg.timestamp
+            }
+            for msg in context.messages_to_upsert.values()
+        ]
         
-        # Tortoise doesn't have great bulk upsert, so we'll use update_or_create
-        for msg_data in messages_data:
-            try:
-                await Message.update_or_create(
-                    id=msg_data.id,
-                    defaults={
-                        "channel_id": msg_data.channel_id,
-                        "guild_id": msg_data.guild_id,
-                        "author_id": msg_data.author_id,
-                        "timestamp": msg_data.timestamp,
-                        "content": msg_data.content
-                    }
-                )
-            except Exception as e:
-                logger.error(f"Failed to upsert message {msg_data.id}: {e}")
+        success_count, failure_count = await bulk_operations.bulk_upsert_messages(messages_data)
         
-        logger.debug(f"Upserted {len(messages_data)} messages")
-        return len(messages_data)
+        if failure_count > 0:
+            logger.warning(f"Bulk upsert messages: {success_count} succeeded, {failure_count} failed")
+        
+        return success_count
     
     @staticmethod
     async def bulk_upsert_clips(context: BatchContext) -> int:
         """
-        Bulk upsert clips.
+        Bulk upsert clips via shared repository.
         
         Args:
             context: BatchContext with clips to upsert
             
         Returns:
-            Number of clips upserted
+            Number of clips successfully upserted
         """
         if not context.clips_to_upsert:
             return 0
         
-        clips_data = list(context.clips_to_upsert.values())
+        # Convert to list of dicts for repository
+        clips_data = [
+            {
+                'id': clip.id,
+                'message_id': clip.message_id,
+                'guild_id': clip.guild_id,
+                'channel_id': clip.channel_id,
+                'filename': clip.filename,
+                'file_size': clip.file_size,
+                'mime_type': clip.mime_type,
+                'cdn_url': clip.cdn_url,
+                'expires_at': clip.expires_at,
+                'thumbnail_status': clip.thumbnail_status,
+                'settings_hash': clip.settings_hash
+            }
+            for clip in context.clips_to_upsert.values()
+        ]
         
-        # Upsert clips
-        for clip_data in clips_data:
-            try:
-                await Clip.update_or_create(
-                    id=clip_data.id,
-                    defaults={
-                        "message_id": clip_data.message_id,
-                        "channel_id": clip_data.channel_id,
-                        "guild_id": clip_data.guild_id,
-                        "filename": clip_data.filename,
-                        "file_size": clip_data.file_size,
-                        "mime_type": clip_data.mime_type,
-                        "cdn_url": clip_data.cdn_url,
-                        "expires_at": clip_data.expires_at,
-                        "thumbnail_status": clip_data.thumbnail_status,
-                        "settings_hash": clip_data.settings_hash
-                    }
-                )
-            except Exception as e:
-                logger.error(f"Failed to upsert clip {clip_data.id}: {e}")
+        success_count, failure_count = await bulk_operations.bulk_upsert_clips(clips_data)
         
-        logger.debug(f"Upserted {len(clips_data)} clips")
-        return len(clips_data)
+        if failure_count > 0:
+            logger.warning(f"Bulk upsert clips: {success_count} succeeded, {failure_count} failed")
+        
+        return success_count
     
     @staticmethod
     async def check_existing_thumbnails(clip_ids: List[str]) -> set:
@@ -177,7 +175,6 @@ class BatchDatabaseOperations:
         ).values_list('clip_id', flat=True)
         
         # Count occurrences (need 2 per clip: small and large)
-        from collections import Counter
         thumbnail_counts = Counter(thumbnails)
         
         # Clips with both thumbnails
