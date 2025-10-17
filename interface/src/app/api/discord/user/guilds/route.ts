@@ -8,7 +8,9 @@ import { getBoolParam } from "@/lib/params";
  * GET /api/discord/user/guilds
  * 
  * Get the authenticated user's Discord guilds.
- * Guilds are cached for 2 minutes to prevent rate limiting.
+ * Guilds are cached with graceful degradation:
+ * - Fresh for 1 hour (normal operations)
+ * - Stale for 24 hours (served when rate limited)
  * 
  * Query params:
  * - filter: "invitable" to filter guilds where user can invite bot
@@ -23,7 +25,7 @@ export async function GET(req: NextRequest) {
     const filterParam = url.searchParams.get("filter");
     const includeDb = getBoolParam(url, "includeDb");
 
-    // auth.userGuilds is already cached (2 minutes TTL)
+    // auth.userGuilds is already cached with graceful degradation (1h fresh / 24h stale)
     const guilds = auth.userGuilds;
 
     // Optional filtering

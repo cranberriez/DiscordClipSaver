@@ -5,8 +5,7 @@ import {
     consumeInstallIntent,
 } from "@/lib/db";
 import { requireAuth } from "@/lib/middleware/auth";
-
-const ME_URL = "https://discord.com/api/v10/users/@me";
+import { getCurrentUser } from "@/lib/discord/discordClient";
 
 /**
  * GET /api/discord/bot/claim
@@ -66,19 +65,25 @@ export async function GET(req: NextRequest) {
     if (auth instanceof NextResponse) return auth;
 
     const tok = auth.accessToken;
+    if (!tok) {
+        return NextResponse.json(
+            { error: "Missing access token" },
+            { status: 401 }
+        );
+    }
 
     // 3) Identify the installer user (already have Discord ID from auth)
     // Verify with Discord API to ensure token is valid
-    const meRes = await fetch(ME_URL, {
-        headers: { Authorization: `Bearer ${tok}` },
-    });
-    if (!meRes.ok) {
+    let me: { id: string };
+    try {
+        me = await getCurrentUser(tok);
+    } catch (err) {
+        console.error("Failed to verify Discord user:", err);
         return NextResponse.json(
             { error: "Failed to verify Discord user" },
             { status: 400 }
         );
     }
-    const me = (await meRes.json()) as { id: string };
 
     // Verify the Discord ID matches our session
     if (me.id !== auth.discordUserId) {

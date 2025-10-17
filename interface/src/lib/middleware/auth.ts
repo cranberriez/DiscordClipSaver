@@ -9,8 +9,8 @@ import "server-only";
 
 import { NextRequest, NextResponse } from "next/server";
 import { getAuthInfo, type AuthInfo } from "@/lib/auth";
-import { cacheUserScoped } from "@/lib/cache";
-import { discordFetch } from "@/lib/discord/discordClient";
+import { cacheUserScopedGraceful } from "@/lib/cache";
+import { discordFetch, DiscordAPIError } from "@/lib/discord/discordClient";
 import { getSingleGuildById } from "@/lib/db";
 import type { DiscordGuild } from "@/lib/discord/types";
 import type { Guild } from "@/lib/db/types";
@@ -38,7 +38,11 @@ export interface GuildAuthContext extends AuthContext {
  * Require authentication and fetch user's Discord guilds (cached).
  * 
  * This is the base middleware that all protected routes should use.
- * It caches the Discord guild list for 2 minutes to avoid rate limiting.
+ * Uses aggressive caching with graceful degradation:
+ * - Fresh cache for 1 hour (guild membership is relatively static)
+ * - Stale cache for 24 hours (served when rate limited or API unavailable)
+ * 
+ * This prevents Discord rate limiting while ensuring reasonable freshness.
  * 
  * @example
  * ```typescript
@@ -69,18 +73,47 @@ export async function requireAuth(
         );
     }
 
-    // Fetch user's guilds (cached for 2 minutes)
-    const ttlMs = 2 * 60 * 1000;
+    // Fetch user's guilds with graceful degradation
+    // Guild membership is relatively static, so cache aggressively:
+    // - Fresh for 1 hour (normal operations)
+    // - Stale for 24 hours (serve when rate limited)
+    const freshTtlMs = 60 * 60 * 1000; // 1 hour
+    const staleTtlMs = 24 * 60 * 60 * 1000; // 24 hours
+    
     let userGuilds: DiscordGuild[];
     try {
-        userGuilds = await cacheUserScoped<DiscordGuild[]>(
+        userGuilds = await cacheUserScopedGraceful<DiscordGuild[]>(
             discordUserId,
             "discord:guilds",
-            ttlMs,
+            freshTtlMs,
+            staleTtlMs,
             () => discordFetch<DiscordGuild[]>("/users/@me/guilds", accessToken)
         );
     } catch (err: any) {
-        console.error("Failed to fetch user guilds:", err);
+        // Graceful cache should have handled rate limits by returning stale data
+        // If we still get an error, it means no cache is available at all
+        console.error("Failed to fetch user guilds (no cache available):", err);
+        
+        // Provide more helpful error message based on error type
+        if (err instanceof DiscordAPIError) {
+            if (err.status === 429) {
+                return NextResponse.json(
+                    { 
+                        error: "Discord rate limit exceeded after retries. Please try again in a moment.",
+                        retryAfter: err.retryAfter 
+                    },
+                    { status: 429 }
+                );
+            }
+            
+            if (err.status === 401 || err.status === 403) {
+                return NextResponse.json(
+                    { error: "Discord authorization failed. Please sign in again." },
+                    { status: 401 }
+                );
+            }
+        }
+        
         return NextResponse.json(
             { error: "Failed to fetch Discord guilds" },
             { status: 502 }
