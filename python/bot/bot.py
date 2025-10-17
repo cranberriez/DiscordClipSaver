@@ -2,10 +2,12 @@ import discord
 from bot.services.container import guild_service, channel_service
 from bot.services.scan_service import get_scan_service
 from bot.logger import logger
+from shared.redis.redis import MessageDeletionJob
 
 # ----- Discord bot -----
 intents = discord.Intents.default()
-intents.message_content = True
+intents.message_content = True  # Required for message.content access
+intents.members = True  # Required for member events (on_member_update, on_member_join, etc.)
 
 bot = discord.Client(intents=intents)
 
@@ -58,14 +60,45 @@ async def on_guild_channel_delete(channel: discord.abc.GuildChannel):
 
 
 # --- User Events ---
+@bot.event
+async def on_user_update(before: discord.User, after: discord.User):
+    """
+    Called when a user updates their profile (username, avatar, discriminator).
+    This is a global event - not guild-specific.
+    """
+    # TODO: Update user record in database (username, avatar_url, discriminator)
+    pass
 
-# TODO: Handle users' joining guilds, leaving guilds, and updating user details (like image and username aka nickname) 
+
+@bot.event
+async def on_member_update(before: discord.Member, after: discord.Member):
+    """
+    Called when a guild member updates (nickname, roles, status, activities).
+    This is guild-specific.
+    """
+    # TODO: Update member-specific data (nickname, roles) if needed
+    pass
+
+
+@bot.event
+async def on_member_join(member: discord.Member):
+    """Called when a member joins a guild."""
+    # TODO: Add member to database or log join event
+    pass
+
+
+@bot.event
+async def on_member_remove(member: discord.Member):
+    """Called when a member leaves or is kicked from a guild."""
+    # TODO: Mark member as left or soft-delete
+    pass
 
 
 # --- Message Events ---
 @bot.event
 async def on_message(message: discord.Message):
-    # Ignore the bot’s own messages
+    """Called when a message is sent in a channel the bot can see."""
+    # Ignore the bot's own messages
     if message.author.id == bot.user.id:
         return
     # Dev visibility
@@ -77,3 +110,90 @@ async def on_message(message: discord.Message):
     
     # TODO: Handle messages from previously unknown channels, fetch single channel and add
     # TODO: Handle messages from unknown guilds, fetch single guild and add
+
+
+@bot.event
+async def on_message_delete(message: discord.Message):
+    """
+    Called when a message is deleted (only if message is in cache).
+    For uncached messages, use on_raw_message_delete.
+    """
+    # TODO: Mark message as deleted in database (set deleted_at timestamp)
+    # TODO: Optionally mark associated clips as deleted
+    pass
+
+
+@bot.event
+async def on_message_edit(before: discord.Message, after: discord.Message):
+    """
+    Called when a message is edited (only if message is in cache).
+    For uncached messages, use on_raw_message_edit.
+    """
+    # TODO: Update message content in database
+    # TODO: Check if attachments changed (clips added/removed)
+    pass
+
+
+@bot.event
+async def on_raw_message_delete(payload: discord.RawMessageDeleteEvent):
+    """
+    Called when a message is deleted (works even if message not in cache).
+    Queues a deletion job for worker to handle full cleanup.
+    
+    Payload attributes:
+    - message_id: int
+    - channel_id: int
+    - guild_id: Optional[int]
+    - cached_message: Optional[discord.Message]
+    """
+    # Only process guild messages (DMs have no guild_id)
+    if not payload.guild_id:
+        return
+    
+    # Queue deletion job for worker to handle
+    # Worker will: delete from DB, delete thumbnails from storage
+    job = MessageDeletionJob(
+        guild_id=str(payload.guild_id),
+        channel_id=str(payload.channel_id),
+        message_id=str(payload.message_id)
+    )
+    
+    scan_service = get_scan_service()
+    await scan_service._redis_client.push_job(
+        stream_name=f"jobs:guild:{payload.guild_id}",
+        job=job
+    )
+    
+    logger.info(f"Queued deletion job for message {payload.message_id}")
+
+
+@bot.event
+async def on_raw_message_edit(payload: discord.RawMessageUpdateEvent):
+    """
+    Called when a message is edited (works even if message not in cache).
+    
+    Payload attributes:
+    - message_id: int
+    - channel_id: int
+    - guild_id: Optional[int]
+    - data: dict (raw message data from Discord)
+    - cached_message: Optional[discord.Message]
+    """
+    # TODO: Update message using raw payload data
+    pass
+
+
+@bot.event
+async def on_raw_bulk_message_delete(payload: discord.RawBulkMessageDeleteEvent):
+    """
+    Called when messages are bulk deleted (e.g., channel purge).
+    
+    Payload attributes:
+    - message_ids: Set[int]
+    - channel_id: int
+    - guild_id: Optional[int]
+    - cached_messages: List[discord.Message]
+    """
+    # TODO: Bulk mark messages as deleted (efficient batch operation)
+    # TODO: Important for handling channel purges
+    pass

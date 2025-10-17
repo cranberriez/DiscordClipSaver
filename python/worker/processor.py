@@ -126,6 +126,8 @@ class JobProcessor:
             await self.process_rescan(job_data)
         elif job_type == "thumbnail_retry":
             await self.process_thumbnail_retry(job_data)
+        elif job_type == "message_deletion":
+            await self.process_message_deletion(job_data)
         else:
             logger.error(f"Unknown job type: {job_type}")
             raise ValueError(f"Unknown job type: {job_type}")
@@ -525,4 +527,88 @@ class JobProcessor:
             logger.info(f"Thumbnail retry complete: {success_count} thumbnails successfully generated")
         except Exception as e:
             logger.error(f"Thumbnail retry job failed: {e}", exc_info=True)
+            raise
+    
+    async def process_message_deletion(self, job_data: dict):
+        """
+        Process message deletion job - hard delete message, clips, and thumbnails.
+        
+        This handles Discord message deletions by:
+        1. Checking if message exists in database (is it a clip message?)
+        2. Deleting thumbnail files from storage
+        3. Hard deleting thumbnails from database
+        4. Hard deleting clips from database
+        5. Hard deleting message from database
+        
+        Note: deleted_at is for interface archival, not Discord deletions.
+        Discord deletions are permanent (CDN URLs are lost), so we fully remove them.
+        
+        Args:
+            job_data: MessageDeletionJob data
+        """
+        from shared.db.models import Message, Clip, Thumbnail
+        from shared.storage import get_storage_backend
+        
+        message_id = job_data["message_id"]
+        channel_id = job_data["channel_id"]
+        guild_id = job_data["guild_id"]
+        
+        logger.info(f"Processing message deletion: message={message_id}, channel={channel_id}")
+        
+        try:
+            # Check if message exists in database
+            message = await Message.get_or_none(id=message_id).prefetch_related("clips")
+            
+            if not message:
+                logger.debug(f"Message {message_id} not in database (not a clip message), skipping")
+                return
+            
+            # Get all clips associated with this message
+            clips = await Clip.filter(message_id=message_id).prefetch_related("thumbnails")
+            
+            if not clips:
+                logger.debug(f"Message {message_id} has no clips, deleting message only")
+                await message.delete()
+                return
+            
+            logger.info(f"Message {message_id} has {len(clips)} clip(s), deleting all associated data")
+            
+            storage = get_storage_backend()
+            total_thumbnails_deleted = 0
+            total_files_deleted = 0
+            
+            # Process each clip
+            for clip in clips:
+                # Get all thumbnails for this clip
+                thumbnails = await Thumbnail.filter(clip_id=clip.id).all()
+                
+                # Delete thumbnail files from storage
+                for thumbnail in thumbnails:
+                    try:
+                        await storage.delete(thumbnail.storage_path)
+                        total_files_deleted += 1
+                        logger.debug(f"Deleted thumbnail file: {thumbnail.storage_path}")
+                    except Exception as e:
+                        logger.warning(f"Failed to delete thumbnail file {thumbnail.storage_path}: {e}")
+                        # Continue even if file deletion fails (file might already be gone)
+                
+                # Hard delete thumbnails from database
+                deleted_thumbs = await Thumbnail.filter(clip_id=clip.id).delete()
+                total_thumbnails_deleted += deleted_thumbs
+                
+                # Hard delete clip from database
+                await clip.delete()
+                logger.debug(f"Deleted clip {clip.id} and {deleted_thumbs} thumbnail(s)")
+            
+            # Finally, hard delete the message
+            await message.delete()
+            
+            logger.info(
+                f"Message deletion complete: message={message_id}, "
+                f"clips={len(clips)}, thumbnails={total_thumbnails_deleted}, "
+                f"files={total_files_deleted}"
+            )
+            
+        except Exception as e:
+            logger.error(f"Message deletion failed for {message_id}: {e}", exc_info=True)
             raise

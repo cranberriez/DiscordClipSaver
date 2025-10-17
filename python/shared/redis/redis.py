@@ -13,7 +13,7 @@ import uuid
 class BaseJob(BaseModel):
     """Base job model with common fields"""
     job_id: str = Field(default_factory=lambda: str(uuid.uuid4()))
-    type: Literal["batch", "message", "rescan", "thumbnail_retry"]
+    type: Literal["batch", "message", "rescan", "thumbnail_retry", "message_deletion"]
     guild_id: str
     channel_id: str
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
@@ -66,6 +66,21 @@ class ThumbnailRetryJob(BaseJob):
     type: Literal["thumbnail_retry"] = "thumbnail_retry"
     clip_ids: list[str]
     retry_count: int = 0
+
+
+class MessageDeletionJob(BaseJob):
+    """
+    Job to delete a message and its associated clips/thumbnails.
+    Created by: Bot (on_raw_message_delete event)
+    
+    Handles:
+    - Hard delete message from database
+    - Hard delete associated clips from database
+    - Hard delete associated thumbnails from database
+    - Delete thumbnail files from storage
+    """
+    type: Literal["message_deletion"] = "message_deletion"
+    message_id: str
 
 
 # Example job payloads
