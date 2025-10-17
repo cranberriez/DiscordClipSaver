@@ -93,9 +93,10 @@ class PurgeChannelJob(BaseJob):
     - Hard delete all thumbnails from database
     - Hard delete all clips from database
     - Hard delete all messages from database
-    - Set purge_cooldown on channel
+    - Delete channel scan status (invalidates scan metadata)
+    - Set purge_cooldown on channel (configurable, default 5 minutes)
     
-    Note: Channel itself is NOT deleted (use cascade delete from interface)
+    Note: Channel itself is NOT deleted (allows re-scanning)
     """
     type: Literal["purge_channel"] = "purge_channel"
 
@@ -110,10 +111,10 @@ class PurgeGuildJob(BaseJob):
     - Hard delete all thumbnails from database
     - Hard delete all clips from database
     - Hard delete all messages from database
+    - Delete all channel scan statuses for guild
+    - Hard delete all channels for guild
     - Soft delete guild (set deleted_at)
     - Leave the guild via bot
-    
-    Note: Database cascade will handle channel cleanup
     """
     type: Literal["purge_guild"] = "purge_guild"
 

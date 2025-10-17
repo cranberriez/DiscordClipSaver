@@ -3,15 +3,15 @@
 ## What Was Implemented
 
 ### ✅ Database Schema Updates
-- **Added `purge_cooldown` to Channel model** - Prevents abuse with 24-hour cooldown
+- **Channel `purge_cooldown` already exists** - Used to prevent abuse with configurable cooldown
 - **Guild `deleted_at` already existed** - Used for soft delete on removal
-- Migration script created: `migrations/add_purge_cooldown.sql`
+- No new migrations required
 
 ### ✅ Worker Purge Jobs
 **New Files:**
 - `python/worker/purge/purge_handler.py` - Core purge logic
-  - `purge_channel()` - Delete all data for a channel
-  - `purge_guild()` - Delete all data for guild and leave
+  - `purge_channel()` - Delete all data for a channel, set cooldown (default 5 min)
+  - `purge_guild()` - Delete all data for guild including channels, then leave
 
 **Modified Files:**
 - `python/worker/processor.py` - Added purge job routing and scan stop methods
@@ -32,7 +32,8 @@
 **New Routes:**
 - `POST /api/guilds/[guildId]/channels/[channelId]/purge` - Purge single channel
   - Checks purge cooldown
-  - Returns 429 if cooldown active
+  - Returns 429 if cooldown active with cooldown_until timestamp
+  - Cooldown configurable via PURGE_COOLDOWN_MINUTES (default 5)
   
 - `POST /api/guilds/[guildId]/purge` - Purge entire guild
   - Checks guild not deleted
@@ -47,12 +48,12 @@
 - `interface/src/components/purge/PurgeButton.tsx` - Reusable purge button
   - Type-to-confirm safety
   - Loading states
-  - Error handling
+  - Error handling with cooldown display
   - Fixed HTML nesting (uses `asChild` with divs)
   
 - `interface/src/components/guild/DangerZone.tsx` - Danger zone section with THREE purge levels:
-  - Purge specific channel (with dropdown selector)
-  - Purge all channels (without leaving guild)
+  - Purge specific channel (with dropdown selector, shows cooldown errors)
+  - Purge all channels (skips channels on cooldown, shows summary)
   - Purge guild (delete everything and leave)
   - Shows clip counts for each option
   
@@ -80,18 +81,7 @@
 
 ## What You Need To Do
 
-### 1. Run Database Migration
-```bash
-# Connect to your PostgreSQL database and run:
-psql -U your_user -d your_database -f migrations/add_purge_cooldown.sql
-```
-
-Or manually:
-```sql
-ALTER TABLE channel ADD COLUMN IF NOT EXISTS purge_cooldown TIMESTAMP NULL;
-```
-
-### 2. Restart Services
+### 1. Restart Services
 After migration:
 ```bash
 # Restart worker to load new job handlers
@@ -116,10 +106,13 @@ docker-compose restart interface
    - Guild shows "Deleted" banner
    - Re-invite button appears
 
-**Testing Channel Purge (when implemented in UI):**
-1. Add purge button to channel management UI
+**Testing Channel Purge:**
+1. Select a channel from the dropdown in Danger Zone
 2. Click purge for a channel
-3. Verify cooldown works (can't purge again for 24 hours)
+3. Verify cooldown is set (5 minutes by default)
+4. Try purging again immediately
+5. Verify 429 error with remaining time displayed
+6. Test with PURGE_COOLDOWN_MINUTES=0 to disable cooldown
 
 ### 4. Test All Three Purge Levels
 The DangerZone component now includes all three purge levels:
@@ -128,12 +121,15 @@ The DangerZone component now includes all three purge levels:
 1. Select a channel from the dropdown
 2. Click "Purge Channel"
 3. Type the channel name to confirm
-4. Verify 24-hour cooldown works
+4. Verify cooldown is set (default 5 minutes)
+5. Try purging again - should show "Try again in X minute(s)"
 
 **Purge All Channels:**
 1. Click "Purge All"
 2. Type "DELETE ALL CHANNELS" to confirm
-3. Verify all channels are purged but bot stays
+3. Verify channels on cooldown are skipped
+4. Verify summary shows "Purged X channel(s), skipped Y on cooldown"
+5. Bot stays in guild
 
 **Purge Guild:**
 1. Click "Purge Guild"
@@ -158,9 +154,11 @@ The DangerZone component now includes all three purge levels:
 
 ### Why Purge Cooldown?
 **Benefits:**
-- Prevents abuse
-- Protects against accidents
-- Rate limiting for free
+- Prevents rapid repeated purges
+- Configurable via environment variable
+- Can be disabled for testing (set to 0)
+- Rate limiting without permanent blocks
+- Allows re-purging after cooldown expires
 
 ## Key Files Changed
 
@@ -230,7 +228,11 @@ Before deploying to production:
 - [ ] Verify bot leaves guild
 - [ ] Verify deleted banner shows
 - [ ] Verify re-invite button works
-- [ ] Test purge cooldown works
+- [ ] Test cooldown prevents rapid purges
+- [ ] Test cooldown shows remaining time
+- [ ] Test PURGE_COOLDOWN_MINUTES=0 disables cooldown
+- [ ] Test "Purge All" skips channels on cooldown
+- [ ] Test guild purge hard deletes channels
 - [ ] Test authorization (non-owners can't purge)
 - [ ] Test type-to-confirm works
 - [ ] Test scan stopping works
@@ -238,15 +240,6 @@ Before deploying to production:
 - [ ] Check bot logs for errors
 
 ## Troubleshooting
-
-### Migration Fails
-```sql
--- Check if column already exists
-SELECT column_name FROM information_schema.columns 
-WHERE table_name='channel' AND column_name='purge_cooldown';
-
--- If exists, skip migration
-```
 
 ### Purge Job Not Processing
 - Check worker logs: `docker logs worker`

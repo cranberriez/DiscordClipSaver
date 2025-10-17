@@ -1,11 +1,12 @@
 """
 Purge handler for deleting clips, messages, and thumbnails
 """
+import os
 import logging
 from datetime import datetime, timezone, timedelta
 from typing import Optional
 from worker.discord.bot import WorkerBot
-from shared.db.models import Guild, Channel, Message, Clip, Thumbnail
+from shared.db.models import Guild, Channel, Message, Clip, Thumbnail, ChannelScanStatus
 from shared.storage import get_storage_backend
 
 logger = logging.getLogger(__name__)
@@ -21,16 +22,15 @@ class PurgeHandler:
     async def purge_channel(
         self,
         guild_id: str,
-        channel_id: str,
-        cooldown_hours: int = 24
+        channel_id: str
     ) -> dict:
         """
         Purge all clips and data for a specific channel.
+        Sets purge cooldown to prevent rapid re-purging.
         
         Args:
             guild_id: Guild snowflake
             channel_id: Channel snowflake
-            cooldown_hours: Hours until next purge allowed (default 24)
             
         Returns:
             Dict with purge statistics
@@ -42,6 +42,7 @@ class PurgeHandler:
             "clips_deleted": 0,
             "thumbnails_deleted": 0,
             "files_deleted": 0,
+            "scan_status_deleted": 0,
         }
         
         try:
@@ -86,19 +87,35 @@ class PurgeHandler:
             ).delete()
             stats["messages_deleted"] = deleted_messages
             
+            # Delete channel scan status (scan metadata is now invalid)
+            deleted_scan_status = await ChannelScanStatus.filter(
+                guild_id=guild_id,
+                channel_id=channel_id
+            ).delete()
+            stats["scan_status_deleted"] = deleted_scan_status
+            if deleted_scan_status > 0:
+                logger.info(f"Deleted scan status for channel {channel_id}")
+            
             # Set purge cooldown on channel
+            cooldown_minutes = float(os.getenv("PURGE_COOLDOWN_MINUTES", "5"))
             channel = await Channel.get_or_none(id=channel_id)
-            if channel:
-                channel.purge_cooldown = datetime.now(timezone.utc) + timedelta(hours=cooldown_hours)
+            if channel and cooldown_minutes > 0:
+                channel.purge_cooldown = datetime.now(timezone.utc) + timedelta(minutes=cooldown_minutes)
                 await channel.save()
                 logger.info(f"Set purge cooldown for channel {channel_id} until {channel.purge_cooldown}")
+            elif channel:
+                # Clear cooldown if disabled (<=0)
+                channel.purge_cooldown = None
+                await channel.save()
+                logger.info(f"Purge cooldown disabled for channel {channel_id}")
             
             logger.info(
                 f"Channel purge complete: channel={channel_id}, "
                 f"messages={stats['messages_deleted']}, "
                 f"clips={stats['clips_deleted']}, "
                 f"thumbnails={stats['thumbnails_deleted']}, "
-                f"files={stats['files_deleted']}"
+                f"files={stats['files_deleted']}, "
+                f"scan_status={stats['scan_status_deleted']}"
             )
             
             return stats
@@ -128,6 +145,7 @@ class PurgeHandler:
             "clips_deleted": 0,
             "thumbnails_deleted": 0,
             "files_deleted": 0,
+            "scan_status_deleted": 0,
             "guild_left": False,
         }
         
@@ -164,9 +182,15 @@ class PurgeHandler:
             deleted_messages = await Message.filter(guild_id=guild_id).delete()
             stats["messages_deleted"] = deleted_messages
             
-            # Count channels before they're cascade deleted
-            channels = await Channel.filter(guild_id=guild_id).all()
-            stats["channels_purged"] = len(channels)
+            # Delete all channel scan statuses for this guild (scan metadata is now invalid)
+            deleted_scan_statuses = await ChannelScanStatus.filter(guild_id=guild_id).delete()
+            stats["scan_status_deleted"] = deleted_scan_statuses
+            logger.info(f"Deleted {deleted_scan_statuses} scan status(es) for guild {guild_id}")
+            
+            # Hard delete all channels for this guild
+            deleted_channels = await Channel.filter(guild_id=guild_id).delete()
+            stats["channels_purged"] = deleted_channels
+            logger.info(f"Deleted {deleted_channels} channel(s) for guild {guild_id}")
             
             # Soft delete guild (set deleted_at)
             guild = await Guild.get_or_none(id=guild_id)
@@ -177,7 +201,8 @@ class PurgeHandler:
             
             # Leave the guild via bot
             try:
-                discord_guild = self.bot.get_guild(int(guild_id))
+                client = self.bot.get_client()
+                discord_guild = client.get_guild(int(guild_id))
                 if discord_guild:
                     await discord_guild.leave()
                     stats["guild_left"] = True
@@ -195,6 +220,7 @@ class PurgeHandler:
                 f"clips={stats['clips_deleted']}, "
                 f"thumbnails={stats['thumbnails_deleted']}, "
                 f"files={stats['files_deleted']}, "
+                f"scan_status={stats['scan_status_deleted']}, "
                 f"guild_left={stats['guild_left']}"
             )
             

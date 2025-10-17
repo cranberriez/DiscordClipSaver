@@ -15,7 +15,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Loader2, Trash2 } from "lucide-react";
+import { Loader2, Trash2, Clock } from "lucide-react";
 
 interface PurgeButtonProps {
     /**
@@ -82,6 +82,7 @@ export function PurgeButton({
     const [inputValue, setInputValue] = useState("");
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    const [cooldownWarning, setCooldownWarning] = useState<string | null>(null);
 
     const handleConfirm = async () => {
         if (inputValue !== confirmText) {
@@ -91,13 +92,21 @@ export function PurgeButton({
 
         setIsLoading(true);
         setError(null);
+        setCooldownWarning(null);
 
         try {
             await onConfirm();
             setIsOpen(false);
             setInputValue("");
         } catch (err: any) {
-            setError(err.message || "Failed to perform operation");
+            const errorMessage = err.message || "Failed to perform operation";
+            
+            // Check if this is a cooldown error (contains "cooldown" or "Try again in")
+            if (errorMessage.toLowerCase().includes("cooldown") || errorMessage.includes("Try again in")) {
+                setCooldownWarning(errorMessage);
+            } else {
+                setError(errorMessage);
+            }
         } finally {
             setIsLoading(false);
         }
@@ -107,6 +116,7 @@ export function PurgeButton({
         setIsOpen(false);
         setInputValue("");
         setError(null);
+        setCooldownWarning(null);
     };
 
     const isConfirmEnabled = inputValue === confirmText && !isLoading;
@@ -144,6 +154,14 @@ export function PurgeButton({
                                     className="font-mono"
                                 />
                             </div>
+                            {cooldownWarning && (
+                                <div className="flex items-start gap-2 p-3 bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-900 rounded-md">
+                                    <Clock className="w-4 h-4 mt-0.5 text-amber-600 dark:text-amber-500 flex-shrink-0" />
+                                    <div className="text-sm font-medium text-amber-800 dark:text-amber-200">
+                                        {cooldownWarning}
+                                    </div>
+                                </div>
+                            )}
                             {error && (
                                 <div className="text-sm font-medium text-destructive">{error}</div>
                             )}
@@ -154,14 +172,17 @@ export function PurgeButton({
                     <AlertDialogCancel onClick={handleCancel} disabled={isLoading}>
                         Cancel
                     </AlertDialogCancel>
-                    <AlertDialogAction
-                        onClick={handleConfirm}
+                    <Button
+                        onClick={(e) => {
+                            e.preventDefault();
+                            handleConfirm();
+                        }}
                         disabled={!isConfirmEnabled}
                         className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
                     >
                         {isLoading && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
                         Confirm Delete
-                    </AlertDialogAction>
+                    </Button>
                 </AlertDialogFooter>
             </AlertDialogContent>
         </AlertDialog>

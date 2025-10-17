@@ -56,6 +56,22 @@ export function DangerZone({ guildId, guildName }: DangerZoneProps) {
 
             if (!response.ok) {
                 const error = await response.json();
+                if (response.status === 429) {
+                    const cooldownDate = new Date(error.cooldown_until);
+                    const remainingMs = cooldownDate.getTime() - Date.now();
+                    const remainingMinutes = Math.ceil(remainingMs / 1000 / 60);
+                    const remainingHours = Math.floor(remainingMinutes / 60);
+                    
+                    let timeMessage;
+                    if (remainingMinutes < 60) {
+                        timeMessage = `${remainingMinutes} minute(s)`;
+                    } else {
+                        const mins = remainingMinutes % 60;
+                        timeMessage = `${remainingHours} hour(s)${mins > 0 ? ` and ${mins} minute(s)` : ''}`;
+                    }
+                    
+                    throw new Error(`Channel is on cooldown. Try again in ${timeMessage}.`);
+                }
                 throw new Error(error.error || "Failed to purge channel");
             }
 
@@ -77,21 +93,40 @@ export function DangerZone({ guildId, guildName }: DangerZoneProps) {
         try {
             // Queue purge job for each channel
             const results = await Promise.allSettled(
-                channels.map(channel =>
-                    fetch(
+                channels.map(async (channel) => {
+                    const response = await fetch(
                         `/api/guilds/${guildId}/channels/${channel.id}/purge`,
-                        {
-                            method: "POST",
+                        { method: "POST" }
+                    );
+                    
+                    if (!response.ok) {
+                        const error = await response.json();
+                        // Skip channels on cooldown (429) but continue with others
+                        if (response.status === 429) {
+                            return { skipped: true, channel: channel.name, error: error.error };
                         }
-                    )
-                )
+                        throw new Error(error.error || "Failed to purge channel");
+                    }
+                    
+                    return { success: true, channel: channel.name };
+                })
             );
 
-            // Check if any failed
-            const failed = results.filter(r => r.status === "rejected");
-            if (failed.length > 0) {
-                throw new Error(`Failed to purge ${failed.length} channel(s)`);
+            // Collect results
+            const succeeded = results.filter(r => r.status === "fulfilled" && r.value.success).length;
+            const skipped = results.filter(r => r.status === "fulfilled" && r.value.skipped).length;
+            const failed = results.filter(r => r.status === "rejected").length;
+
+            // Show summary message
+            let message = `Purged ${succeeded} channel(s)`;
+            if (skipped > 0) message += `, skipped ${skipped} on cooldown`;
+            if (failed > 0) message += `, ${failed} failed`;
+            
+            if (failed > 0 && succeeded === 0) {
+                throw new Error(`Failed to purge any channels`);
             }
+
+            console.log(message);
 
             // Invalidate channel stats cache to refetch updated counts
             await queryClient.invalidateQueries({

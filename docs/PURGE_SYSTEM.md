@@ -29,15 +29,17 @@ The purge system provides destructive operations for removing clips, messages, t
 **PurgeChannelJob**
 - Deletes all clips, messages, and thumbnails for a single channel
 - Deletes thumbnail files from storage
-- Sets `purge_cooldown` on channel (default: 24 hours)
-- Channel itself is NOT deleted (allows re-scanning)
+- Deletes channel scan status (scan metadata becomes invalid)
+- Sets `purge_cooldown` on channel (default: 5 minutes, configurable via env var)
+- Channel itself is NOT deleted (allows re-scanning after cooldown)
 
 **PurgeGuildJob**
 - Deletes all clips, messages, and thumbnails for entire guild
 - Deletes all thumbnail files from storage
+- Deletes all channel scan statuses for guild
+- Hard deletes all channels for the guild
 - Soft deletes guild (`deleted_at` timestamp)
 - Bot leaves the guild via Discord API
-- Database cascade handles channel cleanup
 
 ## Database Schema
 
@@ -61,6 +63,7 @@ Purge a single channel.
 **Validation:**
 - Checks `purge_cooldown` timestamp
 - Returns 429 if cooldown active
+- Cooldown defaults to 5 minutes (configurable via PURGE_COOLDOWN_MINUTES env var)
 
 **Response:**
 ```json
@@ -97,13 +100,14 @@ Purge entire guild and leave it.
 ### PurgeHandler
 Located: `python/worker/purge/purge_handler.py`
 
-**purge_channel(guild_id, channel_id, cooldown_hours=24)**
+**purge_channel(guild_id, channel_id)**
 1. Get all clips for channel
 2. Delete thumbnail files from storage
 3. Hard delete thumbnails from database
 4. Hard delete clips from database
 5. Hard delete messages from database
-6. Set `purge_cooldown` on channel
+6. Delete channel scan status (invalidates scan metadata)
+7. Set `purge_cooldown` on channel (reads PURGE_COOLDOWN_MINUTES env var, default 5)
 
 **purge_guild(guild_id)**
 1. Get all clips for guild
@@ -111,8 +115,10 @@ Located: `python/worker/purge/purge_handler.py`
 3. Hard delete thumbnails from database
 4. Hard delete clips from database
 5. Hard delete messages from database
-6. Soft delete guild (`deleted_at` timestamp)
-7. Leave guild via bot
+6. Delete all channel scan statuses for guild
+7. Hard delete all channels for guild
+8. Soft delete guild (`deleted_at` timestamp)
+9. Leave guild via bot
 
 ### Scan Stop Mechanism
 
@@ -176,9 +182,11 @@ Banner shown when guild is marked deleted.
 
 ### Purge Cooldown
 - Prevents rapid repeated channel purges
-- Default: 24 hours
+- Default: 5 minutes (configurable via PURGE_COOLDOWN_MINUTES)
 - Checked before queueing job
 - Returns 429 if cooldown active
+- Set to 0 or negative to disable for testing
+- "Purge All Channels" skips channels on cooldown and continues with others
 
 ### Authorization
 - All purge endpoints require authentication
@@ -215,8 +223,13 @@ Located: `python/bot/services/guild_service.py`
 
 - [ ] Channel purge deletes all clips and files
 - [ ] Channel purge sets cooldown
-- [ ] Cooldown prevents rapid purges
+- [ ] Cooldown prevents rapid purges (returns 429)
+- [ ] Cooldown displays remaining time in error message
+- [ ] "Purge All" skips channels on cooldown
+- [ ] "Purge All" shows summary of succeeded/skipped/failed
+- [ ] Setting PURGE_COOLDOWN_MINUTES=0 disables cooldown
 - [ ] Guild purge deletes all data
+- [ ] Guild purge hard deletes all channels
 - [ ] Guild purge makes bot leave
 - [ ] Bot leave event sets deleted_at
 - [ ] Deleted guild banner shows correctly
@@ -250,14 +263,28 @@ Located: `python/bot/services/guild_service.py`
 
 ### SQL Migration
 ```sql
--- Add purge_cooldown to channels table
-ALTER TABLE channel 
-ADD COLUMN purge_cooldown TIMESTAMP NULL;
-
+-- purge_cooldown already exists on channel table
 -- deleted_at already exists on guild table
--- Verify it exists:
+-- Verify they exist:
+-- SELECT column_name FROM information_schema.columns 
+-- WHERE table_name='channel' AND column_name='purge_cooldown';
 -- SELECT column_name FROM information_schema.columns 
 -- WHERE table_name='guild' AND column_name='deleted_at';
+```
+
+## Environment Variables
+
+### PURGE_COOLDOWN_MINUTES
+- **Default:** 5
+- **Description:** Minutes to wait between channel purges
+- **Set to 0:** Disables cooldown entirely (useful for testing)
+- **Location:** Add to `.env.global` or environment
+
+```bash
+# Example configurations
+PURGE_COOLDOWN_MINUTES=5    # Default: 5 minute cooldown
+PURGE_COOLDOWN_MINUTES=0    # Disable cooldown for testing
+PURGE_COOLDOWN_MINUTES=60   # 1 hour cooldown for production
 ```
 
 ### Model Updates
