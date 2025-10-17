@@ -21,6 +21,7 @@ import ffmpeg
 from PIL import Image
 from shared.db.models import Clip, Thumbnail
 from shared.storage import get_storage_backend
+from shared.logger import VERBOSE
 
 logger = logging.getLogger(__name__)
 
@@ -60,9 +61,10 @@ class ThumbnailGenerator:
         )
         self._session = aiohttp.ClientSession(timeout=timeout)
         
-        logger.info(f"ThumbnailGenerator initialized with storage: {type(self.storage).__name__}")
-        logger.info(f"FFmpeg found at: {self.ffmpeg_path}")
-        logger.info("Aiohttp session created for connection reuse")
+        logger.info("ThumbnailGenerator initialized")
+        logger.log(VERBOSE, f"Storage backend: {type(self.storage).__name__}")
+        logger.log(VERBOSE, f"FFmpeg path: {self.ffmpeg_path}")
+        logger.log(VERBOSE, f"Download timeout: {timeout.total}s, connect timeout: {timeout.connect}s")
     
     def _find_ffmpeg(self) -> str | None:
         """

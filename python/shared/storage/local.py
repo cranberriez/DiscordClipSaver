@@ -8,8 +8,11 @@ Works for both:
 import os
 import aiofiles
 from pathlib import Path
-from .base import StorageBackend
 import logging
+import aiofiles
+import aiofiles.os
+from .base import StorageBackend
+from shared.logger import VERBOSE
 
 logger = logging.getLogger(__name__)
 
@@ -28,7 +31,7 @@ class LocalStorageBackend(StorageBackend):
         """
         self.base_path = Path(base_path)
         self.base_path.mkdir(parents=True, exist_ok=True)
-        logger.info(f"LocalStorageBackend initialized at: {self.base_path.absolute()}")
+        logger.log(VERBOSE, f"LocalStorageBackend initialized at: {self.base_path.absolute()}")
     
     async def save(self, file_data: bytes, path: str) -> str:
         """Save file to local filesystem"""

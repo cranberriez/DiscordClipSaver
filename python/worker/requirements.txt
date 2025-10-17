@@ -16,6 +16,7 @@ python-dotenv
 
 # Logging and utilities
 python-json-logger
+colorlog
 
 # Async file I/O for storage
 aiofiles

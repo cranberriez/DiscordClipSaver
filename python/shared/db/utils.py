@@ -6,6 +6,7 @@ from tortoise import Tortoise
 from tortoise.exceptions import OperationalError, IntegrityError
 from .config import get_tortoise_config
 import logging
+from shared.logger import VERBOSE
 
 logger = logging.getLogger(__name__)
 
@@ -97,11 +98,12 @@ def db_retry(
 async def init_db(generate_schemas: bool = False, config: Optional[Dict[str, Any]] = None) -> None:
     try:
         tortoise_config = config or get_tortoise_config()
-        logger.info("Initializing database, tortoise config: %s", tortoise_config)
+        logger.log(VERBOSE, "Initializing database, tortoise config: %s", tortoise_config)
         await Tortoise.init(config=tortoise_config)
         if generate_schemas:
             await Tortoise.generate_schemas(safe=True)
-        logger.info("Database initialized successfully, schemas generated: %s, tortoise config: %s", generate_schemas, tortoise_config)
+        logger.info("Database initialized successfully")
+        logger.log(VERBOSE, "Schemas generated: %s, tortoise config: %s", generate_schemas, tortoise_config)
     except Exception as e:
         logger.error(f"Failed to initialize database: {e}")
         raise

@@ -2,7 +2,6 @@
 Main worker entry point
 """
 import asyncio
-import logging
 import os
 import signal
 from dotenv import load_dotenv
@@ -10,16 +9,10 @@ from shared.db.utils import init_db, close_db, start_health_check_loop
 from worker.discord.bot import WorkerBot
 from shared.redis.redis_client import RedisStreamClient
 from worker.processor import JobProcessor
+from worker.logger import logger  # Centralized logger setup
 
 # Load environment variables
 load_dotenv()
-
-# Configure logging
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-)
-logger = logging.getLogger(__name__)
 
 
 class Worker:

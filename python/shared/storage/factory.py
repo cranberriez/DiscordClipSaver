@@ -6,6 +6,7 @@ from typing import Optional
 from .base import StorageBackend
 from .local import LocalStorageBackend
 import logging
+from shared.logger import VERBOSE
 
 logger = logging.getLogger(__name__)
 
@@ -38,7 +39,8 @@ def create_storage_backend() -> StorageBackend:
     
     if storage_type == "local":
         storage_path = os.getenv("STORAGE_PATH", "./storage")
-        logger.info(f"Using local storage backend: {storage_path}")
+        logger.info("Using local storage backend")
+        logger.log(VERBOSE, f"Storage path: {storage_path}")
         return LocalStorageBackend(base_path=storage_path)
     
     elif storage_type == "gcs":
@@ -47,7 +49,8 @@ def create_storage_backend() -> StorageBackend:
             raise ValueError("GCS_BUCKET_NAME environment variable is required for GCS storage")
         
         project_id = os.getenv("GCS_PROJECT_ID")
-        logger.info(f"Using GCS storage backend: {bucket_name}")
+        logger.info("Using GCS storage backend")
+        logger.log(VERBOSE, f"Bucket: {bucket_name}, Project: {project_id}")
         
         from .gcs import GCSStorageBackend
         return GCSStorageBackend(bucket_name=bucket_name, project_id=project_id)
@@ -57,7 +60,8 @@ def create_storage_backend() -> StorageBackend:
         if not bucket_name:
             raise ValueError("S3_BUCKET_NAME environment variable is required for S3 storage")
         
-        logger.info(f"Using S3 storage backend: {bucket_name}")
+        logger.info("Using S3 storage backend")
+        logger.log(VERBOSE, f"Bucket: {bucket_name}")
         
         from .s3 import S3StorageBackend
         return S3StorageBackend(bucket_name=bucket_name)
