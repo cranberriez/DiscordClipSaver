@@ -27,15 +27,21 @@ class Worker:
     
     def __init__(self):
         self.bot = WorkerBot()
-        # Initialize Redis as a consumer with consumer group and name
+        # Generate unique consumer name using hostname (unique per container)
+        import socket
+        consumer_name = f"worker_{socket.gethostname()}"
+        
+        # Initialize Redis as a consumer with consumer group and unique name
         self.redis = RedisStreamClient(
             stream_pattern="*",
             consumer_group="worker_group",
-            consumer_name="worker_1"  # TODO: Make this unique per worker instance
+            consumer_name=consumer_name
         )
         self.processor = None
         self.running = False
         self.shutdown_event = asyncio.Event()
+        
+        logger.info(f"Worker initialized with consumer name: {consumer_name}")
     
     async def initialize(self):
         """Initialize all worker components"""
