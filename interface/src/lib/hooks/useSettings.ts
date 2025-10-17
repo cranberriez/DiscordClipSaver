@@ -3,8 +3,8 @@
 import { useState, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/react-query/client";
-import { guildKeys } from "./useGuilds";
-import { GuildSettingsBuilder } from "@/lib/schemas/guild-settings-builder";
+import { guildKeys } from "@/lib/queries";
+import { GuildSettingsBuilder } from "@/lib/react-query/guild-settings-builder";
 import type {
     GuildSettings,
     DefaultChannelSettings,
