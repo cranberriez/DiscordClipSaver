@@ -140,7 +140,7 @@ class ScanService:
                     auto_continue=True  # Continue until caught up
                 )
                 
-                await self.redis_client.push_job(catch_up_job.model_dump())
+                await self.redis_client.push_job(catch_up_job.model_dump(mode='json'))
                 
                 logger.info(f"Queued catch-up scan for channel {channel.id}")
                 return True
@@ -185,7 +185,7 @@ class ScanService:
             message_ids=[str(message.id)]
         )
         
-        await self.redis_client.push_job(job.model_dump())
+        await self.redis_client.push_job(job.model_dump(mode='json'))
         
         logger.debug(f"Queued message scan job for message {message.id} in channel {message.channel.id}")
 
