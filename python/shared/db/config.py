@@ -105,6 +105,9 @@ def get_tortoise_config() -> Dict[str, Any]:
                 "default_connection": "default",
             }
         },
+        # Enable timezone-aware datetimes
+        "use_tz": True,
+        "timezone": "UTC",
     }
 
 
