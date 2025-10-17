@@ -21,6 +21,7 @@ export const guildKeys = {
     details: () => [...guildKeys.all, 'detail'] as const,
     detail: (id: string) => [...guildKeys.details(), id] as const,
     channels: (id: string) => [...guildKeys.detail(id), 'channels'] as const,
+    channelStats: (id: string) => [...guildKeys.detail(id), 'channel-stats'] as const,
     scanStatuses: (id: string) => [...guildKeys.detail(id), 'scan-statuses'] as const,
     settings: (id: string) => [...guildKeys.detail(id), 'settings'] as const,
 };

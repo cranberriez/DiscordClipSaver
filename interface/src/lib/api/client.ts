@@ -10,6 +10,7 @@ import type {
     GuildsListResponse,
     ToggleScanningResponse,
     ChannelsListResponse,
+    ChannelStatsResponse,
     ScanStatusesResponse,
     SingleScanStatusResponse,
     GuildSettingsResponse,
@@ -127,6 +128,15 @@ export const api = {
         list: (guildId: string) =>
             apiRequest<ChannelsListResponse>(
                 `/api/guilds/${guildId}/channels`
+            ),
+
+        /**
+         * Get all channels with clip counts for a guild
+         * GET /api/guilds/[guildId]/channels/stats
+         */
+        stats: (guildId: string) =>
+            apiRequest<ChannelStatsResponse>(
+                `/api/guilds/${guildId}/channels/stats`
             ),
 
         /**

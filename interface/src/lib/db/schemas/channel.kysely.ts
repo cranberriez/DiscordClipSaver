@@ -43,6 +43,11 @@ export interface ChannelTable {
         number | undefined,
         number | undefined
     >;
+    purge_cooldown: ColumnType<
+        Date | null,
+        Date | null | undefined,
+        Date | null | undefined
+    >;
     deleted_at: ColumnType<
         Date | null,
         Date | null | undefined,

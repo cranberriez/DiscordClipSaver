@@ -40,6 +40,22 @@ export interface ChannelsListResponse {
 }
 
 /**
+ * Channel with clip count for statistics
+ */
+export interface ChannelWithStats {
+    id: string;
+    name: string;
+    position: number;
+    type: string;
+    clip_count: number;
+}
+
+/**
+ * Response from GET /api/guilds/[guildId]/channels/stats
+ */
+export type ChannelStatsResponse = ChannelWithStats[];
+
+/**
  * Response from POST /api/guilds/[guildId]/channels/bulk
  */
 export interface BulkUpdateChannelsResponse {

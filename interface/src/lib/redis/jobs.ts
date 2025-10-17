@@ -4,7 +4,7 @@
  */
 import "server-only";
 import { getRedis } from "./client";
-import type { BatchScanJob, MessageScanJob } from "./types";
+import type { BatchScanJob, MessageScanJob, PurgeChannelJob, PurgeGuildJob } from "./types";
 import { randomUUID } from "crypto";
 
 const STREAM_PREFIX = "jobs";
@@ -43,7 +43,7 @@ async function ensureConsumerGroup(streamName: string): Promise<void> {
 /**
  * Push a job to the Redis stream
  */
-async function pushJob(job: BatchScanJob | MessageScanJob): Promise<string> {
+async function pushJob(job: BatchScanJob | MessageScanJob | PurgeChannelJob | PurgeGuildJob): Promise<string> {
     const redis = getRedis();
     
     const streamName = buildStreamName(job.guild_id, job.type);
@@ -125,6 +125,51 @@ export async function queueMessageScan(params: {
         channel_id: channelId,
         type: "message",
         message_ids: messageIds,
+        created_at: new Date().toISOString(),
+    };
+    
+    const messageId = await pushJob(job);
+    
+    return { jobId: job.job_id, messageId };
+}
+
+/**
+ * Queue a channel purge job
+ */
+export async function queueChannelPurge(params: {
+    guildId: string;
+    channelId: string;
+}): Promise<{ jobId: string; messageId: string }> {
+    const { guildId, channelId } = params;
+    
+    const job: PurgeChannelJob = {
+        job_id: randomUUID(),
+        guild_id: guildId,
+        channel_id: channelId,
+        type: "purge_channel",
+        created_at: new Date().toISOString(),
+    };
+    
+    const messageId = await pushJob(job);
+    
+    return { jobId: job.job_id, messageId };
+}
+
+/**
+ * Queue a guild purge job
+ */
+export async function queueGuildPurge(params: {
+    guildId: string;
+}): Promise<{ jobId: string; messageId: string }> {
+    const { guildId } = params;
+    
+    // Use first channel as placeholder (required by BaseJob schema)
+    // Worker will ignore channel_id for guild purge
+    const job: PurgeGuildJob = {
+        job_id: randomUUID(),
+        guild_id: guildId,
+        channel_id: "0", // Placeholder, not used in guild purge
+        type: "purge_guild",
         created_at: new Date().toISOString(),
     };
     

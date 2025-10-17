@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import GuildHeader from "@/components/guild/GuildHeader";
 import { GuildTabNav } from "@/components/guild/GuildTabNav";
+import { DeletedGuildBanner } from "@/components/guild/DeletedGuildBanner";
 
 type LayoutProps = {
     children: React.ReactNode;
@@ -74,6 +75,15 @@ export default async function GuildLayout({ children, params }: LayoutProps) {
             >
                 ← Back to Dashboard
             </Link>
+
+            {/* Deleted Guild Banner */}
+            {guild.deleted_at && (
+                <DeletedGuildBanner
+                    guildId={guild.id}
+                    guildName={guild.name}
+                    deletedAt={guild.deleted_at}
+                />
+            )}
 
             {/* Guild Header */}
             <GuildHeader

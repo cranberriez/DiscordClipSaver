@@ -7,6 +7,8 @@ from shared.db.repositories.guilds import (
     delete_single_guild as db_delete_single_guild,
 )
 from shared.db.repositories.guild_settings import upsert_guild_settings as db_upsert_guild_settings
+from shared.db.repositories.channel_scan_status import update_scan_status
+from shared.db.models import ChannelScanStatus, ScanStatus
 from bot.logger import logger
 from bot.lib.guild_gather import gather_guilds, build_guild_snapshot
 
@@ -44,8 +46,31 @@ class GuildService:
         logger.info("Joined guild: %s (%s)", guild.name, guild.id)
 
     async def on_guild_remove(self, guild: discord.Guild) -> None:
-        await db_delete_single_guild(str(guild.id))
-        logger.info("Removed from guild: %s (%s)", guild.name, guild.id)
+        guild_id = str(guild.id)
+        
+        # Stop all active scans for this guild
+        try:
+            running_scans = await ChannelScanStatus.filter(
+                guild_id=guild_id,
+                status=ScanStatus.RUNNING
+            ).all()
+            
+            for scan in running_scans:
+                await update_scan_status(
+                    guild_id=guild_id,
+                    channel_id=scan.channel_id,
+                    status=ScanStatus.CANCELLED,
+                    error_message="Scan stopped - bot removed from guild"
+                )
+            
+            if running_scans:
+                logger.info("Stopped %d active scan(s) for guild %s", len(running_scans), guild_id)
+        except Exception as e:
+            logger.warning("Failed to stop scans for guild %s: %s", guild_id, e)
+        
+        # Soft delete guild (sets deleted_at timestamp)
+        await db_delete_single_guild(guild_id)
+        logger.info("Removed from guild: %s (%s) - marked as deleted", guild.name, guild.id)
 
     async def on_guild_update(self, guild: discord.Guild) -> None:
         # Reuse gather helper for consistency

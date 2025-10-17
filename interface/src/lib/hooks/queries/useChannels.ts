@@ -4,6 +4,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/lib/api/client';
 import { guildKeys } from './useGuilds';
 import type { Channel } from '@/lib/db/types';
+import type { ChannelWithStats } from '@/lib/api/types';
 
 // ============================================================================
 // Queries
@@ -43,6 +44,57 @@ export function useChannels(guildId: string, initialData?: Channel[]) {
         // Transform to just return channels array for easier use
         select: (data) => data.channels,
     });
+}
+
+/**
+ * Fetch channel statistics (with clip counts) for a guild.
+ * 
+ * Useful for analytics, dashboards, purge operations, etc.
+ * This is separate from `useChannels` to allow different caching strategies.
+ * 
+ * @param guildId - The guild ID
+ * 
+ * @example
+ * ```tsx
+ * function ChannelStats({ guildId }: { guildId: string }) {
+ *   const { data: channels, isLoading } = useChannelStats(guildId);
+ *   
+ *   if (isLoading) return <div>Loading stats...</div>;
+ *   
+ *   const totalClips = channels?.reduce((sum, ch) => sum + ch.clip_count, 0) ?? 0;
+ *   
+ *   return (
+ *     <div>
+ *       {channels?.map(channel => (
+ *         <div key={channel.id}>
+ *           {channel.name}: {channel.clip_count} clips
+ *         </div>
+ *       ))}
+ *       <div>Total: {totalClips} clips</div>
+ *     </div>
+ *   );
+ * }
+ * ```
+ */
+export function useChannelStats(guildId: string) {
+    return useQuery({
+        queryKey: guildKeys.channelStats(guildId),
+        queryFn: () => api.channels.stats(guildId),
+        enabled: !!guildId,
+        staleTime: 1000 * 60 * 2, // Consider fresh for 2 minutes
+    });
+}
+
+/**
+ * Get total clip count across all channels for a guild.
+ * Convenience hook that uses `useChannelStats` under the hood.
+ * 
+ * @param guildId - The guild ID
+ * @returns Total clip count across all channels
+ */
+export function useTotalClipCount(guildId: string): number {
+    const { data: channels } = useChannelStats(guildId);
+    return channels?.reduce((sum, ch) => sum + ch.clip_count, 0) ?? 0;
 }
 
 // ============================================================================

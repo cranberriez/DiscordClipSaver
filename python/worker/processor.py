@@ -10,6 +10,7 @@ from worker.discord.get_message import get_message
 from worker.message.message_handler import MessageHandler
 from worker.message.batch_processor import BatchMessageProcessor
 from worker.thumbnail.thumbnail_handler import ThumbnailHandler
+from worker.purge.purge_handler import PurgeHandler
 from shared.db.models import Guild, Channel, ScanStatus, ChannelType
 from shared.db.repositories.channel_scan_status import (
     get_or_create_scan_status,
@@ -35,6 +36,7 @@ class JobProcessor:
         # Inject shared handler into message processors
         self.message_handler = MessageHandler(thumbnail_handler=self.thumbnail_handler)
         self.batch_processor = BatchMessageProcessor(thumbnail_handler=self.thumbnail_handler)
+        self.purge_handler = PurgeHandler(bot=bot)
         self.redis_client = redis_client
     
     async def close(self):
@@ -128,6 +130,10 @@ class JobProcessor:
             await self.process_thumbnail_retry(job_data)
         elif job_type == "message_deletion":
             await self.process_message_deletion(job_data)
+        elif job_type == "purge_channel":
+            await self.process_purge_channel(job_data)
+        elif job_type == "purge_guild":
+            await self.process_purge_guild(job_data)
         else:
             logger.error(f"Unknown job type: {job_type}")
             raise ValueError(f"Unknown job type: {job_type}")
@@ -612,3 +618,109 @@ class JobProcessor:
         except Exception as e:
             logger.error(f"Message deletion failed for {message_id}: {e}", exc_info=True)
             raise
+    
+    async def process_purge_channel(self, job_data: dict):
+        """
+        Process channel purge job - delete all clips and data for a channel.
+        
+        Args:
+            job_data: PurgeChannelJob data
+        """
+        channel_id = job_data["channel_id"]
+        guild_id = job_data["guild_id"]
+        
+        logger.info(f"Processing channel purge: guild={guild_id}, channel={channel_id}")
+        
+        try:
+            # Stop any active scans for this channel
+            await self._stop_channel_scan(guild_id, channel_id)
+            
+            # Execute purge
+            stats = await self.purge_handler.purge_channel(
+                guild_id=guild_id,
+                channel_id=channel_id
+            )
+            
+            logger.info(f"Channel purge complete: {stats}")
+            
+        except Exception as e:
+            logger.error(f"Channel purge failed for {channel_id}: {e}", exc_info=True)
+            raise
+    
+    async def process_purge_guild(self, job_data: dict):
+        """
+        Process guild purge job - delete all data for guild and leave it.
+        
+        Args:
+            job_data: PurgeGuildJob data
+        """
+        guild_id = job_data["guild_id"]
+        
+        logger.info(f"Processing guild purge: guild={guild_id}")
+        
+        try:
+            # Stop all active scans for this guild
+            await self._stop_guild_scans(guild_id)
+            
+            # Execute purge (will also leave the guild)
+            stats = await self.purge_handler.purge_guild(guild_id=guild_id)
+            
+            logger.info(f"Guild purge complete: {stats}")
+            
+        except Exception as e:
+            logger.error(f"Guild purge failed for {guild_id}: {e}", exc_info=True)
+            raise
+    
+    async def _stop_channel_scan(self, guild_id: str, channel_id: str):
+        """
+        Stop any active scan for a channel by setting status to CANCELLED.
+        
+        Args:
+            guild_id: Guild snowflake
+            channel_id: Channel snowflake
+        """
+        try:
+            scan_status = await get_or_create_scan_status(guild_id, channel_id)
+            
+            if scan_status.status == ScanStatus.RUNNING:
+                await update_scan_status(
+                    guild_id=guild_id,
+                    channel_id=channel_id,
+                    status=ScanStatus.CANCELLED,
+                    error_message="Scan stopped due to channel purge"
+                )
+                logger.info(f"Stopped active scan for channel {channel_id}")
+        except Exception as e:
+            logger.warning(f"Failed to stop scan for channel {channel_id}: {e}")
+            # Don't raise - purge should continue even if scan stop fails
+    
+    async def _stop_guild_scans(self, guild_id: str):
+        """
+        Stop all active scans for a guild by setting statuses to CANCELLED.
+        
+        Args:
+            guild_id: Guild snowflake
+        """
+        try:
+            from shared.db.models import ChannelScanStatus
+            
+            # Get all running scans for this guild
+            running_scans = await ChannelScanStatus.filter(
+                guild_id=guild_id,
+                status=ScanStatus.RUNNING
+            ).all()
+            
+            for scan in running_scans:
+                await update_scan_status(
+                    guild_id=guild_id,
+                    channel_id=scan.channel_id,
+                    status=ScanStatus.CANCELLED,
+                    error_message="Scan stopped due to guild purge"
+                )
+            
+            if running_scans:
+                logger.info(f"Stopped {len(running_scans)} active scans for guild {guild_id}")
+                
+        except Exception as e:
+            logger.warning(f"Failed to stop scans for guild {guild_id}: {e}")
+            # Don't raise - purge should continue even if scan stop fails

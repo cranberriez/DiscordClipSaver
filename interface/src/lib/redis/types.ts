@@ -27,7 +27,15 @@ export interface MessageScanJob extends BaseJob {
     message_ids: string[];
 }
 
-export type Job = BatchScanJob | MessageScanJob;
+export interface PurgeChannelJob extends BaseJob {
+    type: "purge_channel";
+}
+
+export interface PurgeGuildJob extends BaseJob {
+    type: "purge_guild";
+}
+
+export type Job = BatchScanJob | MessageScanJob | PurgeChannelJob | PurgeGuildJob;
 
 /**
  * Scan status from database

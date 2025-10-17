@@ -13,7 +13,7 @@ import uuid
 class BaseJob(BaseModel):
     """Base job model with common fields"""
     job_id: str = Field(default_factory=lambda: str(uuid.uuid4()))
-    type: Literal["batch", "message", "rescan", "thumbnail_retry", "message_deletion"]
+    type: Literal["batch", "message", "rescan", "thumbnail_retry", "message_deletion", "purge_channel", "purge_guild"]
     guild_id: str
     channel_id: str
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
@@ -81,6 +81,41 @@ class MessageDeletionJob(BaseJob):
     """
     type: Literal["message_deletion"] = "message_deletion"
     message_id: str
+
+
+class PurgeChannelJob(BaseJob):
+    """
+    Job to purge all clips and data for a specific channel.
+    Created by: Interface (user purge action)
+    
+    Handles:
+    - Delete all thumbnail files for channel
+    - Hard delete all thumbnails from database
+    - Hard delete all clips from database
+    - Hard delete all messages from database
+    - Set purge_cooldown on channel
+    
+    Note: Channel itself is NOT deleted (use cascade delete from interface)
+    """
+    type: Literal["purge_channel"] = "purge_channel"
+
+
+class PurgeGuildJob(BaseJob):
+    """
+    Job to purge all data for a guild and leave it.
+    Created by: Interface (user guild purge action)
+    
+    Handles:
+    - Delete all thumbnail files for guild
+    - Hard delete all thumbnails from database
+    - Hard delete all clips from database
+    - Hard delete all messages from database
+    - Soft delete guild (set deleted_at)
+    - Leave the guild via bot
+    
+    Note: Database cascade will handle channel cleanup
+    """
+    type: Literal["purge_guild"] = "purge_guild"
 
 
 # Example job payloads

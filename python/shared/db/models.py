@@ -45,6 +45,7 @@ class Guild(Model):
     icon_url = fields.TextField(null=True)
     message_scan_enabled = fields.BooleanField(default=False)  # Master toggle for message scanning
     last_message_scan_at = fields.DatetimeField(null=True)
+    purge_cooldown = fields.DatetimeField(null=True)  # Prevent abuse of purge operations
     created_at = fields.DatetimeField(auto_now_add=True)
     updated_at = fields.DatetimeField(auto_now=True)
     deleted_at = fields.DatetimeField(null=True)
@@ -83,6 +84,7 @@ class Channel(Model):
     last_channel_sync_at = fields.DatetimeField(null=True)
     next_allowed_channel_sync_at = fields.DatetimeField(null=True)
     channel_sync_cooldown_level = fields.IntField(default=0)
+    purge_cooldown = fields.DatetimeField(null=True)  # Prevent abuse of purge operations
     deleted_at = fields.DatetimeField(null=True)  # Soft delete
     created_at = fields.DatetimeField(auto_now_add=True)
     updated_at = fields.DatetimeField(auto_now=True)

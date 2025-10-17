@@ -11,7 +11,7 @@ export { guildKeys } from './useGuilds';
 export { useGuilds, useGuild, useToggleScanning } from './useGuilds';
 
 // Channel hooks
-export { useChannels, useBulkUpdateChannels } from './useChannels';
+export { useChannels, useChannelStats, useTotalClipCount, useBulkUpdateChannels } from './useChannels';
 
 // Scan hooks
 export { useScanStatuses, useChannelScanStatus, useStartScan } from './useScans';
