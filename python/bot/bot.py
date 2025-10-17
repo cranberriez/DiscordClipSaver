@@ -43,18 +43,18 @@ async def on_guild_remove(guild: discord.Guild):
 
 # --- Channel Events ---
 @bot.event
-async def on_guild_channel_create(channel: discord.ChannelType):
-    await channel_service.on_channel_crup(channel.guild)
+async def on_guild_channel_create(channel: discord.abc.GuildChannel):
+    await channel_service.on_channel_crup(channel.guild, channel)
 
 
 @bot.event
-async def on_guild_channel_update(channel: discord.ChannelType):
-    await channel_service.on_channel_crup(channel.guild)
+async def on_guild_channel_update(before: discord.abc.GuildChannel, after: discord.abc.GuildChannel):
+    await channel_service.on_channel_crup(after.guild, after)
 
 
 @bot.event
-async def on_guild_channel_delete(channel: discord.ChannelType):
-    await channel_service.on_channel_delete(channel.guild)
+async def on_guild_channel_delete(channel: discord.abc.GuildChannel):
+    await channel_service.on_channel_delete(channel.guild, channel)
 
 
 # --- User Events ---

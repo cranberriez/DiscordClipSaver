@@ -63,12 +63,17 @@ async def upsert_channels_for_guild(guild_id: str, snapshots: Iterable[Any]) -> 
 
 
 async def delete_channels(guild_id: str, channel_ids: Iterable[str]) -> int:
+    if channel_ids is None:
+        return 0
     """Delete channels by IDs. Returns number of rows deleted."""
     ids = [str(cid) for cid in channel_ids]
     return await Channel.filter(guild_id=str(guild_id), id__in=ids).update(deleted_at=datetime.now())
 
 
 async def delete_single_channel(guild_id: str, channel_id: str) -> int:
+    if channel_id is None:
+        return 0
+
     return await Channel.filter(guild_id=str(guild_id), id=str(channel_id)).update(deleted_at=datetime.now())
 
 
