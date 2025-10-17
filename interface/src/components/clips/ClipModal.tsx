@@ -27,17 +27,28 @@ export function ClipModal({ clip, onClose }: ClipModalProps) {
     const [hasPlaybackError, setHasPlaybackError] = useState(false);
     const [refreshing, setRefreshing] = useState(false);
     const [autoRefreshed, setAutoRefreshed] = useState(false);
+    const [isDeleted, setIsDeleted] = useState(false);
+    const [deletionMessage, setDeletionMessage] = useState<string>("");
 
     const refreshCdnUrl = useCallback(async () => {
         try {
             setRefreshing(true);
             setHasPlaybackError(false);
+            setIsDeleted(false);
             const response = await fetch(`/api/clips/${clip.id}/refresh-cdn`, {
                 method: "POST",
             });
 
             if (!response.ok) {
                 const errorData = await response.json();
+                
+                // Check if this is a deletion error
+                if (response.status === 410 && errorData.error_type === "MESSAGE_DELETED") {
+                    setIsDeleted(true);
+                    setDeletionMessage(errorData.error || "This clip was deleted from Discord and is no longer available");
+                    return; // Don't throw, just set state
+                }
+                
                 const errorMsg = errorData.details || errorData.error || "Failed to refresh CDN URL";
                 throw new Error(errorMsg);
             }
@@ -101,6 +112,19 @@ export function ClipModal({ clip, onClose }: ClipModalProps) {
                             <div className="aspect-video bg-muted rounded-lg flex flex-col items-center justify-center gap-4">
                                 <p className="text-muted-foreground text-center px-4">
                                     Refreshing video URL...
+                                </p>
+                            </div>
+                        ) : isDeleted ? (
+                            <div className="aspect-video bg-destructive/10 border-2 border-destructive/20 rounded-lg flex flex-col items-center justify-center gap-4 p-6">
+                                <div className="text-destructive text-5xl">🗑️</div>
+                                <p className="text-destructive font-semibold text-lg text-center">
+                                    Clip Deleted
+                                </p>
+                                <p className="text-destructive/80 text-sm text-center max-w-md">
+                                    {deletionMessage}
+                                </p>
+                                <p className="text-muted-foreground text-xs text-center max-w-md mt-2">
+                                    The original Discord message was deleted. This clip and its data will be removed from the database automatically.
                                 </p>
                             </div>
                         ) : hasPlaybackError ? (

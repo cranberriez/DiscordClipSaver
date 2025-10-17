@@ -28,6 +28,8 @@ async def refresh_cdn_url(request: RefreshCdnRequest):
     """
     Fetch a Discord message and return fresh CDN URLs for its attachments.
     This is used when CDN URLs expire (typically after 24 hours).
+    
+    Lazy deletion detection: If message is not found (deleted), queue cleanup job.
     """
     try:
         # Get the channel
@@ -39,7 +41,27 @@ async def refresh_cdn_url(request: RefreshCdnRequest):
         try:
             message = await channel.fetch_message(int(request.message_id))
         except discord.NotFound:
-            raise HTTPException(status_code=404, detail="Message not found")
+            # Message was deleted from Discord!
+            # Queue deletion job to clean up database and storage
+            from bot.services.scan_service import get_scan_service
+            
+            scan_service = get_scan_service()
+            if scan_service and scan_service.redis_client:
+                # Queue cleanup job asynchronously
+                await scan_service.handle_message_deletion(
+                    guild_id=str(channel.guild.id) if hasattr(channel, 'guild') else None,
+                    channel_id=request.channel_id,
+                    message_id=request.message_id
+                )
+            
+            # Return specific error type for UI to handle gracefully
+            raise HTTPException(
+                status_code=410,  # 410 Gone - resource permanently deleted
+                detail={
+                    "error_type": "MESSAGE_DELETED",
+                    "message": "This clip was deleted from Discord and is no longer available"
+                }
+            )
         except discord.Forbidden:
             raise HTTPException(status_code=403, detail="Bot lacks permission to access message")
 

@@ -62,10 +62,30 @@ export async function POST(
         });
 
         if (!response.ok) {
-            const error = await response.text();
-            console.error("Bot API error:", error);
+            // Try to parse JSON error for structured error types
+            let errorData;
+            try {
+                errorData = await response.json();
+            } catch {
+                errorData = { error: await response.text() };
+            }
+            
+            console.error("Bot API error:", errorData);
+            
+            // Pass through MESSAGE_DELETED error type for UI to handle gracefully
+            if (response.status === 410 && errorData.detail?.error_type === "MESSAGE_DELETED") {
+                return NextResponse.json(
+                    { 
+                        error_type: "MESSAGE_DELETED",
+                        error: errorData.detail.message || "This clip was deleted from Discord"
+                    },
+                    { status: 410 }
+                );
+            }
+            
+            // Generic error response for other failures
             return NextResponse.json(
-                { error: "Failed to refresh CDN URL from bot" },
+                { error: errorData.error || errorData.detail || "Failed to refresh CDN URL from bot" },
                 { status: response.status }
             );
         }
