@@ -29,7 +29,11 @@ class Worker:
         self.bot = WorkerBot()
         # Generate unique consumer name using hostname (unique per container)
         import socket
-        consumer_name = f"worker_{socket.gethostname()}"
+        hostname = socket.gethostname()
+        consumer_name = f"worker_{hostname}"
+        
+        # Extract worker number from hostname if available (e.g., "discord-clip-saver-worker-1" -> "1")
+        worker_id = hostname.split('-')[-1] if '-' in hostname else hostname
         
         # Initialize Redis as a consumer with consumer group and unique name
         self.redis = RedisStreamClient(
@@ -40,8 +44,9 @@ class Worker:
         self.processor = None
         self.running = False
         self.shutdown_event = asyncio.Event()
+        self.worker_id = worker_id
         
-        logger.info(f"Worker initialized with consumer name: {consumer_name}")
+        logger.info(f"🔧 Worker #{worker_id} initialized (consumer: {consumer_name})")
     
     async def initialize(self):
         """Initialize all worker components"""
@@ -108,7 +113,7 @@ class Worker:
                     metadata = job.get('metadata', {})
                     
                     try:
-                        logger.info(f"Processing job {job_data.get('job_id', 'unknown')} (type: {job_data.get('type')}) from stream {stream_name}")
+                        logger.info(f"[Worker #{self.worker_id}] Processing job {job_data.get('job_id', 'unknown')} (type: {job_data.get('type')}) from stream {stream_name}")
                         
                         # Process the job
                         await self.processor.process_job(job_data)
@@ -116,7 +121,7 @@ class Worker:
                         # Acknowledge successful processing
                         await self.redis.acknowledge_job(stream_name, message_id)
                         
-                        logger.info(f"Job {job_data.get('job_id')} completed successfully")
+                        logger.info(f"[Worker #{self.worker_id}] ✓ Job {job_data.get('job_id')} completed successfully")
                         
                     except Exception as e:
                         logger.error(f"Job {job_data.get('job_id')} failed: {e}", exc_info=True)
