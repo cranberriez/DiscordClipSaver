@@ -4,8 +4,7 @@ import { useState, useEffect } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { ClipGrid } from "@/components/clips/ClipGrid";
-import { ClipModal } from "@/components/clips/ClipModal";
+import { ClipGrid, ClipModal } from "@/features/clips/";
 import type { Channel, Clip, Message, Thumbnail } from "@/lib/db/types";
 
 interface ClipWithMetadata extends Clip {
@@ -31,9 +30,16 @@ export default function GuildClipsPage() {
     const [channels, setChannels] = useState<Channel[]>([]);
     const [clips, setClips] = useState<ClipWithMetadata[]>([]);
     const [selectedChannel, setSelectedChannel] = useState<string | null>(null);
-    const [selectedClip, setSelectedClip] = useState<ClipWithMetadata | null>(null);
+    const [selectedClip, setSelectedClip] = useState<ClipWithMetadata | null>(
+        null
+    );
     const [loading, setLoading] = useState(false);
-    const [pagination, setPagination] = useState({ offset: 0, limit: 50, total: 0, hasMore: false });
+    const [pagination, setPagination] = useState({
+        offset: 0,
+        limit: 50,
+        total: 0,
+        hasMore: false,
+    });
 
     // Fetch channels on mount
     useEffect(() => {
@@ -65,7 +71,11 @@ export default function GuildClipsPage() {
         }
     };
 
-    const fetchClips = async (guildId: string, channelId: string, offset: number) => {
+    const fetchClips = async (
+        guildId: string,
+        channelId: string,
+        offset: number
+    ) => {
         try {
             setLoading(true);
             const response = await fetch(
@@ -73,13 +83,13 @@ export default function GuildClipsPage() {
             );
             if (!response.ok) throw new Error("Failed to fetch clips");
             const data: ClipsResponse = await response.json();
-            
+
             if (offset === 0) {
                 setClips(data.clips);
             } else {
-                setClips((prev) => [...prev, ...data.clips]);
+                setClips(prev => [...prev, ...data.clips]);
             }
-            
+
             setPagination(data.pagination);
         } catch (error) {
             console.error("Error fetching clips:", error);
@@ -90,7 +100,11 @@ export default function GuildClipsPage() {
 
     const loadMore = () => {
         if (selectedChannel && pagination.hasMore) {
-            fetchClips(guildId, selectedChannel, pagination.offset + pagination.limit);
+            fetchClips(
+                guildId,
+                selectedChannel,
+                pagination.offset + pagination.limit
+            );
         }
     };
 
@@ -127,14 +141,22 @@ export default function GuildClipsPage() {
                             </div>
                         ) : (
                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-2">
-                                {channels.map((channel) => (
+                                {channels.map(channel => (
                                     <Button
                                         key={channel.id}
-                                        variant={selectedChannel === channel.id ? "default" : "outline"}
+                                        variant={
+                                            selectedChannel === channel.id
+                                                ? "default"
+                                                : "outline"
+                                        }
                                         className="justify-start"
-                                        onClick={() => setSelectedChannel(channel.id)}
+                                        onClick={() =>
+                                            setSelectedChannel(channel.id)
+                                        }
                                     >
-                                        <span className="truncate">#{channel.name}</span>
+                                        <span className="truncate">
+                                            #{channel.name}
+                                        </span>
                                     </Button>
                                 ))}
                             </div>
@@ -146,9 +168,7 @@ export default function GuildClipsPage() {
                 {selectedChannel && (
                     <Card>
                         <CardHeader>
-                            <CardTitle>
-                                Clips ({pagination.total})
-                            </CardTitle>
+                            <CardTitle>Clips ({pagination.total})</CardTitle>
                         </CardHeader>
                         <CardContent>
                             {loading && clips.length === 0 ? (
@@ -161,7 +181,10 @@ export default function GuildClipsPage() {
                                 </div>
                             ) : (
                                 <>
-                                    <ClipGrid clips={clips} onClipClick={setSelectedClip} />
+                                    <ClipGrid
+                                        clips={clips}
+                                        onClipClick={setSelectedClip}
+                                    />
                                     {pagination.hasMore && (
                                         <div className="mt-6 text-center">
                                             <Button
@@ -169,7 +192,9 @@ export default function GuildClipsPage() {
                                                 disabled={loading}
                                                 variant="outline"
                                             >
-                                                {loading ? "Loading..." : "Load More"}
+                                                {loading
+                                                    ? "Loading..."
+                                                    : "Load More"}
                                             </Button>
                                         </div>
                                     )}

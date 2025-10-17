@@ -57,7 +57,7 @@ export default function ClipsPage() {
                         </div>
                     ) : (
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                            {guilds.map((guild) => (
+                            {guilds.map(guild => (
                                 <Button
                                     key={guild.id}
                                     variant="outline"
@@ -72,7 +72,9 @@ export default function ClipsPage() {
                                                 className="w-10 h-10 rounded-full"
                                             />
                                         )}
-                                        <span className="font-medium text-lg">{guild.name}</span>
+                                        <span className="font-medium text-lg">
+                                            {guild.name}
+                                        </span>
                                     </div>
                                 </Button>
                             ))}
