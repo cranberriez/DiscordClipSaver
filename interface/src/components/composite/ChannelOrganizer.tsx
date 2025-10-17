@@ -1,10 +1,5 @@
 import React from "react";
-import {
-    Hash,
-    Volume2,
-    MessageSquare,
-    Folder,
-} from "lucide-react";
+import { Hash, Volume2, MessageSquare, Folder } from "lucide-react";
 import type { ChannelType } from "@/lib/db/types";
 
 export interface ChannelTypeConfig {
@@ -47,11 +42,11 @@ type HasChannelType = { type: ChannelType; [key: string]: any };
 /**
  * Groups channels by type and sorts them alphabetically within each group.
  * Works with any object that has a `type` property of type `ChannelType`.
- * 
+ *
  * @param channels - Array of channel objects with a `type` property
  * @param sortBy - Optional property name to sort by (defaults to alphabetical by index)
  * @returns Record of channel types to arrays of channels
- * 
+ *
  * @example
  * ```tsx
  * const grouped = groupChannelsByType(channels, 'name');
@@ -81,18 +76,18 @@ export function groupChannelsByType<T extends HasChannelType>(
             if (sortBy) {
                 const aVal = a[sortBy];
                 const bVal = b[sortBy];
-                
+
                 // String comparison
-                if (typeof aVal === 'string' && typeof bVal === 'string') {
+                if (typeof aVal === "string" && typeof bVal === "string") {
                     return aVal.localeCompare(bVal);
                 }
-                
+
                 // Number comparison
-                if (typeof aVal === 'number' && typeof bVal === 'number') {
+                if (typeof aVal === "number" && typeof bVal === "number") {
                     return aVal - bVal;
                 }
             }
-            
+
             // Default: maintain original order
             return 0;
         });
@@ -103,7 +98,7 @@ export function groupChannelsByType<T extends HasChannelType>(
 
 /**
  * Gets channel types sorted by their configured display order
- * 
+ *
  * @returns Array of channel types in display order
  */
 export function getSortedChannelTypes(): ChannelType[] {
@@ -114,7 +109,7 @@ export function getSortedChannelTypes(): ChannelType[] {
 
 /**
  * Renders a channel type header with icon and label
- * 
+ *
  * @param type - The channel type
  * @returns JSX element with icon and label
  */

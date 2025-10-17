@@ -1,20 +1,10 @@
+import { type SettingMetadata } from "../types";
 /**
  * Settings metadata for dynamic form generation (optional).
- * 
+ *
  * This provides UI hints and descriptions for each setting.
  * Can be used to generate forms automatically in the future.
  */
-
-export interface SettingMetadata {
-    label: string;
-    description: string;
-    type: "text" | "number" | "boolean" | "select" | "textarea";
-    options?: { value: string; label: string }[];
-    min?: number;
-    max?: number;
-    placeholder?: string;
-    advanced?: boolean; // If true, show in advanced section
-}
 
 export const guildSettingsMetadata: Record<string, SettingMetadata> = {
     enabled_by_default: {
@@ -82,7 +72,8 @@ export const channelSettingsMetadata: Record<string, SettingMetadata> = {
     },
     include_threads: {
         label: "Include threads",
-        description: "For forum/threaded channels, treat parent only unless true",
+        description:
+            "For forum/threaded channels, treat parent only unless true",
         type: "boolean",
         advanced: true,
     },
@@ -93,7 +84,8 @@ export const channelSettingsMetadata: Record<string, SettingMetadata> = {
     },
     min_video_seconds: {
         label: "Minimum Video Duration (seconds)",
-        description: "Ignore videos shorter than this duration (0 = no minimum)",
+        description:
+            "Ignore videos shorter than this duration (0 = no minimum)",
         type: "number",
         min: 0,
         max: 3600,

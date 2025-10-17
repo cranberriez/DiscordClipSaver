@@ -1,14 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireGuildAccess } from "@/lib/middleware/auth";
-import {
-    getGuildSettings,
-    upsertGuildSettings,
-} from "@/lib/db";
+import { getGuildSettings, upsertGuildSettings } from "@/lib/db";
 import {
     UpdateGuildSettingsPayloadSchema,
     GuildSettingsSchema,
     DefaultChannelSettingsSchema,
-} from "@/lib/validation/guild-settings.schema";
+} from "@/lib/schemas/guild-settings.schema";
 
 /**
  * GET /api/guilds/[guildId]/settings

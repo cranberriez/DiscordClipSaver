@@ -5,16 +5,16 @@ import { useGuildSettingsWithBuilder } from "@/lib/hooks/queries";
 import {
     GuildSettingsSchema,
     DefaultChannelSettingsSchema,
-} from "@/lib/validation/guild-settings.schema";
-import {
-    guildSettingsMetadata,
-    channelSettingsMetadata,
-    type SettingMetadata,
-} from "@/lib/validation/settings-metadata";
+} from "@/lib/schemas/guild-settings.schema";
 import {
     normalizeTimezone,
     getTimezoneDisplay,
-} from "@/lib/validation/timezone-helpers";
+} from "@/lib/utils/timezone-helpers";
+import {
+    channelSettingsMetadata,
+    guildSettingsMetadata,
+} from "../lib/settings-metadata";
+import { type SettingMetadata } from "../types";
 
 interface DynamicSettingsFormProps {
     guildId: string;

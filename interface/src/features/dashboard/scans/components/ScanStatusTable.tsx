@@ -5,12 +5,12 @@ import { Badge } from "@/components/ui/badge";
 import { RefreshCw, AlertCircle } from "lucide-react";
 import { StatusBadge } from "./StatusBadge";
 import type { ChannelWithStatus } from "../types";
-import { formatRelativeTime } from "@/lib/utils/time";
+import { formatRelativeTime } from "@/lib/utils/time-helpers";
 import {
     groupChannelsByType,
     getSortedChannelTypes,
     ChannelTypeHeader,
-} from "@/lib/utils/channels";
+} from "@/components/composite/ChannelOrganizer";
 
 interface ScanStatusTableProps {
     channels: ChannelWithStatus[];

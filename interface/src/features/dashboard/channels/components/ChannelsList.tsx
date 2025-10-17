@@ -12,7 +12,7 @@ import {
     groupChannelsByType,
     getSortedChannelTypes,
     ChannelTypeHeader,
-} from "@/lib/utils/channels";
+} from "@/components/composite/ChannelOrganizer";
 
 type ChannelsListProps = {
     channels: Channel[];

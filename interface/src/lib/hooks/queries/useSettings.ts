@@ -1,11 +1,14 @@
-'use client';
+"use client";
 
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { api } from '@/lib/api/client';
-import { guildKeys } from './useGuilds';
-import { GuildSettingsBuilder } from '@/lib/settings/guild-settings-builder';
-import { useState, useMemo } from 'react';
-import type { GuildSettings, DefaultChannelSettings } from '@/lib/validation/guild-settings.schema';
+import { useState, useMemo } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { api } from "@/lib/api/client";
+import { guildKeys } from "./useGuilds";
+import { GuildSettingsBuilder } from "@/lib/schemas/guild-settings-builder";
+import type {
+    GuildSettings,
+    DefaultChannelSettings,
+} from "@/lib/schemas/guild-settings.schema";
 
 // ============================================================================
 // Queries
@@ -13,7 +16,7 @@ import type { GuildSettings, DefaultChannelSettings } from '@/lib/validation/gui
 
 /**
  * Fetch guild settings.
- * 
+ *
  * This is a simpler query-only version. For the full builder pattern,
  * use useGuildSettingsWithBuilder below.
  */
@@ -39,18 +42,19 @@ export function useUpdateGuildSettings(guildId: string) {
         mutationFn: (payload: {
             settings?: Record<string, unknown>;
             default_channel_settings?: Record<string, unknown>;
-        }) => api.settings.update(guildId, {
-            guild_id: guildId,
-            ...payload,
-        }),
+        }) =>
+            api.settings.update(guildId, {
+                guild_id: guildId,
+                ...payload,
+            }),
 
-        onSuccess: (data) => {
+        onSuccess: data => {
             // Update cache with new data
             queryClient.setQueryData(guildKeys.settings(guildId), data);
         },
 
-        onError: (error) => {
-            console.error('Failed to update settings:', error);
+        onError: error => {
+            console.error("Failed to update settings:", error);
         },
     });
 }
@@ -92,10 +96,10 @@ export interface UseGuildSettingsReturn {
 
 /**
  * Full-featured guild settings hook with builder pattern.
- * 
+ *
  * This replaces the old useGuildSettings hook and provides the same API,
  * but uses TanStack Query under the hood.
- * 
+ *
  * @example
  * ```tsx
  * function GuildSettingsPage({ guildId }: { guildId: string }) {
@@ -131,7 +135,9 @@ export interface UseGuildSettingsReturn {
  * }
  * ```
  */
-export function useGuildSettingsWithBuilder(guildId: string): UseGuildSettingsReturn {
+export function useGuildSettingsWithBuilder(
+    guildId: string
+): UseGuildSettingsReturn {
     const [builder] = useState(() => new GuildSettingsBuilder(guildId));
 
     // Fetch settings
@@ -146,7 +152,8 @@ export function useGuildSettingsWithBuilder(guildId: string): UseGuildSettingsRe
     const updateMutation = useUpdateGuildSettings(guildId);
 
     // Working state (server state + pending changes)
-    const [workingSettings, setWorkingSettings] = useState<GuildSettings | null>(null);
+    const [workingSettings, setWorkingSettings] =
+        useState<GuildSettings | null>(null);
     const [workingDefaultChannelSettings, setWorkingDefaultChannelSettings] =
         useState<DefaultChannelSettings | null>(null);
     const [hasChanges, setHasChanges] = useState(false);
@@ -171,7 +178,7 @@ export function useGuildSettingsWithBuilder(guildId: string): UseGuildSettingsRe
                 settings: payload.settings,
                 default_channel_settings: payload.default_channel_settings,
             });
-            
+
             builder.clearAll();
             setHasChanges(false);
         } catch (err) {
@@ -197,7 +204,7 @@ export function useGuildSettingsWithBuilder(guildId: string): UseGuildSettingsRe
                 settings: {},
                 default_channel_settings: {},
             });
-            
+
             builder.clearAll();
             setHasChanges(false);
         } catch (err) {
@@ -211,7 +218,9 @@ export function useGuildSettingsWithBuilder(guildId: string): UseGuildSettingsRe
         value: GuildSettings[K]
     ) => {
         builder.setGuildSetting(key, value);
-        setWorkingSettings((prev) => ({ ...prev, [key]: value } as GuildSettings));
+        setWorkingSettings(
+            prev => ({ ...prev, [key]: value } as GuildSettings)
+        );
         setHasChanges(true);
     };
 
@@ -222,7 +231,7 @@ export function useGuildSettingsWithBuilder(guildId: string): UseGuildSettingsRe
     ) => {
         builder.setDefaultChannelSetting(key, value);
         setWorkingDefaultChannelSettings(
-            (prev) => ({ ...prev, [key]: value } as DefaultChannelSettings)
+            prev => ({ ...prev, [key]: value } as DefaultChannelSettings)
         );
         setHasChanges(true);
     };

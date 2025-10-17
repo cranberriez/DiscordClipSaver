@@ -1,10 +1,9 @@
-'use client';
+"use client";
 
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { api } from '@/lib/api/client';
-import { guildKeys } from './useGuilds';
-import type { Channel } from '@/lib/db/types';
-import type { ChannelWithStats } from '@/lib/api/types';
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { api } from "@/lib/api/client";
+import { guildKeys } from "./useGuilds";
+import type { Channel } from "@/lib/db/types";
 
 // ============================================================================
 // Queries
@@ -12,17 +11,17 @@ import type { ChannelWithStats } from '@/lib/api/types';
 
 /**
  * Fetch all channels for a guild.
- * 
+ *
  * @param guildId - The guild ID
  * @param initialData - Optional initial data from Server Component
- * 
+ *
  * @example
  * ```tsx
  * function ChannelsList({ guildId }: { guildId: string }) {
  *   const { data, isLoading } = useChannels(guildId);
- *   
+ *
  *   if (isLoading) return <div>Loading channels...</div>;
- *   
+ *
  *   return (
  *     <ul>
  *       {data?.channels.map(channel => (
@@ -42,27 +41,27 @@ export function useChannels(guildId: string, initialData?: Channel[]) {
         // Don't refetch if we have initial data from server
         staleTime: initialData ? Infinity : 60 * 1000,
         // Transform to just return channels array for easier use
-        select: (data) => data.channels,
+        select: data => data.channels,
     });
 }
 
 /**
  * Fetch channel statistics (with clip counts) for a guild.
- * 
+ *
  * Useful for analytics, dashboards, purge operations, etc.
  * This is separate from `useChannels` to allow different caching strategies.
- * 
+ *
  * @param guildId - The guild ID
- * 
+ *
  * @example
  * ```tsx
  * function ChannelStats({ guildId }: { guildId: string }) {
  *   const { data: channels, isLoading } = useChannelStats(guildId);
- *   
+ *
  *   if (isLoading) return <div>Loading stats...</div>;
- *   
+ *
  *   const totalClips = channels?.reduce((sum, ch) => sum + ch.clip_count, 0) ?? 0;
- *   
+ *
  *   return (
  *     <div>
  *       {channels?.map(channel => (
@@ -88,7 +87,7 @@ export function useChannelStats(guildId: string) {
 /**
  * Get total clip count across all channels for a guild.
  * Convenience hook that uses `useChannelStats` under the hood.
- * 
+ *
  * @param guildId - The guild ID
  * @returns Total clip count across all channels
  */
@@ -103,18 +102,18 @@ export function useTotalClipCount(guildId: string): number {
 
 /**
  * Bulk enable/disable all channels for a guild.
- * 
+ *
  * @example
  * ```tsx
  * function BulkChannelToggle({ guildId }: { guildId: string }) {
  *   const bulkUpdate = useBulkUpdateChannels(guildId);
- *   
+ *
  *   const handleEnableAll = () => {
  *     bulkUpdate.mutate(true);
  *   };
- *   
+ *
  *   return (
- *     <button 
+ *     <button
  *       onClick={handleEnableAll}
  *       disabled={bulkUpdate.isPending}
  *     >
@@ -128,17 +127,20 @@ export function useBulkUpdateChannels(guildId: string) {
     const queryClient = useQueryClient();
 
     return useMutation({
-        mutationFn: (enabled: boolean) => api.channels.bulkUpdate(guildId, enabled),
+        mutationFn: (enabled: boolean) =>
+            api.channels.bulkUpdate(guildId, enabled),
 
         // Optimistic update
-        onMutate: async (enabled) => {
+        onMutate: async enabled => {
             // Cancel outgoing refetches
-            await queryClient.cancelQueries({ queryKey: guildKeys.channels(guildId) });
+            await queryClient.cancelQueries({
+                queryKey: guildKeys.channels(guildId),
+            });
 
             // Snapshot previous value - the cache stores { channels: [...] } before select transform
-            const previousData = queryClient.getQueryData<{ channels: Channel[] }>(
-                guildKeys.channels(guildId)
-            );
+            const previousData = queryClient.getQueryData<{
+                channels: Channel[];
+            }>(guildKeys.channels(guildId));
 
             // Optimistically update all channels
             if (previousData?.channels) {
@@ -148,7 +150,7 @@ export function useBulkUpdateChannels(guildId: string) {
                         channels: previousData.channels.map(channel => ({
                             ...channel,
                             message_scan_enabled: enabled,
-                        }))
+                        })),
                     }
                 );
             }
@@ -168,7 +170,9 @@ export function useBulkUpdateChannels(guildId: string) {
 
         // Refetch on success
         onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: guildKeys.channels(guildId) });
+            queryClient.invalidateQueries({
+                queryKey: guildKeys.channels(guildId),
+            });
         },
     });
 }

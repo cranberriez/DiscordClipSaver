@@ -1,19 +1,22 @@
-import type { GuildSettings, DefaultChannelSettings } from "@/lib/validation/guild-settings.schema";
+import type {
+    GuildSettings,
+    DefaultChannelSettings,
+} from "@/lib/schemas/guild-settings.schema";
 
 /**
  * Builder pattern for collecting guild settings changes.
- * 
+ *
  * This class allows you to accumulate changes to guild settings
  * without directly manipulating the JSON payload. Once all changes
  * are collected, you can build the final payload to send to the API.
- * 
+ *
  * @example
  * ```ts
  * const builder = new GuildSettingsBuilder("123456789");
  * builder.setGuildSetting("enabled_by_default", true);
  * builder.setGuildSetting("tz", "America/Los_Angeles");
  * builder.setDefaultChannelSetting("is_enabled", true);
- * 
+ *
  * const payload = builder.build();
  * // Send payload to API
  * ```
@@ -152,7 +155,9 @@ export class GuildSettingsBuilder {
         }
 
         if (Object.keys(this.defaultChannelSettings).length > 0) {
-            payload.default_channel_settings = { ...this.defaultChannelSettings };
+            payload.default_channel_settings = {
+                ...this.defaultChannelSettings,
+            };
         }
 
         return payload;
