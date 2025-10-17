@@ -17,9 +17,21 @@ This means clips deleted while the bot is offline remain in your database as "zo
 
 Instead of proactively checking every clip, we detect deletions **reactively** when users try to view them:
 
+### Two Detection Triggers
+
+**1. Expired CDN URL** (Auto-refresh on modal open)
 ```
-User clicks clip → CDN URL expired → Request refresh → Message not found → Queue cleanup
+User clicks clip → CDN URL expired → Auto-refresh → Message not found → Queue cleanup
 ```
+
+**2. Playback Error** (Auto-refresh on video load failure)
+```
+User clicks clip → Video fails to load (404 from Discord) → Auto-refresh → Message not found → Queue cleanup
+```
+
+This covers both cases:
+- ✅ **Expired URL** - Detected when modal opens
+- ✅ **Deleted but not expired** - Detected when video tries to load and gets 404
 
 ### Flow Diagram
 
@@ -30,53 +42,66 @@ User clicks clip → CDN URL expired → Request refresh → Message not found �
 └──────┬──────┘
        │
        ▼
-┌─────────────┐
-│ Interface   │ Check: Is CDN URL expired?
-│ checks URL  │ Yes → Auto-refresh
-└──────┬──────┘
+┌─────────────────────┐
+│ ClipModal opens     │
+│ Check: URL expired? │
+└──────┬──────────────┘
        │
-       ▼
-┌──────────────────┐
-│ Interface API    │ POST /api/clips/:id/refresh-cdn
-│ calls bot API    │ 
-└──────┬───────────┘
+       ├─────► YES (Expired) ──► Auto-refresh immediately
        │
-       ▼
-┌──────────────────┐
-│ Bot FastAPI      │ Try: Fetch message from Discord
-│ fetches message  │
-└──────┬───────────┘
-       │
-       ├─────────► Message exists ──► Return fresh CDN URL ──► Play video ✅
-       │
-       └─────────► Message deleted (404)
-                   │
-                   ▼
-                ┌──────────────────────┐
-                │ Queue deletion job   │
-                │ to Redis queue       │
-                └──────┬───────────────┘
-                       │
-                       ▼
-                ┌──────────────────────┐
-                │ Return 410 Gone      │
-                │ error_type:          │
-                │ MESSAGE_DELETED      │
-                └──────┬───────────────┘
-                       │
-                       ▼
-                ┌──────────────────────┐
-                │ Interface displays:  │
-                │ "Clip Deleted" 🗑️    │
-                └──────────────────────┘
-                       │
-                       ▼
-                ┌──────────────────────┐
-                │ Worker picks up job  │
-                │ Deletes: Message,    │
-                │ Clips, Thumbnails,   │
-                │ Files from storage   │
-                └──────────────────────┘
+       └─────► NO (Valid) ──────► Try to play video
+                                   │
+                                   ├──► Video loads ──► Success ✅
+                                   │
+                                   └──► Video error (404) ──► Auto-refresh
+                                                               (check if deleted)
+                                   
+┌────────────────────────────────────────────────────────────┐
+│              Refresh Flow (Both Triggers)                   │
+└─────────────────────┬──────────────────────────────────────┘
+                      │
+                      ▼
+           ┌──────────────────┐
+           │ Interface API    │ POST /api/clips/:id/refresh-cdn
+           │ calls bot API    │ 
+           └──────┬───────────┘
+                  │
+                  ▼
+           ┌──────────────────┐
+           │ Bot FastAPI      │ Try: Fetch message from Discord
+           │ fetches message  │
+           └──────┬───────────┘
+                  │
+                  ├─────────► Message exists ──► Return fresh CDN URL ──► Play video ✅
+                  │
+                  └─────────► Message deleted (404)
+                              │
+                              ▼
+                           ┌──────────────────────┐
+                           │ Queue deletion job   │
+                           │ to Redis queue       │
+                           └──────┬───────────────┘
+                                  │
+                                  ▼
+                           ┌──────────────────────┐
+                           │ Return 410 Gone      │
+                           │ error_type:          │
+                           │ MESSAGE_DELETED      │
+                           └──────┬───────────────┘
+                                  │
+                                  ▼
+                           ┌──────────────────────┐
+                           │ Interface displays:  │
+                           │ "Clip Deleted" 🗑️    │
+                           └──────────────────────┘
+                                  │
+                                  ▼
+                           ┌──────────────────────┐
+                           │ Worker picks up job  │
+                           │ Deletes: Message,    │
+                           │ Clips, Thumbnails,   │
+                           │ Files from storage   │
+                           └──────────────────────┘
 ```
 
 ## Implementation
@@ -138,10 +163,38 @@ if (response.status === 410 && errorData.detail?.error_type === "MESSAGE_DELETED
 
 ### 3. ClipModal UI (`interface/src/components/clips/ClipModal.tsx`)
 
-Displays deletion gracefully:
+**A. Video Error Handler** - Triggers refresh on playback failure
 
 ```typescript
-const refreshCdnUrl = useCallback(async () => {
+const handleVideoError = useCallback(() => {
+    // When video fails to load, try refreshing to check if message was deleted
+    // This handles the case where clip was deleted during downtime but CDN URL hasn't expired yet
+    if (!errorRefreshAttempted && !refreshing) {
+        setErrorRefreshAttempted(true);
+        refreshCdnUrl(true); // isFromPlaybackError = true
+    } else {
+        // Already tried refresh, just show error
+        setHasPlaybackError(true);
+    }
+}, [errorRefreshAttempted, refreshing, refreshCdnUrl]);
+
+// VideoPlayer component
+<VideoPlayer
+    src={videoUrl}
+    onError={handleVideoError}  // Auto-refresh on 404
+/>
+```
+
+**Key Points:**
+- ✅ Prevents infinite refresh loops with `errorRefreshAttempted` flag
+- ✅ Only attempts refresh once per modal open
+- ✅ Silently refreshes (no alert) when triggered by playback error
+- ✅ Shows playback error UI only after refresh attempt fails
+
+**B. Refresh Handler** - Handles deletion gracefully
+
+```typescript
+const refreshCdnUrl = useCallback(async (isFromPlaybackError: boolean = false) => {
     const response = await fetch(`/api/clips/${clip.id}/refresh-cdn`, { method: "POST" });
     
     if (!response.ok) {
@@ -154,7 +207,12 @@ const refreshCdnUrl = useCallback(async () => {
             return; // Don't show alert, just update state
         }
         
-        // Handle other errors...
+        // Handle other errors differently based on trigger
+        if (isFromPlaybackError) {
+            setHasPlaybackError(true); // Silent error
+        } else {
+            alert("Failed to refresh..."); // User-triggered = alert
+        }
     }
 }, [clip.id]);
 ```

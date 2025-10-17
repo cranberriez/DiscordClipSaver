@@ -27,10 +27,11 @@ export function ClipModal({ clip, onClose }: ClipModalProps) {
     const [hasPlaybackError, setHasPlaybackError] = useState(false);
     const [refreshing, setRefreshing] = useState(false);
     const [autoRefreshed, setAutoRefreshed] = useState(false);
+    const [errorRefreshAttempted, setErrorRefreshAttempted] = useState(false);
     const [isDeleted, setIsDeleted] = useState(false);
     const [deletionMessage, setDeletionMessage] = useState<string>("");
 
-    const refreshCdnUrl = useCallback(async () => {
+    const refreshCdnUrl = useCallback(async (isFromPlaybackError: boolean = false) => {
         try {
             setRefreshing(true);
             setHasPlaybackError(false);
@@ -55,15 +56,53 @@ export function ClipModal({ clip, onClose }: ClipModalProps) {
 
             const data = await response.json();
             setVideoUrl(data.cdn_url);
+            // Reset error flags on success
+            setErrorRefreshAttempted(false);
         } catch (error) {
             console.error("Error refreshing CDN URL:", error);
-            const errorMsg = error instanceof Error ? error.message : "Unknown error";
-            alert(`Failed to refresh video URL: ${errorMsg}\n\nPlease check that the bot is running and try again.`);
-            setHasPlaybackError(true);
+            
+            // If this was triggered by playback error, show playback error UI
+            // If this was user-triggered, show alert
+            if (isFromPlaybackError) {
+                setHasPlaybackError(true);
+            } else {
+                const errorMsg = error instanceof Error ? error.message : "Unknown error";
+                alert(`Failed to refresh video URL: ${errorMsg}\n\nPlease check that the bot is running and try again.`);
+                setHasPlaybackError(true);
+            }
         } finally {
             setRefreshing(false);
         }
     }, [clip.id]);
+
+    const handleVideoError = useCallback(async () => {
+        // When video fails to load, first check if Discord CDN returns 404
+        // Only refresh (call bot API) if the file is actually gone from Discord
+        if (errorRefreshAttempted || refreshing) {
+            setHasPlaybackError(true);
+            return;
+        }
+        
+        try {
+            // Check if Discord CDN URL is valid (HEAD request = no download)
+            const cdnCheck = await fetch(videoUrl, { method: 'HEAD' });
+            
+            if (cdnCheck.status === 404 || cdnCheck.status === 403) {
+                // Discord CDN says file is gone - likely deleted
+                // Now check with bot to confirm and queue cleanup
+                setErrorRefreshAttempted(true);
+                refreshCdnUrl(true); // isFromPlaybackError = true
+            } else {
+                // CDN URL is valid - this is a playback error (codec, browser support, etc.)
+                setHasPlaybackError(true);
+            }
+        } catch (error) {
+            // CORS error or network issue checking CDN
+            // Just show playback error - don't spam bot API
+            console.warn("Could not check Discord CDN:", error);
+            setHasPlaybackError(true);
+        }
+    }, [videoUrl, errorRefreshAttempted, refreshing, refreshCdnUrl]);
 
     useEffect(() => {
         // Auto-refresh if URL is expired
@@ -73,7 +112,7 @@ export function ClipModal({ clip, onClose }: ClipModalProps) {
         
         if (isExpired && !autoRefreshed) {
             setAutoRefreshed(true);
-            refreshCdnUrl();
+            refreshCdnUrl(false);
         }
     }, [clip.expires_at, autoRefreshed, refreshCdnUrl]);
 
@@ -137,7 +176,7 @@ export function ClipModal({ clip, onClose }: ClipModalProps) {
                                 </p>
                                 <div className="flex gap-2">
                                     <Button
-                                        onClick={refreshCdnUrl}
+                                        onClick={() => refreshCdnUrl(false)}
                                         disabled={refreshing}
                                         variant="outline"
                                     >
@@ -156,7 +195,7 @@ export function ClipModal({ clip, onClose }: ClipModalProps) {
                                 src={videoUrl}
                                 poster={getLargeThumbnail() || undefined}
                                 title={clip.filename}
-                                onError={() => setHasPlaybackError(true)}
+                                onError={handleVideoError}
                             />
                         )}
                     </div>
