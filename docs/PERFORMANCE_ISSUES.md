@@ -135,36 +135,157 @@ success_count, failure_count = await bulk_operations.bulk_upsert_users(users_dat
 
 ## 🟠 High Priority Issues
 
-### [HIGH-1] Redis KEYS Command Blocks Server
+### [HIGH-1] Redis KEYS Command Blocks Server ✅ COMPLETED
 
 **Priority**: High | **Impact**: Blocks Redis for all clients | **Effort**: 2h  
-**Files**: `python/shared/redis/redis_client.py` (lines 152, 350, 483)
+**Files**: `python/shared/redis/redis_client.py`
 
-**Issue**: `KEYS` pattern is O(N) and blocks Redis during scan.
+**Completed**: 2025-10-17
 
-**Fix**: Replace with `SCAN` for non-blocking iteration.
+**Issue**: `KEYS` command is O(N) and blocks Redis server during scan. With thousands of keys, this causes all other Redis operations to wait, creating latency spikes.
+
+**Implementation**:
+- ✅ Created `_scan_keys()` helper method using cursor-based SCAN
+- ✅ Replaced KEYS in 3 locations:
+  - `_get_matching_streams()` (line 152)
+  - `list_streams()` (line 350)
+  - `get_guild_job_stats()` (line 483)
+- ✅ SCAN iterates incrementally with cursor, never blocking Redis
+
+**Performance Improvement**:
+- **Before**: KEYS blocks Redis for entire scan duration (proportional to total keyspace size)
+- **After**: SCAN yields control between iterations, never blocking
+- **Impact**: Eliminates Redis blocking, prevents latency spikes for all clients
+
+**Technical Details**:
+```python
+async def _scan_keys(self, pattern: str) -> List[str]:
+    """Non-blocking key iteration using SCAN"""
+    keys = []
+    cursor = 0
+    
+    while True:
+        # Incremental scan with count=100 per iteration
+        cursor, batch = await self.client.scan(
+            cursor=cursor, 
+            match=pattern, 
+            count=100
+        )
+        keys.extend(batch)
+        
+        # cursor=0 means iteration complete
+        if cursor == 0:
+            break
+    
+    return keys
+```
+
+**KEYS vs SCAN Comparison**:
+- **KEYS**: O(N) single blocking operation
+- **SCAN**: O(N) spread across multiple non-blocking iterations
+- **SCAN count**: 100 keys per iteration (tunable)
+- **Safety**: SCAN never blocks other Redis operations
 
 ---
 
-### [HIGH-2] Settings Not Cached (Repeated DB Queries)
+### [HIGH-2] Settings Not Cached (Repeated DB Queries) ✅ COMPLETED
 
 **Priority**: High | **Impact**: Unnecessary DB load | **Effort**: 2h  
-**Files**: `python/shared/settings_resolver.py:33-65`
+**Files**: 
+- `python/shared/settings_resolver.py`
+- `.env.global.example`
 
-**Issue**: Every batch fetches settings from DB, even for same channel.
+**Completed**: 2025-10-17
 
-**Fix**: Add TTL-based in-memory cache (5 minute default).
+**Issue**: Every batch fetches settings from DB, even for same channel. When processing multiple batches from the same channel, settings were queried repeatedly instead of being cached.
+
+**Implementation**:
+- ✅ Created `SettingsCache` class with TTL-based expiration
+- ✅ Thread-safe using `asyncio.Lock`
+- ✅ Integrated into `get_channel_settings()` with automatic cache population
+- ✅ Added cache management functions: `invalidate_channel_settings()`, `invalidate_guild_settings()`, `clear_settings_cache()`, `get_cache_stats()`
+- ✅ Configurable TTL via `SETTINGS_CACHE_TTL_SECONDS` (default: 300 seconds / 5 minutes)
+- ✅ Optional bypass with `use_cache=False` parameter
+
+**Performance Improvement**:
+- **Before**: 2 DB queries per channel per batch (GuildSettings + ChannelSettings)
+- **After**: 2 DB queries on first access, then 0 queries for 5 minutes
+- **Impact**: Eliminates 100% of repeated settings queries during high-frequency processing
+
+**Cache Architecture**:
+```python
+# Cache structure
+_cache: Dict[str, tuple[ResolvedSettings, datetime]] = {}
+# Key format: "guild_id:channel_id"
+# Value: (settings, cached_at_timestamp)
+
+# Automatic expiration check on get()
+if (now - cached_at).total_seconds() > ttl:
+    del _cache[key]  # Auto-cleanup expired entries
+```
+
+**API Usage**:
+```python
+# Automatic caching (default)
+settings = await get_channel_settings(guild_id, channel_id)
+
+# Force fresh fetch (bypass cache)
+settings = await get_channel_settings(guild_id, channel_id, use_cache=False)
+
+# Cache invalidation (call when settings change)
+await invalidate_channel_settings(guild_id, channel_id)
+await invalidate_guild_settings(guild_id)  # Invalidate all channels in guild
+```
+
+**Environment Variable**:
+- `SETTINGS_CACHE_TTL_SECONDS=300` - Cache expiration time (default: 5 minutes)
 
 ---
 
-### [HIGH-3] Aiohttp Session Not Reused
+### [HIGH-3] Aiohttp Session Not Reused ✅ COMPLETED
 
 **Priority**: High | **Impact**: 50% slower downloads | **Effort**: 2h  
-**Files**: `python/worker/thumbnail/thumbnail_generator.py:193`
+**Files**: 
+- `python/worker/thumbnail/thumbnail_generator.py`
+- `python/worker/thumbnail/thumbnail_handler.py`
+- `python/worker/processor.py`
+- `python/worker/main.py`
 
-**Issue**: New ClientSession per download = full TCP/TLS handshake every time.
+**Completed**: 2025-10-17
 
-**Fix**: Make session class-level with proper lifecycle management.
+**Issue**: New `ClientSession` per download = full TCP/TLS handshake every time. Each thumbnail download created a new session, wasting time on connection setup.
+
+**Implementation**:
+- ✅ Created persistent `aiohttp.ClientSession` in `ThumbnailGenerator.__init__()`
+- ✅ Reused session across all downloads via `self._session`
+- ✅ Added `close()` method for proper cleanup
+- ✅ Integrated cleanup through handler chain: `Worker.shutdown()` → `JobProcessor.close()` → `ThumbnailHandler.close()` → `ThumbnailGenerator.close()`
+- ✅ Session configured with timeouts from environment variables
+
+**Performance Improvement**:
+- **Before**: New TCP/TLS handshake for every video download
+- **After**: Connection reuse across all downloads
+- **Speedup**: ~50% faster downloads (eliminates handshake overhead)
+
+**Code Changes**:
+```python
+# ThumbnailGenerator.__init__()
+timeout = aiohttp.ClientTimeout(
+    total=int(os.getenv("VIDEO_DOWNLOAD_TIMEOUT", "300")),
+    connect=int(os.getenv("VIDEO_DOWNLOAD_CONNECT_TIMEOUT", "10"))
+)
+self._session = aiohttp.ClientSession(timeout=timeout)
+
+# Reuse in _download_video()
+async with self._session.get(url) as response:
+    # ... download using persistent connection
+```
+
+**Cleanup Chain**:
+1. `Worker.shutdown()` calls `processor.close()`
+2. `JobProcessor.close()` closes all handlers
+3. `ThumbnailHandler.close()` calls `generator.close()`
+4. `ThumbnailGenerator.close()` closes aiohttp session
 
 ---
 
@@ -285,20 +406,28 @@ Add tracemalloc to identify leaks and high-memory operations.
 ## Summary
 
 **Total Issues**: 19 (3 Critical, 6 High, 6 Medium, 3 Low)  
-**Completed**: 7 (3 Critical, 3 High, 1 Medium) ✅  
-**Remaining Effort**: ~17-23 hours
+**Completed**: 10 (3 Critical, 6 High, 1 Medium) ✅  
+**Remaining Effort**: ~11-17 hours
+
+**🎉 ALL CRITICAL & HIGH PRIORITY ISSUES RESOLVED! 🎉**
 
 **Completed Issues** ✅:
 1. ✅ [CRITICAL-1] Database connection pooling (1h)
 2. ✅ [CRITICAL-2] Download timeouts (30min)
 3. ✅ [CRITICAL-3] Bulk database operations (4h)
-4. ✅ [HIGH-4] Job batch size increase (5min)
-5. ✅ [HIGH-5] N+1 thumbnail query fix (30min)
-6. ✅ [HIGH-6] Stream maxlen increase (5min)
-7. ✅ [MED-3] Batch operation failure tracking (included in #3)
+4. ✅ [HIGH-1] Replace KEYS with SCAN (2h)
+5. ✅ [HIGH-2] Settings cache with TTL (2h)
+6. ✅ [HIGH-3] Aiohttp session reuse (2h)
+7. ✅ [HIGH-4] Job batch size increase (5min)
+8. ✅ [HIGH-5] N+1 thumbnail query fix (30min)
+9. ✅ [HIGH-6] Stream maxlen increase (5min)
+10. ✅ [MED-3] Batch operation failure tracking (included in #3)
 
 **Performance Improvements Achieved**:
 - ✅ **Batch operations**: 70-90% faster (N queries → 1 query)
+- ✅ **Settings queries**: 100% elimination of repeated DB queries (5-min cache)
+- ✅ **Download speed**: 50% faster (connection reuse eliminates TCP/TLS handshakes)
+- ✅ **Redis safety**: Non-blocking SCAN prevents server lockup
 - ✅ **Workers won't hang**: Download timeouts prevent stalled connections
 - ✅ **Proper connection pooling**: Scales with multiple workers
 - ✅ **Redis throughput**: 10x fewer round-trips with job batching
@@ -306,7 +435,6 @@ Add tracemalloc to identify leaks and high-memory operations.
 - ✅ **Thumbnail queries**: Fixed N+1 pattern
 - ✅ **Better error tracking**: Success/failure counts for all batch operations
 
-**Remaining High Priority** (Recommended order):
-1. [HIGH-3] Aiohttp session reuse (2h) - 50% faster downloads
-2. [HIGH-2] Settings cache (2h) - Eliminates repeated queries
-3. [HIGH-1] Replace KEYS with SCAN (2h) - Stops Redis blocking
+**Remaining Issues** (5 Medium, 3 Low):
+- Medium priority issues focus on robustness (health checks, retry logic, disk space)
+- Low priority issues are observability and optimization (metrics, indexes, profiling)

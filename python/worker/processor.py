@@ -27,10 +27,21 @@ class JobProcessor:
     
     def __init__(self, bot: WorkerBot, redis_client: Optional[RedisStreamClient] = None):
         self.bot = bot
-        self.message_handler = MessageHandler()
-        self.batch_processor = BatchMessageProcessor()
+        
+        # Create single shared thumbnail handler to avoid duplicate aiohttp sessions
+        # Previously had 3 separate instances (one per handler) - wasteful!
         self.thumbnail_handler = ThumbnailHandler()
+        
+        # Inject shared handler into message processors
+        self.message_handler = MessageHandler(thumbnail_handler=self.thumbnail_handler)
+        self.batch_processor = BatchMessageProcessor(thumbnail_handler=self.thumbnail_handler)
         self.redis_client = redis_client
+    
+    async def close(self):
+        """Close all handlers and cleanup resources"""
+        # Close single shared thumbnail handler (contains aiohttp session)
+        await self.thumbnail_handler.close()
+        logger.debug("JobProcessor cleanup complete")
     
     async def _update_scan_status_with_error(
         self,

@@ -2,6 +2,7 @@
 Message handler for processing Discord messages and extracting clips
 """
 import logging
+from typing import Optional
 import discord
 from shared.db.models import Message, Clip, User
 from shared.settings_resolver import get_channel_settings
@@ -16,9 +17,9 @@ logger = logging.getLogger(__name__)
 class MessageHandler:
     """Handles individual message processing"""
     
-    def __init__(self):
-        """Initialize message handler with thumbnail handler"""
-        self.thumbnail_handler = ThumbnailHandler()
+    def __init__(self, thumbnail_handler: Optional[ThumbnailHandler] = None):
+        """Initialize message handler with optional shared thumbnail handler"""
+        self.thumbnail_handler = thumbnail_handler or ThumbnailHandler()
     
     async def process_message(
         self,

@@ -80,6 +80,10 @@ class Worker:
         
         self.running = False
         
+        # Close processor and its handlers (releases aiohttp sessions)
+        if self.processor:
+            await self.processor.close()
+        
         # Stop Discord bot
         await self.bot.stop()
         

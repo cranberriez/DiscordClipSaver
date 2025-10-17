@@ -34,6 +34,10 @@ class ThumbnailHandler:
         self.generator = ThumbnailGenerator()
         self.storage = get_storage_backend()
     
+    async def close(self):
+        """Close the thumbnail generator and cleanup resources"""
+        await self.generator.close()
+    
     async def process_clip(self, clip: Clip) -> bool:
         """
         Process a clip to generate thumbnails and create database records

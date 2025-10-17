@@ -146,10 +146,37 @@ class RedisStreamClient:
             if "BUSYGROUP" not in str(e):
                 raise
     
+    async def _scan_keys(self, pattern: str) -> List[str]:
+        """
+        Scan for keys matching pattern using non-blocking SCAN command.
+        
+        SCAN is preferred over KEYS as it doesn't block Redis server during iteration.
+        Uses cursor-based iteration to retrieve all matching keys incrementally.
+        
+        Args:
+            pattern: Redis key pattern (supports wildcards like *)
+            
+        Returns:
+            List of matching keys
+        """
+        keys = []
+        cursor = 0
+        
+        while True:
+            # SCAN returns (next_cursor, [keys])
+            # cursor=0 means iteration is complete
+            cursor, batch = await self.client.scan(cursor=cursor, match=pattern, count=100)
+            keys.extend(batch)
+            
+            if cursor == 0:
+                break
+        
+        return keys
+    
     async def _get_matching_streams(self) -> List[str]:
-        """Get list of streams matching the pattern"""
+        """Get list of streams matching the pattern using non-blocking SCAN"""
         pattern = f"{self.STREAM_PREFIX}:{self.stream_pattern}"
-        keys = await self.client.keys(pattern)
+        keys = await self._scan_keys(pattern)
         return [k for k in keys if k.startswith(self.STREAM_PREFIX)]
     
     async def _claim_pending_jobs(self, streams: List[str], min_idle_time: int = 60000) -> List[Dict[str, Any]]:
@@ -336,6 +363,8 @@ class RedisStreamClient:
         """
         List all job streams, optionally filtered by guild/job type
         
+        Uses SCAN for non-blocking iteration.
+        
         Args:
             guild_id: Filter by guild ID
             job_type: Filter by job type (batch, message, rescan, thumbnail_retry)
@@ -347,7 +376,7 @@ class RedisStreamClient:
             raise RuntimeError("Redis not connected")
         
         pattern = self._build_stream_name(guild_id=guild_id, job_type=job_type) + "*"
-        keys = await self.client.keys(pattern)
+        keys = await self._scan_keys(pattern)
         return sorted([k for k in keys if k.startswith(self.STREAM_PREFIX)])
     
     async def get_stream_info(self, stream_name: str) -> Dict[str, Any]:
@@ -478,9 +507,9 @@ class RedisStreamClient:
         if not self.connected:
             raise RuntimeError("Redis not connected")
         
-        # Find all streams for this guild
+        # Find all streams for this guild using SCAN (non-blocking)
         pattern = f"{self.STREAM_PREFIX}:guild:{guild_id}:*"
-        streams = await self.client.keys(pattern)
+        streams = await self._scan_keys(pattern)
         
         stats = {
             'guild_id': guild_id,

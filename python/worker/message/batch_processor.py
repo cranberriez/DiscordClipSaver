@@ -2,7 +2,7 @@
 Batch message processor for efficient processing of multiple messages
 """
 import logging
-from typing import List
+from typing import List, Optional
 import discord
 from shared.settings_resolver import get_channel_settings
 from worker.message.batch_context import BatchContext
@@ -27,9 +27,9 @@ class BatchMessageProcessor:
     - Thumbnail existence checked in bulk
     """
     
-    def __init__(self):
+    def __init__(self, thumbnail_handler: Optional[ThumbnailHandler] = None):
         self.db_ops = BatchDatabaseOperations()
-        self.thumbnail_handler = ThumbnailHandler()
+        self.thumbnail_handler = thumbnail_handler or ThumbnailHandler()
     
     async def process_messages_batch(
         self,
