@@ -1,7 +1,7 @@
 "use client";
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { api } from "@/lib/react-query/client";
+import { api } from "@/lib/api/client";
 import { guildKeys } from "@/lib/queries";
 import { startChannelScan } from "@/lib/actions/scan";
 import type { ChannelScanStatus } from "@/lib/db/types";

@@ -1,7 +1,7 @@
 "use client";
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { api } from "@/lib/react-query/client";
+import { api } from "@/lib/api/client";
 import type { Guild } from "@/lib/db/types";
 import { guildKeys } from "@/lib/queries";
 

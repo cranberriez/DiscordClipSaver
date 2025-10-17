@@ -15,7 +15,7 @@ import type {
     SingleScanStatusResponse,
     GuildSettingsResponse,
     UpdateGuildSettingsPayload,
-} from "./types";
+} from "../types/types";
 import type { Guild } from "@/lib/db/types";
 
 // ============================================================================

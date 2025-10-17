@@ -2,7 +2,7 @@
 
 import { useState, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { api } from "@/lib/react-query/client";
+import { api } from "@/lib/api/client";
 import { guildKeys } from "@/lib/queries";
 import { GuildSettingsBuilder } from "@/lib/react-query/guild-settings-builder";
 import type {

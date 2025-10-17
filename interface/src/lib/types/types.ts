@@ -1,12 +1,12 @@
 /**
  * API Response Types
- * 
+ *
  * These types define the shape of responses from our API routes.
  * They use the Kysely-generated types from @/lib/db/types as the foundation.
  */
 
-import type { Guild, Channel, ChannelScanStatus } from '@/lib/db/types';
-import type { DiscordGuild } from '@/lib/discord/types';
+import type { Guild, Channel, ChannelScanStatus } from "@/lib/db/types";
+import type { DiscordGuild } from "@/lib/discord/types";
 
 // ============================================================================
 // Guild API Responses

@@ -4,9 +4,6 @@
  * Centralized exports for all query hooks.
  */
 
-// Query keys
-export { guildKeys } from "./useGuilds";
-
 // Guild hooks
 export { useGuilds, useGuild, useToggleScanning } from "./useGuilds";
 
