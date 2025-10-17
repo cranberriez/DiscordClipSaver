@@ -4,6 +4,7 @@ from typing import Optional
 import discord
 
 from bot.bot import bot as discord_bot
+from bot.services.scan_service import get_scan_service
 
 # ----- FastAPI app -----
 api = FastAPI(title="Discord Bot API", version="0.1.0")
@@ -43,7 +44,6 @@ async def refresh_cdn_url(request: RefreshCdnRequest):
         except discord.NotFound:
             # Message was deleted from Discord!
             # Queue deletion job to clean up database and storage
-            from bot.services.scan_service import get_scan_service
             
             scan_service = get_scan_service()
             if scan_service and scan_service.redis_client:
