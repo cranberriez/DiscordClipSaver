@@ -92,9 +92,6 @@ export default async function GuildLayout({ children, params }: LayoutProps) {
                 guildId={guild.id}
                 guildName={guild.name}
                 ownerId={guild.owner_id}
-                messageScanEnabled={guild.message_scan_enabled}
-                lastMessageScanAt={guild.last_message_scan_at}
-                createdAt={guild.created_at}
                 iconUrl={guild.icon_url}
             />
 
