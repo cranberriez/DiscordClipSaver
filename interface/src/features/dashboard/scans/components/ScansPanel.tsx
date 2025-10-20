@@ -12,6 +12,7 @@ import {
     ScanStatusTable,
 } from "../index";
 import { ChannelWithStatus } from "../types";
+import { randomUUID } from "crypto"; // TODO: Fix by creating DTO for redis jobs properly
 
 interface ScansPanelProps {
     guildId: string;
@@ -59,6 +60,7 @@ export function ScansPanel({
 
     const handleStartScan = (channelId: string, isUpdate: boolean = false) => {
         startScanMutation.mutate({
+            job_id: randomUUID(),
             channel_id: channelId,
             guild_id: guildId,
             type: "batch",

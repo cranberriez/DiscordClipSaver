@@ -4,6 +4,7 @@
  */
 
 export interface BaseJob {
+    job_id: string;
     guild_id: string;
     channel_id: string;
     created_at: string; // ISO datetime string
