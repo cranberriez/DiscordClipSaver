@@ -23,6 +23,13 @@ export async function GET(
     try {
         const allChannels = await DataService.getChannelsByGuildId(guildId);
 
+        if (!allChannels) {
+            return NextResponse.json(
+                { error: "Channels not found" },
+                { status: 404 }
+            );
+        }
+
         // Filter channels based on user's Discord permissions
         const visibleChannels = filterChannelsByPermissions(
             allChannels,
