@@ -10,6 +10,7 @@ import type { GuildResponse } from "@/lib/api/guild";
 
 export default function GuildList() {
     const { data: session } = useSession();
+    const { isLoading, error, data: guilds } = useGuilds(true);
 
     if (!session?.user?.id) {
         return (
@@ -18,8 +19,6 @@ export default function GuildList() {
             </p>
         );
     }
-
-    const { isLoading, error, data: guilds } = useGuilds(true);
 
     if (isLoading) {
         return (

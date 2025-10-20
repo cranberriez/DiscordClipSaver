@@ -20,20 +20,20 @@ export function ChannelsList({ guildId, guildScanEnabled }: ChannelsListProps) {
     const bulkUpdateMutation = useBulkUpdateChannels(guildId);
 
     // Track live channels state from React Query cache
-    const channelsQuery = useChannels(guildId);
-    if (!channelsQuery) {
-        return null;
-    }
-    const channelsList = channelsQuery.data || [];
+    const { isLoading, error, data: channelsList } = useChannels(guildId);
 
     // Group channels by type and sort alphabetically by name within each group
     const groupedChannels = useMemo(
-        () => groupChannelsByType(channelsList, "name"),
+        () => groupChannelsByType(channelsList || [], "name"),
         [channelsList]
     );
 
     // Get sorted channel types based on configured display order
     const sortedChannelTypes = useMemo(() => getSortedChannelTypes(), []);
+
+    if (!channelsList) {
+        return null;
+    }
 
     const enabledCount = channelsList.filter(
         c => c.message_scan_enabled

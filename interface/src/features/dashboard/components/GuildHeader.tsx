@@ -28,11 +28,12 @@ export function GuildHeader({
 }: GuildHeaderProps) {
     // Use React Query to track live state
     const { data: guild } = useGuild(guildId);
+    const toggleMutation = useToggleScanning(guildId);
+
     if (!guild) {
         return null;
     }
 
-    const toggleMutation = useToggleScanning(guildId);
     const messageScanEnabled = guild.message_scan_enabled;
 
     const handleToggle = () => {
