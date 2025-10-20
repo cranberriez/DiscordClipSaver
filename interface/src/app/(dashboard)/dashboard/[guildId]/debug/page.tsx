@@ -22,7 +22,7 @@ export default async function DebugPage({ params }: PageProps) {
 
             <div className="p-4 bg-white/5 rounded-lg">
                 <h2 className="text-xl font-semibold mb-2">
-                    Channels ({channels.length})
+                    Channels ({channels?.length})
                 </h2>
                 <pre className="text-xs overflow-auto">
                     {JSON.stringify(channels, null, 2)}
