@@ -2,38 +2,38 @@ import "server-only";
 
 /**
  * Channel Permission Filtering
- * 
+ *
  * Filters channels based on user's Discord permissions.
  * Note: This is a simplified version. Full Discord permission checking
  * would require fetching channel-specific permissions from Discord API.
  */
 
-import type { Channel } from "@/lib/db/types";
-import type { DiscordGuild } from "@/lib/discord/types";
+import type { Channel } from "@/lib/api/channel";
+import type { DiscordGuild } from "@/server/discord/types";
 import { hasPermission, DiscordPermissions } from "./auth";
 
 /**
  * Filter channels based on user's guild-level permissions.
- * 
+ *
  * This is a simplified filter that uses guild-level permissions.
  * For full accuracy, you would need to:
  * 1. Fetch channel-specific permission overwrites from Discord
  * 2. Check role-based permissions
  * 3. Check user-specific permission overwrites
- * 
+ *
  * Current logic:
  * - If user is guild owner or has ADMINISTRATOR: see all channels
  * - Otherwise: see all channels (you may want to implement more granular logic)
- * 
+ *
  * @param channels - All channels in the guild
  * @param discordGuild - User's Discord guild object (contains permissions)
  * @returns Filtered list of channels user can access
- * 
+ *
  * @example
  * ```typescript
  * const auth = await requireGuildAccess(req, guildId);
  * if (auth instanceof NextResponse) return auth;
- * 
+ *
  * const allChannels = await getChannelsByGuildId(guildId);
  * const visibleChannels = filterChannelsByPermissions(allChannels, auth.discordGuild);
  * ```
@@ -66,10 +66,10 @@ export function filterChannelsByPermissions(
 
 /**
  * Check if a user can view a specific channel.
- * 
+ *
  * This is a placeholder for more granular permission checking.
  * Currently returns true if user has guild access.
- * 
+ *
  * @param channelId - The channel ID to check
  * @param discordGuild - User's Discord guild object
  * @returns Whether user can view the channel
@@ -95,7 +95,7 @@ export function canViewChannel(
 
 /**
  * Future enhancement: Fetch channel permissions from Discord API
- * 
+ *
  * This would require:
  * ```typescript
  * async function getChannelPermissions(

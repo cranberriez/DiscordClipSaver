@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireGuildAccess } from "@/lib/middleware/auth";
-import { bulkUpdateChannelsEnabled } from "@/lib/db";
+import { bulkUpdateChannelsEnabled } from "@/server/db";
 import { z } from "zod";
 
 const BulkUpdateSchema = z.object({
@@ -9,7 +9,7 @@ const BulkUpdateSchema = z.object({
 
 /**
  * POST /api/guilds/[guildId]/channels/bulk
- * 
+ *
  * Bulk enable/disable all channels for a guild.
  * Requires guild ownership.
  */

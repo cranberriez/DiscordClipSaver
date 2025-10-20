@@ -58,3 +58,6 @@ export interface ChannelTable {
 }
 
 export type Channel = Selectable<ChannelTable>;
+export type ChannelWithClipCount = Selectable<ChannelTable> & {
+    clip_count: number;
+};

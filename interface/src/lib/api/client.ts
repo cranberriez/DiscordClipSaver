@@ -6,15 +6,12 @@
  */
 
 import { signOut } from "next-auth/react";
-import type {
-    GuildSettingsResponse,
-    ScanStatusesResponse,
-    SingleScanStatusResponse,
-} from "../types/types";
-import type { Guild } from "@/lib/db/types";
-import { GuildsListResponse, ToggleScanningResponse } from "./guild";
+import type { GuildSettingsResponse } from "./settings";
+import type { Guild } from "@/lib/api/guild";
+import { GuildResponse, ToggleScanningResponse } from "./guild";
 import { UpdateGuildSettingsPayload } from "../schema/guild-settings.schema";
-import { ChannelsListResponse, ChannelStatsResponse } from "./channels";
+import { Channel, ChannelStatsResponse } from "./channel";
+import { ScanStatus } from "./scan";
 
 // ============================================================================
 // Error Handling
@@ -79,11 +76,11 @@ export const api = {
     guilds: {
         /**
          * Get list of user's guilds from Discord with optional DB enrichment
-         * GET /api/discord/user/guilds?includeDb=1
+         * GET /api/guilds/?includePerms=1
          */
-        list: () =>
-            apiRequest<GuildsListResponse[]>(
-                "/api/discord/user/guilds?includeDb=1"
+        list: (withPerms?: boolean) =>
+            apiRequest<GuildResponse[]>(
+                `/api/guilds/?includePerms=${withPerms ? 1 : 0}`
             ),
 
         /**
@@ -122,7 +119,7 @@ export const api = {
          * GET /api/guilds/[guildId]/channels
          */
         list: (guildId: string) =>
-            apiRequest<ChannelsListResponse>(`/api/guilds/${guildId}/channels`),
+            apiRequest<Channel[]>(`/api/guilds/${guildId}/channels`),
 
         /**
          * Get all channels with clip counts for a guild
@@ -157,16 +154,14 @@ export const api = {
          * GET /api/guilds/[guildId]/scan-statuses
          */
         statuses: (guildId: string) =>
-            apiRequest<ScanStatusesResponse>(
-                `/api/guilds/${guildId}/scan-statuses`
-            ),
+            apiRequest<ScanStatus[]>(`/api/guilds/${guildId}/scan-statuses`),
 
         /**
          * Get scan status for a single channel
          * GET /api/guilds/[guildId]/channels/[channelId]/scan-status
          */
         status: (guildId: string, channelId: string) =>
-            apiRequest<SingleScanStatusResponse>(
+            apiRequest<ScanStatus>(
                 `/api/guilds/${guildId}/channels/${channelId}/scan-status`
             ),
 

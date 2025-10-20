@@ -1,15 +1,40 @@
 // src/lib/api/guilds.ts
 import { api } from "@/lib/api/client";
-import type { DiscordGuild } from "@/lib/discord/types";
-import type { Guild } from "@/lib/db/types";
 import type { UpdateGuildSettingsPayload } from "../schema/guild-settings.schema";
 
 /**
- * Response from GET /api/discord/user/guilds?includeDb=1
+ * Guild DTO as returned by the API
  */
-export interface GuildsListResponse {
-    guilds: DiscordGuild[];
-    dbGuilds: Guild[];
+export interface Guild {
+    id: string;
+    name: string;
+    icon_url: string | null;
+    owner_id: string | null;
+    message_scan_enabled: boolean;
+    last_message_scan_at: Date | null;
+    created_at: Date;
+    updated_at: Date;
+    deleted_at: Date | null;
+}
+
+/**
+ * Guild DTO as returned by the Discord API
+ */
+export interface DiscordGuild {
+    id: string;
+    name: string;
+    icon: string;
+    owner: boolean;
+    owner_id: string;
+    permissions: string;
+    features: string[];
+}
+
+/**
+ * Response from GET /api/guilds/?includePerms=1
+ */
+export interface GuildResponse extends Guild {
+    permissions: string;
 }
 
 /**
@@ -21,8 +46,8 @@ export interface ToggleScanningResponse {
 }
 
 // List guilds (Discord + DB enrichment)
-export function getGuilds() {
-    return api.guilds.list(); // GET /api/discord/user/guilds?includeDb=1
+export function getGuilds(includePerms?: boolean) {
+    return api.guilds.list(includePerms); // GET /api/guilds/?includePerms=1
 }
 
 // Single guild (if/when you add this endpoint)
@@ -31,16 +56,16 @@ export function getGuild(guildId: string) {
 }
 
 // Settings
-export function getGuildSettings(guildId: string) {
-    return api.settings.get(guildId); // your existing client method
-}
+// export function getGuildSettings(guildId: string) {
+//     return api.settings.get(guildId); // your existing client method
+// }
 
-export function updateGuildSettings(
-    guildId: string,
-    payload: UpdateGuildSettingsPayload
-) {
-    return api.settings.update(guildId, payload); // PATCH
-}
+// export function updateGuildSettings(
+//     guildId: string,
+//     payload: UpdateGuildSettingsPayload
+// ) {
+//     return api.settings.update(guildId, payload); // PATCH
+// }
 
 export function toggleScanning(guildId: string, enabled: boolean) {
     return api.guilds.toggleScanning(guildId, enabled); // POST /api/guilds/[guildId]/toggle

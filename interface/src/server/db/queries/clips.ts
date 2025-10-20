@@ -1,9 +1,10 @@
 import { getDb } from "../db";
-import type { Clip, Message, Thumbnail } from "../types";
+import type { DbClip, DbMessage, DbThumbnail } from "../types";
 
-export interface ClipWithMetadata extends Clip {
-    message: Message;
-    thumbnails: Thumbnail[];
+export interface ClipWithMetadata {
+    clip: DbClip;
+    message: DbMessage;
+    thumbnails: DbThumbnail[];
 }
 
 /**
@@ -48,7 +49,7 @@ export async function getClipsByChannelId(
 
     // Create lookup maps
     const messageMap = new Map(messages.map(m => [m.id, m]));
-    const thumbnailMap = new Map<string, Thumbnail[]>();
+    const thumbnailMap = new Map<string, DbThumbnail[]>();
     for (const thumb of thumbnails) {
         if (!thumbnailMap.has(thumb.clip_id)) {
             thumbnailMap.set(thumb.clip_id, []);
@@ -58,7 +59,7 @@ export async function getClipsByChannelId(
 
     // Combine data
     return clips.map(clip => ({
-        ...clip,
+        clip: clip,
         message: messageMap.get(clip.message_id)!,
         thumbnails: thumbnailMap.get(clip.id) || [],
     }));
@@ -96,16 +97,16 @@ export async function getClipById(
     if (!message) return null;
 
     return {
-        ...clip,
-        message,
-        thumbnails,
+        clip: clip,
+        message: message,
+        thumbnails: thumbnails,
     };
 }
 
 /**
  * Check if a clip's CDN URL has expired
  */
-export function isClipExpired(clip: Clip): boolean {
+export function isClipExpired(clip: DbClip): boolean {
     return new Date(clip.expires_at) < new Date();
 }
 

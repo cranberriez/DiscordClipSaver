@@ -1,12 +1,12 @@
 import { getDb } from "../db";
-import type { GuildSettings } from "../types";
+import type { DbGuildSettings } from "../types";
 
 /**
  * Get guild settings by guild ID.
  */
 export async function getGuildSettings(
     guildId: string
-): Promise<GuildSettings | null> {
+): Promise<DbGuildSettings | null> {
     const settings = await getDb()
         .selectFrom("guild_settings")
         .selectAll()
@@ -30,7 +30,7 @@ export async function upsertGuildSettings(
     guildId: string,
     settings?: Record<string, unknown>,
     defaultChannelSettings?: Record<string, unknown>
-): Promise<GuildSettings> {
+): Promise<DbGuildSettings> {
     const db = getDb();
 
     // Check if settings exist

@@ -1,0 +1,153 @@
+import * as db from "../db";
+import {
+    GuildMapper,
+    ChannelMapper,
+    ClipMapper,
+    ScanMapper,
+    SettingsMapper,
+} from "../mappers";
+
+// Handles DTO mapping, and caching (later) for relevant database queries
+export class DataService {
+    // Guilds
+    static async getSingleGuildById(guildId: string) {
+        const guild = await db.getSingleGuildById(guildId);
+
+        if (!guild) {
+            console.error("Guild not found, guildId: " + guildId);
+            return undefined;
+        }
+
+        return GuildMapper.toGuild(guild);
+    }
+
+    static async getGuildsByIds(ids: string[]) {
+        const guilds = await db.getGuildsByIds(ids);
+
+        if (!guilds) {
+            console.error("Guilds not found, ids: " + ids.join(", "));
+            return undefined;
+        }
+
+        return guilds.map(guild => GuildMapper.toGuild(guild));
+    }
+
+    // Channels
+    static async getChannelsByGuildId(guildId: string) {
+        const channels = await db.getChannelsByGuildId(guildId);
+
+        if (!channels) {
+            console.error("Channels not found, guildId: " + guildId);
+            return undefined;
+        }
+
+        return channels.map(channel => ChannelMapper.toChannel(channel));
+    }
+
+    static async getChannelById(guildId: string, channelId: string) {
+        const channel = await db.getChannelById(guildId, channelId);
+
+        if (!channel) {
+            console.error(
+                "Channel not found, guildId: " +
+                    guildId +
+                    ", channelId: " +
+                    channelId
+            );
+            return undefined;
+        }
+
+        return ChannelMapper.toChannel(channel);
+    }
+
+    static async getChannelsByGuildIdWithClipCount(guildId: string) {
+        const channels = await db.getChannelsByGuildIdWithClipCount(guildId);
+
+        if (!channels) {
+            console.error("Channels not found, guildId: " + guildId);
+            return undefined;
+        }
+
+        return channels.map(channel => ChannelMapper.toChannel(channel));
+    }
+
+    // Scans
+    static async getScanStatusesByGuildId(guildId: string) {
+        const scanStatuses = await db.getGuildScanStatuses(guildId);
+
+        if (!scanStatuses) {
+            console.error("Scan statuses not found, guildId: " + guildId);
+            return undefined;
+        }
+
+        return scanStatuses.map(scanStatus =>
+            ScanMapper.toScanStatus(scanStatus)
+        );
+    }
+
+    static async getScanStatusByChannelId(guildId: string, channelId: string) {
+        const scanStatus = await db.getChannelScanStatus(guildId, channelId);
+
+        if (!scanStatus) {
+            console.error(
+                "Scan status not found, guildId: " +
+                    guildId +
+                    ", channelId: " +
+                    channelId
+            );
+            return undefined;
+        }
+
+        return ScanMapper.toScanStatus(scanStatus);
+    }
+
+    // Clips
+    static async getClipsByChannelId(
+        channelId: string,
+        offset: number = 0,
+        limit: number = 50
+    ) {
+        const clips = await db.getClipsByChannelId(channelId, offset, limit);
+
+        if (!clips) {
+            console.error("Clips not found, channelId: " + channelId);
+            return undefined;
+        }
+
+        return clips.map(clip => ClipMapper.toClipWithMetadata(clip));
+    }
+
+    static async getClipById(clipId: string) {
+        const clip = await db.getClipById(clipId);
+
+        if (!clip) {
+            console.error("Clip not found, clipId: " + clipId);
+            return undefined;
+        }
+
+        return ClipMapper.toClipWithMetadata(clip);
+    }
+
+    static async getClipCountByChannelId(channelId: string) {
+        const clipCount = await db.getClipCountByChannelId(channelId);
+
+        if (!clipCount) {
+            console.error("Clip count not found, channelId: " + channelId);
+            return undefined;
+        }
+
+        return clipCount;
+    }
+
+    // Settings
+    static async getGuildSettings(guildId: string) {
+        const settings = await db.getGuildSettings(guildId);
+
+        if (!settings) {
+            console.error("Settings not found, guildId: " + guildId);
+            return undefined;
+        }
+
+        return SettingsMapper.toGuildSettings(settings);
+    }
+}

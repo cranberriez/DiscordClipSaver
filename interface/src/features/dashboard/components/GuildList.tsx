@@ -3,13 +3,13 @@
 
 import { useSession } from "next-auth/react";
 import { useGuilds } from "@/lib/hooks";
-import { canInviteBot } from "@/lib/discord/visibility";
-import type { FullGuild, GuildRelation } from "@/lib/discord/types";
+import { canInviteBotPerms } from "@/lib/discord/visibility";
+import type { GuildRelation } from "@/server/discord/types";
 import { GuildItemComponent } from "./GuildItemComponent";
+import type { GuildResponse } from "@/lib/api/guild";
 
 export default function GuildList() {
     const { data: session } = useSession();
-    const { data, isLoading, error } = useGuilds();
 
     if (!session?.user?.id) {
         return (
@@ -19,6 +19,8 @@ export default function GuildList() {
         );
     }
 
+    const { isLoading, error, data: guilds } = useGuilds(true);
+
     if (isLoading) {
         return (
             <div className="flex items-center justify-center p-8">
@@ -27,45 +29,35 @@ export default function GuildList() {
         );
     }
 
-    if (error) {
+    if (error || !guilds) {
         return (
             <p className="text-sm text-red-500">
-                Failed to load guilds: {error.message}
+                Failed to load guilds: {error?.message}
             </p>
         );
     }
 
     const currentUserId = String(session.user.id);
-    const discordGuilds = data?.guilds ?? [];
-    const dbGuilds = data?.dbGuilds ?? [];
 
-    if (discordGuilds.length === 0) {
+    if (guilds.length === 0) {
         return <p className="text-sm text-red-500">No guilds found.</p>;
     }
 
-    // Build FullGuild[] by joining Discord partial guilds with optional DB rows
-    const dbById = new Map(dbGuilds.map(row => [row.id, row]));
-    const items: FullGuild[] = discordGuilds.filter(Boolean).map(dg => ({
-        discord: dg,
-        db: dg?.id ? dbById.get(dg.id) : undefined,
-    }));
-
     // Categorize
-    const installed: FullGuild[] = items.filter(i => i.db);
-    const installedNoOwner: FullGuild[] = installed.filter(
-        i => i.db?.owner_id == null
+    const installedNoOwner: GuildResponse[] = guilds.filter(
+        i => i.owner_id == null
     );
-    const installedOwnedByYou: FullGuild[] = installed.filter(
-        i => i.db?.owner_id === currentUserId
+    const installedOwnedByYou: GuildResponse[] = guilds.filter(
+        i => i.owner_id === currentUserId
     );
-    const installedOthers: FullGuild[] = installed.filter(
-        i => i.db?.owner_id != null && i.db.owner_id !== currentUserId
+    const installedOthers: GuildResponse[] = guilds.filter(
+        i => i.owner_id != null && i.owner_id !== currentUserId
     );
-    const invitable: FullGuild[] = items.filter(
-        i => !i.db && canInviteBot(i.discord)
+    const invitable: GuildResponse[] = guilds.filter(
+        i => !i.owner_id && canInviteBotPerms(BigInt(i.permissions))
     );
-    const notInstalled: FullGuild[] = items.filter(
-        i => !i.db && !canInviteBot(i.discord)
+    const notInstalled: GuildResponse[] = guilds.filter(
+        i => !i.owner_id && !canInviteBotPerms(BigInt(i.permissions))
     );
 
     return (
@@ -105,7 +97,7 @@ function Section({
     relation,
 }: {
     title: string;
-    items: FullGuild[];
+    items: GuildResponse[];
     relation: GuildRelation;
 }) {
     if (items.length === 0) {
@@ -125,7 +117,7 @@ function Section({
                     <GuildItemComponent
                         guild={guild}
                         relation={relation}
-                        key={guild.discord.id}
+                        key={guild.id}
                     />
                 ))}
             </ul>

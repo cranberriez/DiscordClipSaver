@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireGuildAccess } from "@/lib/middleware/auth";
-import { updateGuildMessageScanEnabled } from "@/lib/db";
+import { updateGuildMessageScanEnabled } from "@/server/db";
 import { ToggleSchema } from "@/lib/schema/guild-toggle.schema";
 
 /**
@@ -9,6 +9,7 @@ import { ToggleSchema } from "@/lib/schema/guild-toggle.schema";
  * Toggle message scanning for the entire guild.
  * Requires guild ownership.
  */
+// TODO: Use data service
 export async function POST(
     req: NextRequest,
     { params }: { params: Promise<{ guildId: string }> }

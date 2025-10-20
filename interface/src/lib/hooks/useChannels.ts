@@ -2,14 +2,12 @@
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api/client";
-import { guildKeys } from "@/lib/queries";
-import type { Channel } from "@/lib/db/types";
 import {
     channelKeys,
     channelStatsByGuildQuery,
     guildChannelsQuery,
     optimisticBulkUpdateChannels,
-} from "../queries/channels";
+} from "../queries/channel";
 
 // ============================================================================
 // Queries
@@ -38,7 +36,7 @@ import {
  * }
  * ```
  */
-export function useChannels(guildId: string, initialData?: Channel[]) {
+export function useChannels(guildId: string) {
     return useQuery(guildChannelsQuery(guildId));
 }
 

@@ -1,10 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAuth } from "@/lib/middleware/auth";
-import { getClipById, updateClipCdnUrl } from "@/lib/db/queries/clips";
+import { DataService } from "@/server/services/data-service";
+import { updateClipCdnUrl } from "@/server/db/queries/clips";
 
 /**
  * POST /api/clips/[clipId]/refresh-cdn
- * 
+ *
  * Refresh the CDN URL for a clip by fetching fresh attachment data from Discord bot.
  * This is called when a CDN URL has expired (typically after 24 hours).
  */
@@ -19,9 +20,9 @@ export async function POST(
     if (auth instanceof NextResponse) return auth;
 
     try {
-        const clip = await getClipById(clipId);
+        const clipWithMetadata = await DataService.getClipById(clipId);
 
-        if (!clip) {
+        if (!clipWithMetadata) {
             return NextResponse.json(
                 { error: "Clip not found" },
                 { status: 404 }
@@ -29,13 +30,12 @@ export async function POST(
         }
 
         // Verify user has access to the guild
-        const hasAccess = auth.userGuilds.some((g) => g.id === clip.guild_id);
+        const hasAccess = auth.userGuilds.some(
+            g => g.id === clipWithMetadata.message.guild_id
+        );
 
         if (!hasAccess) {
-            return NextResponse.json(
-                { error: "Forbidden" },
-                { status: 403 }
-            );
+            return NextResponse.json({ error: "Forbidden" }, { status: 403 });
         }
 
         // Call the bot's FastAPI endpoint to get fresh CDN URLs
@@ -49,15 +49,15 @@ export async function POST(
             );
         }
         console.log(`Calling bot API at: ${botApiUrl}/refresh-cdn`);
-        
+
         const response = await fetch(`${botApiUrl}/refresh-cdn`, {
             method: "POST",
             headers: {
                 "Content-Type": "application/json",
             },
             body: JSON.stringify({
-                message_id: clip.message.id,
-                channel_id: clip.channel_id,
+                message_id: clipWithMetadata.message.id,
+                channel_id: clipWithMetadata.message.channel_id,
             }),
         });
 
@@ -69,23 +69,33 @@ export async function POST(
             } catch {
                 errorData = { error: await response.text() };
             }
-            
+
             console.error("Bot API error:", errorData);
-            
+
             // Pass through MESSAGE_DELETED error type for UI to handle gracefully
-            if (response.status === 410 && errorData.detail?.error_type === "MESSAGE_DELETED") {
+            if (
+                response.status === 410 &&
+                errorData.detail?.error_type === "MESSAGE_DELETED"
+            ) {
                 return NextResponse.json(
-                    { 
+                    {
                         error_type: "MESSAGE_DELETED",
-                        error: errorData.detail.message || "This clip was deleted from Discord"
+                        error:
+                            errorData.detail.message ||
+                            "This clip was deleted from Discord",
                     },
                     { status: 410 }
                 );
             }
-            
+
             // Generic error response for other failures
             return NextResponse.json(
-                { error: errorData.error || errorData.detail || "Failed to refresh CDN URL from bot" },
+                {
+                    error:
+                        errorData.error ||
+                        errorData.detail ||
+                        "Failed to refresh CDN URL from bot",
+                },
                 { status: response.status }
             );
         }
@@ -94,7 +104,7 @@ export async function POST(
 
         // Find the matching attachment by filename
         const attachment = data.attachments.find(
-            (att: any) => att.filename === clip.filename
+            (att: any) => att.filename === clipWithMetadata.clip.filename
         );
 
         if (!attachment) {
@@ -115,19 +125,24 @@ export async function POST(
         });
     } catch (error) {
         console.error("Failed to refresh CDN URL:", error);
-        
+
         // Provide more detailed error information
-        const errorMessage = error instanceof Error ? error.message : "Unknown error";
-        const errorCause = error instanceof Error && 'cause' in error 
-            ? JSON.stringify(error.cause) 
-            : "No cause";
-        
-        console.error("Error details:", { message: errorMessage, cause: errorCause });
-        
+        const errorMessage =
+            error instanceof Error ? error.message : "Unknown error";
+        const errorCause =
+            error instanceof Error && "cause" in error
+                ? JSON.stringify(error.cause)
+                : "No cause";
+
+        console.error("Error details:", {
+            message: errorMessage,
+            cause: errorCause,
+        });
+
         return NextResponse.json(
-            { 
+            {
                 error: "Failed to refresh CDN URL",
-                details: errorMessage 
+                details: errorMessage,
             },
             { status: 500 }
         );

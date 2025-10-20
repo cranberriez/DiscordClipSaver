@@ -2,16 +2,16 @@
 
 import { useScanStatuses, useStartScan } from "@/lib/hooks";
 import { startMultipleChannelScans } from "@/lib/actions/scan";
-import { useState, useMemo } from "react";
-import type { Channel } from "@/lib/db/types";
+import { useState } from "react";
+import { Channel } from "@/lib/api/channel";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
     InfoPanel,
     BulkScanActions,
     HistoricalScanPanel,
     ScanStatusTable,
-    type ChannelWithStatus,
 } from "../index";
+import { ChannelWithStatus } from "../types";
 
 interface ScansPanelProps {
     guildId: string;
@@ -33,52 +33,40 @@ export function ScansPanel({
     const [startingUpdate, setStartingUpdate] = useState(false);
     const [startingHistorical, setStartingHistorical] = useState(false);
 
-    // Convert array to map for easier lookup
-    const scanStatusMap = useMemo(() => {
-        const map: Record<string, (typeof scanStatuses)[0]> = {};
-        scanStatuses.forEach(status => {
-            map[status.channel_id] = status;
-        });
-        return map;
-    }, [scanStatuses]);
-
-    // Merge server channels with scan statuses
-    const channels = useMemo<ChannelWithStatus[]>(() => {
-        return serverChannels.map(channel => ({
-            channelId: channel.id,
-            channelName: channel.name,
-            type: channel.type,
-            messageScanEnabled: channel.message_scan_enabled,
-            status: scanStatusMap[channel.id]?.status || null,
-            messageCount: scanStatusMap[channel.id]?.message_count || 0,
-            totalMessagesScanned:
-                scanStatusMap[channel.id]?.total_messages_scanned || 0,
-            updatedAt: scanStatusMap[channel.id]?.updated_at || null,
-            errorMessage: scanStatusMap[channel.id]?.error_message || null,
-        }));
-    }, [serverChannels, scanStatusMap]);
+    const channels: ChannelWithStatus[] = scanStatuses.map(scan => ({
+        ...serverChannels.find(
+            serverChannel => serverChannel.id === scan.channel_id
+        )!,
+        scanStatus: scan,
+    }));
 
     const unscannedOrFailedCount = channels.filter(
-        ch => (!ch.status || ch.status === "FAILED") && ch.messageScanEnabled
+        ch =>
+            (!ch.scanStatus || ch.scanStatus.status === "FAILED") &&
+            ch.message_scan_enabled
     ).length;
     const activeScans = channels.filter(
-        ch => ch.status === "RUNNING" || ch.status === "PENDING"
+        ch =>
+            ch.scanStatus?.status === "RUNNING" ||
+            ch.scanStatus?.status === "PENDING"
     ).length;
     const successfulScans = channels.filter(
-        ch => ch.status === "SUCCEEDED" && ch.messageScanEnabled
+        ch => ch.scanStatus?.status === "SUCCEEDED" && ch.message_scan_enabled
     ).length;
     const enabledChannelsCount = channels.filter(
-        ch => ch.messageScanEnabled
+        ch => ch.message_scan_enabled
     ).length;
 
     const handleStartScan = (channelId: string, isUpdate: boolean = false) => {
         startScanMutation.mutate({
-            channelId,
-            options: {
-                isUpdate,
-                limit: 100,
-                autoContinue: true,
-            },
+            channel_id: channelId,
+            guild_id: guildId,
+            type: "batch",
+            direction: "forward",
+            limit: 100,
+            auto_continue: true,
+            rescan: "stop",
+            created_at: new Date().toISOString(),
         });
     };
 
@@ -88,10 +76,11 @@ export function ScansPanel({
         // Scan channels that are unscanned or failed
         const toScan = channels.filter(
             ch =>
-                (!ch.status || ch.status === "FAILED") && ch.messageScanEnabled
+                (!ch.scanStatus || ch.scanStatus.status === "FAILED") &&
+                ch.message_scan_enabled
         );
 
-        const channelIds = toScan.map(ch => ch.channelId);
+        const channelIds = toScan.map(ch => ch.id);
 
         if (channelIds.length === 0) {
             alert("No unscanned or failed channels found");
@@ -118,9 +107,9 @@ export function ScansPanel({
         setStartingUpdate(true);
 
         // Update scan for all enabled channels (forward scan from last known position)
-        const toUpdate = channels.filter(ch => ch.messageScanEnabled);
+        const toUpdate = channels.filter(ch => ch.message_scan_enabled);
 
-        const channelIds = toUpdate.map(ch => ch.channelId);
+        const channelIds = toUpdate.map(ch => ch.id);
 
         if (channelIds.length === 0) {
             alert("No channels enabled for scanning");
@@ -151,9 +140,9 @@ export function ScansPanel({
         setStartingHistorical(true);
 
         // Historical scan: backward from the beginning for all enabled channels
-        const toScan = channels.filter(ch => ch.messageScanEnabled);
+        const toScan = channels.filter(ch => ch.message_scan_enabled);
 
-        const channelIds = toScan.map(ch => ch.channelId);
+        const channelIds = toScan.map(ch => ch.id);
 
         if (channelIds.length === 0) {
             alert("No channels enabled for scanning");

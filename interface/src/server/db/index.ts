@@ -18,4 +18,17 @@ export {
 export {
     getChannelsByGuildId,
     bulkUpdateChannelsEnabled,
+    getChannelById,
+    getChannelsByGuildIdWithClipCount,
 } from "./queries/channels";
+export {
+    getClipById,
+    getClipsByChannelId,
+    getClipCountByChannelId,
+    updateClipCdnUrl,
+    isClipExpired,
+} from "./queries/clips";
+export {
+    getChannelScanStatus,
+    getGuildScanStatuses,
+} from "./queries/scan_status";

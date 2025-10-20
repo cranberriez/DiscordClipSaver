@@ -1,11 +1,14 @@
 "use client";
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { api } from "@/lib/api/client";
-import { guildKeys } from "@/lib/queries";
-import { startChannelScan } from "@/lib/actions/scan";
-import type { ChannelScanStatus } from "@/lib/db/types";
-import { scanStatusesQuery, scanStatusQuery } from "../queries/scans";
+import {
+    scanStatusesQuery,
+    scanStatusQuery,
+    scanKeys,
+    optimisticStartScan,
+} from "../queries/scans";
+import { startScan } from "../api/scan";
+import { BatchScanJob } from "../redis";
 
 // ============================================================================
 // Queries
@@ -72,6 +75,11 @@ export function useChannelScanStatus(guildId: string, channelId: string) {
 /**
  * Start a scan for a channel using the server action.
  *
+ * Features:
+ * - Optimistic update: immediately shows PENDING status
+ * - Automatic rollback on error
+ * - Invalidates cache on success to fetch real server state
+ *
  * @param guildId - The guild ID
  *
  * @example
@@ -95,120 +103,36 @@ export function useChannelScanStatus(guildId: string, channelId: string) {
  * ```
  */
 export function useStartScan(guildId: string) {
-    const queryClient = useQueryClient();
+    const qc = useQueryClient();
 
     return useMutation({
-        mutationFn: async ({
-            channelId,
-            options,
-        }: {
-            channelId: string;
-            options?: {
-                isUpdate?: boolean;
-                isHistorical?: boolean;
-                limit?: number;
-                autoContinue?: boolean;
-                rescan?: "stop" | "continue" | "update";
-            };
-        }) => {
-            const result = await startChannelScan(guildId, channelId, options);
+        mutationFn: (payload: BatchScanJob) => startScan(guildId, payload),
 
-            if (!result.success) {
-                throw new Error(result.error);
-            }
-
-            return result;
-        },
-
-        // Optimistic update: immediately show PENDING status
-        onMutate: async ({ channelId }) => {
-            // Cancel any outgoing refetches to avoid overwriting our optimistic update
-            await queryClient.cancelQueries({
-                queryKey: guildKeys.scanStatuses(guildId),
+        onMutate: async ({ channel_id }) => {
+            // Stop any in-flight refetches of scan statuses
+            await qc.cancelQueries({
+                queryKey: scanKeys.statuses(guildId),
             });
 
-            // Snapshot the previous value
-            const previousStatuses = queryClient.getQueryData(
-                guildKeys.scanStatuses(guildId)
-            );
+            // Optimistically update to PENDING status
+            const snapshot = optimisticStartScan(qc, guildId, channel_id);
 
-            // Optimistically update the cache
-            queryClient.setQueryData(
-                guildKeys.scanStatuses(guildId),
-                (old: any) => {
-                    if (!old?.statuses) return old;
-
-                    const statuses = old.statuses as ChannelScanStatus[];
-                    const existingIndex = statuses.findIndex(
-                        s => s.channel_id === channelId
-                    );
-
-                    const optimisticStatus: ChannelScanStatus = {
-                        channel_id: channelId,
-                        guild_id: guildId,
-                        status: "PENDING",
-                        message_count:
-                            existingIndex >= 0
-                                ? statuses[existingIndex].message_count
-                                : 0,
-                        total_messages_scanned:
-                            existingIndex >= 0
-                                ? statuses[existingIndex].total_messages_scanned
-                                : 0,
-                        forward_message_id:
-                            existingIndex >= 0
-                                ? statuses[existingIndex].forward_message_id
-                                : null,
-                        backward_message_id:
-                            existingIndex >= 0
-                                ? statuses[existingIndex].backward_message_id
-                                : null,
-                        created_at:
-                            existingIndex >= 0
-                                ? statuses[existingIndex].created_at
-                                : new Date(),
-                        updated_at: new Date(),
-                        error_message: null,
-                    };
-
-                    if (existingIndex >= 0) {
-                        // Update existing status
-                        const newStatuses = [...statuses];
-                        newStatuses[existingIndex] = optimisticStatus;
-                        return { ...old, statuses: newStatuses };
-                    } else {
-                        // Add new status
-                        return {
-                            ...old,
-                            statuses: [...statuses, optimisticStatus],
-                        };
-                    }
-                }
-            );
-
-            // Return context with previous value for rollback on error
-            return { previousStatuses };
+            return { snapshot };
         },
 
-        // Invalidate scan statuses after starting a scan to get real server state
-        onSuccess: () => {
-            // Invalidate to refetch the actual server state
-            queryClient.invalidateQueries({
-                queryKey: guildKeys.scanStatuses(guildId),
+        onError: (_err, _payload, ctx) => {
+            console.error("Failed to start scan:", _err);
+
+            // Roll back if we had a snapshot
+            const prev = ctx?.snapshot?.prev;
+            if (prev) qc.setQueryData(scanKeys.statuses(guildId), prev);
+        },
+
+        onSettled: () => {
+            // Revalidate canonical data
+            qc.invalidateQueries({
+                queryKey: scanKeys.statuses(guildId),
             });
-        },
-
-        // Rollback on error
-        onError: (error, variables, context) => {
-            console.error("Failed to start scan:", error);
-
-            // Rollback to previous state
-            if (context?.previousStatuses) {
-                queryClient.setQueryData(
-                    guildKeys.scanStatuses(guildId),
-                    context.previousStatuses
-                );
-            }
         },
     });
 }

@@ -1,36 +1,30 @@
 "use client";
 
 import { useMemo } from "react";
-import { useBulkUpdateChannels, useGuild, useChannels } from "@/lib/hooks";
-import type { Channel } from "@/lib/db/types";
+import { useBulkUpdateChannels } from "@/lib/hooks";
 import { Button } from "@/components/ui/button";
 import {
     groupChannelsByType,
     getSortedChannelTypes,
     ChannelTypeHeader,
 } from "@/components/composite/ChannelOrganizer";
+import { Channel } from "@/lib/api/channel";
+import { useChannels } from "@/lib/hooks";
 
 type ChannelsListProps = {
-    channels: Channel[];
     guildId: string;
     guildScanEnabled: boolean;
 };
 
-export function ChannelsList({
-    channels: initialChannels,
-    guildId,
-    guildScanEnabled: initialGuildScanEnabled,
-}: ChannelsListProps) {
+export function ChannelsList({ guildId, guildScanEnabled }: ChannelsListProps) {
     const bulkUpdateMutation = useBulkUpdateChannels(guildId);
 
-    // Track live guild state from React Query cache
-    const { data: guild } = useGuild(guildId);
-    const guildScanEnabled =
-        guild?.message_scan_enabled ?? initialGuildScanEnabled;
-
     // Track live channels state from React Query cache
-    const { data } = useChannels(guildId, initialChannels);
-    const channelsList = data?.channels ?? initialChannels;
+    const channelsQuery = useChannels(guildId);
+    if (!channelsQuery) {
+        return null;
+    }
+    const channelsList = channelsQuery.data || [];
 
     // Group channels by type and sort alphabetically by name within each group
     const groupedChannels = useMemo(
@@ -165,11 +159,6 @@ function ChannelItem({
                     <p className="text-xs text-muted-foreground mt-1">
                         ID: {channel.id}
                     </p>
-                    {channel.topic && (
-                        <p className="text-sm text-muted-foreground mt-1">
-                            {channel.topic}
-                        </p>
-                    )}
                 </div>
                 <div className="flex flex-col items-end gap-1">
                     <span

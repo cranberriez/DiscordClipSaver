@@ -3,16 +3,16 @@ import {
     getUserByDiscordId,
     setGuildOwnerIfUnclaimed,
     consumeInstallIntent,
-} from "@/lib/db";
+} from "@/server/db";
 import { requireAuth } from "@/lib/middleware/auth";
-import { getCurrentUser } from "@/lib/discord/discordClient";
+import { getCurrentUser } from "@/server/discord/discordClient";
 
 /**
  * GET /api/discord/bot/claim
- * 
+ *
  * OAuth callback handler for bot installation.
  * Verifies the install intent and claims guild ownership.
- * 
+ *
  * Query params:
  * - state: Install intent state token
  * - error: OAuth error (if user denied)

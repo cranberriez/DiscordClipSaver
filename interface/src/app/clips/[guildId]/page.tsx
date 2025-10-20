@@ -5,7 +5,7 @@ import { useRouter, useParams } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { ClipGrid, ClipModal } from "@/features/clips/";
-import type { Channel, Clip, Message, Thumbnail } from "@/lib/db/types";
+import type { Channel, Clip, Message, Thumbnail } from "@/lib/api/types";
 
 interface ClipWithMetadata extends Clip {
     message: Message;

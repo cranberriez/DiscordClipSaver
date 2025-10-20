@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireGuildAccess } from "@/lib/middleware/auth";
-import { getClipsByChannelId, getClipCountByChannelId } from "@/lib/db/queries/clips";
+import { DataService } from "@/server/services/data-service";
 
 /**
  * GET /api/guilds/[guildId]/clips?channelId=xxx&limit=50&offset=0
- * 
+ *
  * Get clips for a specific channel with pagination.
  * Requires user to have access to the guild.
  */
@@ -32,18 +32,26 @@ export async function GET(
     }
 
     try {
-        const [clips, totalCount] = await Promise.all([
-            getClipsByChannelId(channelId, limit, offset),
-            getClipCountByChannelId(channelId),
-        ]);
+        const clips = await DataService.getClipsByChannelId(
+            channelId,
+            offset,
+            limit + 1
+        );
+
+        if (!clips) {
+            console.error("Clips not found, channelId: " + channelId);
+            return NextResponse.json(
+                { error: "Clips not found" },
+                { status: 404 }
+            );
+        }
 
         return NextResponse.json({
             clips,
             pagination: {
                 limit,
                 offset,
-                total: totalCount,
-                hasMore: offset + limit < totalCount,
+                hasMore: clips.length > limit,
             },
         });
     } catch (error) {

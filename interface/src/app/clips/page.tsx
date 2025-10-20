@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import type { Guild } from "@/lib/db/types";
+import type { Guild } from "@/lib/api/types";
 
 export default function ClipsPage() {
     const router = useRouter();

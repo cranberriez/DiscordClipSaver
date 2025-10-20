@@ -2,18 +2,18 @@ import "server-only";
 
 /**
  * Authorization Middleware
- * 
+ *
  * Provides utilities for checking user permissions in API routes.
  * Uses cached Discord guild data to avoid rate limiting.
  */
 
 import { NextRequest, NextResponse } from "next/server";
-import { getAuthInfo, type AuthInfo } from "@/lib/auth";
-import { cacheUserScopedGraceful } from "@/lib/cache";
-import { discordFetch, DiscordAPIError } from "@/lib/discord/discordClient";
-import { getSingleGuildById } from "@/lib/db";
-import type { DiscordGuild } from "@/lib/discord/types";
-import type { Guild } from "@/lib/db/types";
+import { getAuthInfo, type AuthInfo } from "@/server/auth";
+import { cacheUserScopedGraceful } from "@/server/cache";
+import { discordFetch, DiscordAPIError } from "@/server/discord/discordClient";
+import { getSingleGuildById } from "@/server/db";
+import type { DiscordGuild } from "@/server/discord/types";
+import type { DbGuild } from "@/server/db/types";
 
 // ============================================================================
 // Types
@@ -24,7 +24,7 @@ export interface AuthContext extends AuthInfo {
 }
 
 export interface GuildAuthContext extends AuthContext {
-    guild: Guild;
+    guild: DbGuild;
     discordGuild: DiscordGuild | undefined;
     isOwner: boolean;
     hasAccess: boolean;
@@ -36,20 +36,20 @@ export interface GuildAuthContext extends AuthContext {
 
 /**
  * Require authentication and fetch user's Discord guilds (cached).
- * 
+ *
  * This is the base middleware that all protected routes should use.
  * Uses aggressive caching with graceful degradation:
  * - Fresh cache for 1 hour (guild membership is relatively static)
  * - Stale cache for 24 hours (served when rate limited or API unavailable)
- * 
+ *
  * This prevents Discord rate limiting while ensuring reasonable freshness.
- * 
+ *
  * @example
  * ```typescript
  * export async function GET(req: NextRequest) {
  *   const auth = await requireAuth(req);
  *   if (auth instanceof NextResponse) return auth; // Error response
- *   
+ *
  *   // auth.discordUserId, auth.accessToken, auth.userGuilds available
  * }
  * ```
@@ -79,7 +79,7 @@ export async function requireAuth(
     // - Stale for 24 hours (serve when rate limited)
     const freshTtlMs = 60 * 60 * 1000; // 1 hour
     const staleTtlMs = 24 * 60 * 60 * 1000; // 24 hours
-    
+
     let userGuilds: DiscordGuild[];
     try {
         userGuilds = await cacheUserScopedGraceful<DiscordGuild[]>(
@@ -93,27 +93,29 @@ export async function requireAuth(
         // Graceful cache should have handled rate limits by returning stale data
         // If we still get an error, it means no cache is available at all
         console.error("Failed to fetch user guilds (no cache available):", err);
-        
+
         // Provide more helpful error message based on error type
         if (err instanceof DiscordAPIError) {
             if (err.status === 429) {
                 return NextResponse.json(
-                    { 
+                    {
                         error: "Discord rate limit exceeded after retries. Please try again in a moment.",
-                        retryAfter: err.retryAfter 
+                        retryAfter: err.retryAfter,
                     },
                     { status: 429 }
                 );
             }
-            
+
             if (err.status === 401 || err.status === 403) {
                 return NextResponse.json(
-                    { error: "Discord authorization failed. Please sign in again." },
+                    {
+                        error: "Discord authorization failed. Please sign in again.",
+                    },
                     { status: 401 }
                 );
             }
         }
-        
+
         return NextResponse.json(
             { error: "Failed to fetch Discord guilds" },
             { status: 502 }
@@ -132,16 +134,16 @@ export async function requireAuth(
 
 /**
  * Require authentication and verify user has access to a specific guild.
- * 
+ *
  * This checks:
  * 1. User is authenticated
  * 2. Guild exists in database
  * 3. User has access to the guild on Discord
- * 
+ *
  * @param req - The request object
  * @param guildId - The guild ID to check access for
  * @param requireOwner - If true, user must be the guild owner in DB
- * 
+ *
  * @example
  * ```typescript
  * export async function GET(
@@ -151,7 +153,7 @@ export async function requireAuth(
  *   const { guildId } = await params;
  *   const auth = await requireGuildAccess(req, guildId);
  *   if (auth instanceof NextResponse) return auth;
- *   
+ *
  *   // auth.guild, auth.isOwner, auth.hasAccess available
  * }
  * ```
@@ -168,14 +170,11 @@ export async function requireGuildAccess(
     // Check if guild exists in database
     const guild = await getSingleGuildById(guildId);
     if (!guild) {
-        return NextResponse.json(
-            { error: "Guild not found" },
-            { status: 404 }
-        );
+        return NextResponse.json({ error: "Guild not found" }, { status: 404 });
     }
 
     // Check if user has access to this guild on Discord
-    const discordGuild = authContext.userGuilds.find((g) => g.id === guildId);
+    const discordGuild = authContext.userGuilds.find(g => g.id === guildId);
     const hasAccess = !!discordGuild;
 
     if (!hasAccess) {
@@ -209,7 +208,7 @@ export async function requireGuildAccess(
 
 /**
  * Check if user has a specific Discord permission in a guild.
- * 
+ *
  * @param discordGuild - The Discord guild object
  * @param permission - The permission bit to check
  */
@@ -242,7 +241,9 @@ export const DiscordPermissions = {
 /**
  * Check if user can manage a guild (owner or has ADMINISTRATOR or MANAGE_GUILD).
  */
-export function canManageGuild(discordGuild: DiscordGuild | undefined): boolean {
+export function canManageGuild(
+    discordGuild: DiscordGuild | undefined
+): boolean {
     return (
         hasPermission(discordGuild, DiscordPermissions.ADMINISTRATOR) ||
         hasPermission(discordGuild, DiscordPermissions.MANAGE_GUILD)

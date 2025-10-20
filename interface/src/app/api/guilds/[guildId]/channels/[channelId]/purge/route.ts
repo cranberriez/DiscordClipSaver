@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireGuildAccess } from "@/lib/middleware/auth";
 import { queueChannelPurge } from "@/lib/redis/jobs";
-import { db } from "@/lib/db";
+import { DataService } from "@/server/services/data-service";
 
 /**
  * POST /api/guilds/[guildId]/channels/[channelId]/purge
@@ -29,13 +29,7 @@ export async function POST(
     if (auth instanceof NextResponse) return auth;
 
     // Check if channel exists and belongs to this guild
-    const channel = await db
-        .selectFrom("channel")
-        .selectAll()
-        .where("id", "=", channelId)
-        .where("guild_id", "=", guildId)
-        .where("deleted_at", "is", null)
-        .executeTakeFirst();
+    const channel = await DataService.getChannelById(guildId, channelId);
 
     if (!channel) {
         return NextResponse.json(

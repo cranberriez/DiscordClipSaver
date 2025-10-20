@@ -1,6 +1,6 @@
 import DynamicSettingsForm from "@/features/dashboard/settings/components/DynamicSettingsForm";
 import { DangerZone } from "@/features/dashboard/settings/components/DangerZone";
-import { getSingleGuildById } from "@/lib/db/queries/guilds";
+import { DataService } from "@/server/services/data-service";
 import { redirect } from "next/navigation";
 
 type PageProps = {
@@ -11,14 +11,11 @@ export default async function SettingsPage({ params }: PageProps) {
     const { guildId } = await params;
 
     // Fetch guild data for danger zone
-    const guild = await getSingleGuildById(guildId);
+    const guild = await DataService.getSingleGuildById(guildId);
 
     if (!guild) {
         redirect("/dashboard");
     }
-
-    // Note: Channels are now fetched client-side using TanStack Query
-    // This allows the data to be reused across multiple components
 
     return (
         <div className="space-y-8">

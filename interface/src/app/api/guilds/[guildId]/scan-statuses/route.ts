@@ -5,7 +5,7 @@
  */
 import { NextRequest, NextResponse } from "next/server";
 import { requireGuildAccess } from "@/lib/middleware/auth";
-import { getGuildScanStatuses } from "@/lib/db/queries/scan_status";
+import { DataService } from "@/server/services/data-service";
 
 export async function GET(
     req: NextRequest,
@@ -19,9 +19,9 @@ export async function GET(
 
     try {
         // Returns only scan statuses for channels that have been scanned
-        const statuses = await getGuildScanStatuses(guildId);
+        const statuses = await DataService.getScanStatusesByGuildId(guildId);
 
-        return NextResponse.json({ statuses });
+        return NextResponse.json(statuses);
     } catch (error) {
         console.error("Failed to fetch scan statuses:", error);
         return NextResponse.json(

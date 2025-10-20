@@ -1,9 +1,7 @@
 import { queryOptions } from "@tanstack/react-query";
-import type { GuildSettingsResponse } from "../types/types";
-import { getGuilds, getGuild, getGuildSettings } from "../api/guild";
-import type { GuildsListResponse } from "../api/guild";
-import type { Guild } from "@/lib/db/types";
-import { toggleScanning } from "../api/guild";
+import { getGuildSettings, type GuildSettingsResponse } from "../api/settings";
+import { getGuilds, getGuild, toggleScanning } from "../api/guild";
+import type { Guild, GuildResponse } from "../api/guild";
 
 // ============================================================================
 // Query Keys Factory
@@ -28,10 +26,10 @@ export const guildKeys = {
 // Queries
 // ============================================================================
 
-export const guildsQuery = () =>
-    queryOptions<GuildsListResponse[]>({
+export const guildsQuery = (includePerms?: boolean) =>
+    queryOptions<GuildResponse[]>({
         queryKey: guildKeys.list(),
-        queryFn: () => getGuilds(),
+        queryFn: () => getGuilds(includePerms),
         staleTime: 60_000,
     });
 

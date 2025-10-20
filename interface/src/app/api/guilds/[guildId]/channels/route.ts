@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireGuildAccess } from "@/lib/middleware/auth";
 import { filterChannelsByPermissions } from "@/lib/middleware/channels";
-import { getChannelsByGuildId } from "@/lib/db";
+import { DataService } from "@/server/services/data-service";
 
 /**
  * GET /api/guilds/[guildId]/channels
- * 
+ *
  * Get all channels for a guild that the user has access to.
  * Channels are filtered based on the user's Discord permissions.
  */
@@ -21,7 +21,7 @@ export async function GET(
 
     // Get all channels for this guild
     try {
-        const allChannels = await getChannelsByGuildId(guildId);
+        const allChannels = await DataService.getChannelsByGuildId(guildId);
 
         // Filter channels based on user's Discord permissions
         const visibleChannels = filterChannelsByPermissions(
@@ -29,7 +29,7 @@ export async function GET(
             auth.discordGuild
         );
 
-        return NextResponse.json({ channels: visibleChannels });
+        return NextResponse.json(visibleChannels);
     } catch (error) {
         console.error("Failed to fetch channels:", error);
         return NextResponse.json(

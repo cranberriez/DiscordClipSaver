@@ -1,5 +1,4 @@
-import { getSingleGuildById } from "@/lib/db/queries/guilds";
-import { getChannelsByGuildId } from "@/lib/db/queries/channels";
+import { DataService } from "@/server/services/data-service";
 
 type PageProps = {
     params: Promise<{ guildId: string }>;
@@ -9,10 +8,8 @@ export default async function DebugPage({ params }: PageProps) {
     const { guildId } = await params;
 
     // Fetch all data for debugging
-    const [guild, channels] = await Promise.all([
-        getSingleGuildById(guildId),
-        getChannelsByGuildId(guildId),
-    ]);
+    const guild = await DataService.getSingleGuildById(guildId);
+    const channels = await DataService.getChannelsByGuildId(guildId);
 
     return (
         <div className="space-y-6">

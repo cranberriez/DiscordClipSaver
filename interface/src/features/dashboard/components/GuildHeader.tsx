@@ -1,7 +1,7 @@
 "use client";
 
 import { useToggleScanning, useGuild } from "@/lib/hooks";
-import type { Guild } from "@/lib/db/types";
+import type { Guild } from "@/lib/api/types";
 import {
     Card,
     CardContent,
@@ -17,9 +17,6 @@ interface GuildHeaderProps {
     guildId: string;
     guildName: string;
     ownerId: string | null;
-    messageScanEnabled: boolean;
-    lastMessageScanAt: Date | null;
-    createdAt: Date;
     iconUrl: string | null;
 }
 
@@ -27,25 +24,16 @@ export function GuildHeader({
     guildId,
     guildName,
     ownerId,
-    messageScanEnabled: initialMessageScanEnabled,
-    lastMessageScanAt,
-    createdAt,
     iconUrl,
 }: GuildHeaderProps) {
     // Use React Query to track live state
-    const { data: guild } = useGuild(guildId, {
-        id: guildId,
-        name: guildName,
-        owner_id: ownerId,
-        message_scan_enabled: initialMessageScanEnabled,
-        last_message_scan_at: lastMessageScanAt,
-        created_at: createdAt,
-        icon_url: iconUrl,
-    } as Guild);
+    const { data: guild } = useGuild(guildId);
+    if (!guild) {
+        return null;
+    }
 
     const toggleMutation = useToggleScanning(guildId);
-    const messageScanEnabled =
-        guild?.message_scan_enabled ?? initialMessageScanEnabled;
+    const messageScanEnabled = guild.message_scan_enabled;
 
     const handleToggle = () => {
         toggleMutation.mutate(!messageScanEnabled);
@@ -68,7 +56,7 @@ export function GuildHeader({
                     <p className="text-sm text-muted-foreground">
                         Guild ID: {guildId}
                     </p>
-                    {ownerId === guild?.owner_id && (
+                    {ownerId === guild.owner_id && (
                         <Badge variant="destructive">Owner</Badge>
                     )}
                 </div>

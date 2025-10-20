@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireGuildAccess } from "@/lib/middleware/auth";
-import { db } from "@/lib/db";
+import { DataService } from "@/server/services/data-service";
 
 /**
  * GET /api/guilds/[guildId]/channels/stats
@@ -20,33 +20,17 @@ export async function GET(
     const auth = await requireGuildAccess(req, guildId);
     if (auth instanceof NextResponse) return auth;
 
-    // Fetch channels with clip counts
-    const channelsRaw = await db
-        .selectFrom("channel")
-        .select(eb => [
-            "channel.id",
-            "channel.name",
-            "channel.position",
-            "channel.type",
-            eb
-                .selectFrom("clip")
-                .select(eb2 => eb2.fn.countAll<string>().as("count"))
-                .whereRef("clip.channel_id", "=", "channel.id")
-                .as("clip_count"),
-        ])
-        .where("channel.guild_id", "=", guildId)
-        .where("channel.deleted_at", "is", null)
-        .orderBy("channel.name", "asc")
-        .execute();
+    const channels = await DataService.getChannelsByGuildIdWithClipCount(
+        guildId
+    );
 
-    // Convert clip_count from string to number
-    const channels = channelsRaw.map(channel => ({
-        id: channel.id,
-        name: channel.name,
-        position: channel.position,
-        type: channel.type,
-        clip_count: parseInt(channel.clip_count || "0", 10),
-    }));
+    if (!channels) {
+        console.error("Channels not found, guildId: " + guildId);
+        return NextResponse.json(
+            { error: "Channels not found" },
+            { status: 404 }
+        );
+    }
 
     return NextResponse.json(channels);
 }

@@ -1,5 +1,25 @@
-import type { Channel } from "@/lib/db/types";
 import { api } from "@/lib/api/client";
+
+export type ChannelType = "text" | "voice" | "category" | "forum";
+
+export interface Channel {
+    id: string;
+    guild_id: string;
+    name: string;
+    type: ChannelType;
+    position: number;
+    parent_id: string | null;
+    nsfw: boolean;
+    clip_count?: number;
+    message_scan_enabled: boolean;
+    last_channel_sync_at: Date | null;
+    next_allowed_channel_sync_at: Date | null;
+    channel_sync_cooldown_level: number;
+    purge_cooldown: Date | null;
+    created_at: Date;
+    updated_at: Date;
+    deleted_at: Date | null;
+}
 
 /**
  * Response from GET /api/guilds/[guildId]/channels
@@ -11,13 +31,7 @@ export interface ChannelsListResponse {
 /**
  * Channel with clip count for statistics
  */
-export interface ChannelWithStats {
-    id: string;
-    name: string;
-    position: number;
-    type: string;
-    clip_count: number;
-}
+export type ChannelWithStats = Channel & { clip_count: number };
 
 /**
  * Response from GET /api/guilds/[guildId]/channels/stats
@@ -38,7 +52,7 @@ export interface BulkUpdateChannelsResponse {
 // ========================================================================
 export async function listChannels(guildId: string): Promise<Channel[]> {
     const res = await api.channels.list(guildId); // GET /api/guilds/[guildId]/channels
-    return res.channels;
+    return res;
 }
 
 export function listChannelsStats(

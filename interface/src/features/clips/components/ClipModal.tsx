@@ -10,7 +10,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { VideoPlayer } from "./VideoPlayer";
-import type { Clip, Message, Thumbnail } from "@/lib/db/types";
+import type { Clip, Message, Thumbnail } from "@/lib/api/types";
 
 interface ClipWithMetadata extends Clip {
     message: Message;
@@ -31,49 +31,69 @@ export function ClipModal({ clip, onClose }: ClipModalProps) {
     const [isDeleted, setIsDeleted] = useState(false);
     const [deletionMessage, setDeletionMessage] = useState<string>("");
 
-    const refreshCdnUrl = useCallback(async (isFromPlaybackError: boolean = false) => {
-        try {
-            setRefreshing(true);
-            setHasPlaybackError(false);
-            setIsDeleted(false);
-            const response = await fetch(`/api/clips/${clip.id}/refresh-cdn`, {
-                method: "POST",
-            });
+    const refreshCdnUrl = useCallback(
+        async (isFromPlaybackError: boolean = false) => {
+            try {
+                setRefreshing(true);
+                setHasPlaybackError(false);
+                setIsDeleted(false);
+                const response = await fetch(
+                    `/api/clips/${clip.id}/refresh-cdn`,
+                    {
+                        method: "POST",
+                    }
+                );
 
-            if (!response.ok) {
-                const errorData = await response.json();
-                
-                // Check if this is a deletion error
-                if (response.status === 410 && errorData.error_type === "MESSAGE_DELETED") {
-                    setIsDeleted(true);
-                    setDeletionMessage(errorData.error || "This clip was deleted from Discord and is no longer available");
-                    return; // Don't throw, just set state
+                if (!response.ok) {
+                    const errorData = await response.json();
+
+                    // Check if this is a deletion error
+                    if (
+                        response.status === 410 &&
+                        errorData.error_type === "MESSAGE_DELETED"
+                    ) {
+                        setIsDeleted(true);
+                        setDeletionMessage(
+                            errorData.error ||
+                                "This clip was deleted from Discord and is no longer available"
+                        );
+                        return; // Don't throw, just set state
+                    }
+
+                    const errorMsg =
+                        errorData.details ||
+                        errorData.error ||
+                        "Failed to refresh CDN URL";
+                    throw new Error(errorMsg);
                 }
-                
-                const errorMsg = errorData.details || errorData.error || "Failed to refresh CDN URL";
-                throw new Error(errorMsg);
-            }
 
-            const data = await response.json();
-            setVideoUrl(data.cdn_url);
-            // Reset error flags on success
-            setErrorRefreshAttempted(false);
-        } catch (error) {
-            console.error("Error refreshing CDN URL:", error);
-            
-            // If this was triggered by playback error, show playback error UI
-            // If this was user-triggered, show alert
-            if (isFromPlaybackError) {
-                setHasPlaybackError(true);
-            } else {
-                const errorMsg = error instanceof Error ? error.message : "Unknown error";
-                alert(`Failed to refresh video URL: ${errorMsg}\n\nPlease check that the bot is running and try again.`);
-                setHasPlaybackError(true);
+                const data = await response.json();
+                setVideoUrl(data.cdn_url);
+                // Reset error flags on success
+                setErrorRefreshAttempted(false);
+            } catch (error) {
+                console.error("Error refreshing CDN URL:", error);
+
+                // If this was triggered by playback error, show playback error UI
+                // If this was user-triggered, show alert
+                if (isFromPlaybackError) {
+                    setHasPlaybackError(true);
+                } else {
+                    const errorMsg =
+                        error instanceof Error
+                            ? error.message
+                            : "Unknown error";
+                    alert(
+                        `Failed to refresh video URL: ${errorMsg}\n\nPlease check that the bot is running and try again.`
+                    );
+                    setHasPlaybackError(true);
+                }
+            } finally {
+                setRefreshing(false);
             }
-        } finally {
-            setRefreshing(false);
-        }
-    }, [clip.id]);
+        },
+        [clip.id]
+    );
 
     const handleVideoError = useCallback(async () => {
         // When video fails to load, first check if Discord CDN returns 404
@@ -82,11 +102,11 @@ export function ClipModal({ clip, onClose }: ClipModalProps) {
             setHasPlaybackError(true);
             return;
         }
-        
+
         try {
             // Check if Discord CDN URL is valid (HEAD request = no download)
-            const cdnCheck = await fetch(videoUrl, { method: 'HEAD' });
-            
+            const cdnCheck = await fetch(videoUrl, { method: "HEAD" });
+
             if (cdnCheck.status === 404 || cdnCheck.status === 403) {
                 // Discord CDN says file is gone - likely deleted
                 // Now check with bot to confirm and queue cleanup
@@ -109,7 +129,7 @@ export function ClipModal({ clip, onClose }: ClipModalProps) {
         const expiresAt = new Date(clip.expires_at);
         const now = new Date();
         const isExpired = expiresAt < now;
-        
+
         if (isExpired && !autoRefreshed) {
             setAutoRefreshed(true);
             refreshCdnUrl(false);
@@ -128,11 +148,11 @@ export function ClipModal({ clip, onClose }: ClipModalProps) {
     };
 
     const getLargeThumbnail = (): string | null => {
-        const largeThumb = clip.thumbnails.find((t) => t.size_type === "large");
+        const largeThumb = clip.thumbnails.find(t => t.size === "large");
         if (largeThumb) {
             // Use API route to serve thumbnails from storage
             // storage_path is like "thumbnails/guild_xxx/file.webp"
-            return `/api/storage/${largeThumb.storage_path}`;
+            return `/api/storage/${largeThumb.url}`;
         }
         return null;
     };
@@ -155,7 +175,9 @@ export function ClipModal({ clip, onClose }: ClipModalProps) {
                             </div>
                         ) : isDeleted ? (
                             <div className="aspect-video bg-destructive/10 border-2 border-destructive/20 rounded-lg flex flex-col items-center justify-center gap-4 p-6">
-                                <div className="text-destructive text-5xl">🗑️</div>
+                                <div className="text-destructive text-5xl">
+                                    🗑️
+                                </div>
                                 <p className="text-destructive font-semibold text-lg text-center">
                                     Clip Deleted
                                 </p>
@@ -163,7 +185,9 @@ export function ClipModal({ clip, onClose }: ClipModalProps) {
                                     {deletionMessage}
                                 </p>
                                 <p className="text-muted-foreground text-xs text-center max-w-md mt-2">
-                                    The original Discord message was deleted. This clip and its data will be removed from the database automatically.
+                                    The original Discord message was deleted.
+                                    This clip and its data will be removed from
+                                    the database automatically.
                                 </p>
                             </div>
                         ) : hasPlaybackError ? (
@@ -172,7 +196,8 @@ export function ClipModal({ clip, onClose }: ClipModalProps) {
                                     Video cannot be played
                                 </p>
                                 <p className="text-sm text-muted-foreground text-center px-4">
-                                    This may be due to an unsupported video codec (HEVC/H.265) or a playback error.
+                                    This may be due to an unsupported video
+                                    codec (HEVC/H.265) or a playback error.
                                 </p>
                                 <div className="flex gap-2">
                                     <Button
@@ -183,7 +208,9 @@ export function ClipModal({ clip, onClose }: ClipModalProps) {
                                         Retry
                                     </Button>
                                     <Button
-                                        onClick={() => window.open(videoUrl, '_blank')}
+                                        onClick={() =>
+                                            window.open(videoUrl, "_blank")
+                                        }
                                         variant="default"
                                     >
                                         Download Video
@@ -203,59 +230,97 @@ export function ClipModal({ clip, onClose }: ClipModalProps) {
                     {/* Metadata */}
                     <div className="space-y-4">
                         <div>
-                            <h3 className="font-semibold mb-2">Clip Information</h3>
+                            <h3 className="font-semibold mb-2">
+                                Clip Information
+                            </h3>
                             <div className="grid grid-cols-2 gap-2 text-sm">
                                 <div>
-                                    <span className="text-muted-foreground">File Size:</span>
-                                    <span className="ml-2">{formatFileSize(clip.file_size)}</span>
-                                </div>
-                                <div>
-                                    <span className="text-muted-foreground">Resolution:</span>
-                                    <span className="ml-2">{clip.resolution || "Unknown"}</span>
-                                </div>
-                                <div>
-                                    <span className="text-muted-foreground">Duration:</span>
+                                    <span className="text-muted-foreground">
+                                        File Size:
+                                    </span>
                                     <span className="ml-2">
-                                        {clip.duration ? `${clip.duration.toFixed(1)}s` : "Unknown"}
+                                        {formatFileSize(clip.file_size)}
                                     </span>
                                 </div>
                                 <div>
-                                    <span className="text-muted-foreground">MIME Type:</span>
-                                    <span className="ml-2">{clip.mime_type}</span>
+                                    <span className="text-muted-foreground">
+                                        Resolution:
+                                    </span>
+                                    <span className="ml-2">
+                                        {clip.resolution || "Unknown"}
+                                    </span>
                                 </div>
                                 <div>
-                                    <span className="text-muted-foreground">Created:</span>
-                                    <span className="ml-2">{formatDate(clip.created_at)}</span>
+                                    <span className="text-muted-foreground">
+                                        Duration:
+                                    </span>
+                                    <span className="ml-2">
+                                        {clip.duration
+                                            ? `${clip.duration.toFixed(1)}s`
+                                            : "Unknown"}
+                                    </span>
                                 </div>
                                 <div>
-                                    <span className="text-muted-foreground">Expires:</span>
-                                    <span className="ml-2">{formatDate(clip.expires_at)}</span>
+                                    <span className="text-muted-foreground">
+                                        MIME Type:
+                                    </span>
+                                    <span className="ml-2">
+                                        {clip.mime_type}
+                                    </span>
+                                </div>
+                                <div>
+                                    <span className="text-muted-foreground">
+                                        Created:
+                                    </span>
+                                    <span className="ml-2">
+                                        {formatDate(clip.created_at)}
+                                    </span>
+                                </div>
+                                <div>
+                                    <span className="text-muted-foreground">
+                                        Expires:
+                                    </span>
+                                    <span className="ml-2">
+                                        {formatDate(clip.expires_at)}
+                                    </span>
                                 </div>
                             </div>
                         </div>
 
                         <div>
-                            <h3 className="font-semibold mb-2">Message Information</h3>
+                            <h3 className="font-semibold mb-2">
+                                Message Information
+                            </h3>
                             <div className="space-y-2 text-sm">
                                 <div>
-                                    <span className="text-muted-foreground">Message ID:</span>
+                                    <span className="text-muted-foreground">
+                                        Message ID:
+                                    </span>
                                     <code className="ml-2 bg-muted px-2 py-1 rounded text-xs">
                                         {clip.message.id}
                                     </code>
                                 </div>
                                 <div>
-                                    <span className="text-muted-foreground">Author ID:</span>
+                                    <span className="text-muted-foreground">
+                                        Author ID:
+                                    </span>
                                     <code className="ml-2 bg-muted px-2 py-1 rounded text-xs">
                                         {clip.message.author_id}
                                     </code>
                                 </div>
                                 <div>
-                                    <span className="text-muted-foreground">Timestamp:</span>
-                                    <span className="ml-2">{formatDate(clip.message.timestamp)}</span>
+                                    <span className="text-muted-foreground">
+                                        Timestamp:
+                                    </span>
+                                    <span className="ml-2">
+                                        {formatDate(clip.message.created_at)}
+                                    </span>
                                 </div>
                                 {clip.message.content && (
                                     <div>
-                                        <span className="text-muted-foreground">Content:</span>
+                                        <span className="text-muted-foreground">
+                                            Content:
+                                        </span>
                                         <p className="mt-1 bg-muted p-2 rounded text-xs whitespace-pre-wrap">
                                             {clip.message.content}
                                         </p>
@@ -267,9 +332,10 @@ export function ClipModal({ clip, onClose }: ClipModalProps) {
                         <div>
                             <h3 className="font-semibold mb-2">Thumbnails</h3>
                             <div className="flex gap-2">
-                                {clip.thumbnails.map((thumb) => (
-                                    <Badge key={thumb.id} variant="secondary">
-                                        {thumb.size_type} ({thumb.width}x{thumb.height})
+                                {clip.thumbnails.map(thumb => (
+                                    <Badge key={thumb.url} variant="secondary">
+                                        {thumb.size} ({thumb.width}x
+                                        {thumb.height})
                                     </Badge>
                                 ))}
                                 {clip.thumbnails.length === 0 && (
@@ -291,13 +357,13 @@ export function ClipModal({ clip, onClose }: ClipModalProps) {
                                         clip: {
                                             id: clip.id,
                                             filename: clip.filename,
-                                            file_size: clip.file_size.toString(),
+                                            file_size:
+                                                clip.file_size.toString(),
                                             mime_type: clip.mime_type,
                                             duration: clip.duration,
                                             resolution: clip.resolution,
                                             cdn_url: clip.cdn_url,
                                             expires_at: clip.expires_at,
-                                            thumbnail_status: clip.thumbnail_status,
                                             created_at: clip.created_at,
                                         },
                                         message: clip.message,

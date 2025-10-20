@@ -3,7 +3,7 @@ import type { NextAuthOptions } from "next-auth";
 import DiscordProvider from "next-auth/providers/discord";
 import type { DiscordProfile } from "next-auth/providers/discord";
 
-import { upsertUser } from "@/lib/db";
+import { upsertUser } from "@/server/db";
 
 export const authOptions: NextAuthOptions = {
     providers: [

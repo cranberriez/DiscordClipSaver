@@ -1,13 +1,13 @@
 import { getDb } from "../db";
 import type {
-    InstallIntent,
-    NewInstallIntent,
-    InstallIntentPartial,
+    DbInstallIntent,
+    DbNewInstallIntent,
+    DbInstallIntentPartial,
 } from "../types";
 
 export async function consumeInstallIntent(
-    params: InstallIntentPartial
-): Promise<InstallIntent | null> {
+    params: DbInstallIntentPartial
+): Promise<DbInstallIntent | null> {
     const intent = await getDb()
         .deleteFrom("install_intent")
         .where("state", "=", params.state)
@@ -18,11 +18,11 @@ export async function consumeInstallIntent(
         .executeTakeFirst();
 
     if (!intent) return null;
-    return intent satisfies InstallIntent;
+    return intent satisfies DbInstallIntent;
 }
 
 export async function createInstallIntent(
-    params: NewInstallIntent
+    params: DbNewInstallIntent
 ): Promise<Date> {
     const newIntent = await getDb()
         .insertInto("install_intent")

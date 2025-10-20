@@ -5,7 +5,7 @@ import { getToken } from "next-auth/jwt";
 import type { NextRequest } from "next/server";
 import type { Session } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
-import { getUserByDiscordId } from "@/lib/db";
+import { getUserByDiscordId } from "@/server/db";
 
 export type AuthInfo = {
     session: Session;

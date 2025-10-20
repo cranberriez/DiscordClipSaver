@@ -4,7 +4,6 @@
  */
 
 export interface BaseJob {
-    job_id: string;
     guild_id: string;
     channel_id: string;
     created_at: string; // ISO datetime string
@@ -35,12 +34,21 @@ export interface PurgeGuildJob extends BaseJob {
     type: "purge_guild";
 }
 
-export type Job = BatchScanJob | MessageScanJob | PurgeChannelJob | PurgeGuildJob;
+export type Job =
+    | BatchScanJob
+    | MessageScanJob
+    | PurgeChannelJob
+    | PurgeGuildJob;
 
 /**
  * Scan status from database
  */
-export type ScanStatus = "PENDING" | "RUNNING" | "SUCCEEDED" | "FAILED" | "CANCELLED";
+export type ScanStatus =
+    | "PENDING"
+    | "RUNNING"
+    | "SUCCEEDED"
+    | "FAILED"
+    | "CANCELLED";
 
 export interface ChannelScanStatus {
     guild_id: string;

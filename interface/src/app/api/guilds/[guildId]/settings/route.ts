@@ -1,11 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireGuildAccess } from "@/lib/middleware/auth";
-import { getGuildSettings, upsertGuildSettings } from "@/lib/db";
+import { upsertGuildSettings } from "@/server/db";
 import {
     UpdateGuildSettingsPayloadSchema,
     GuildSettingsSchema,
     DefaultChannelSettingsSchema,
 } from "@/lib/schema/guild-settings.schema";
+import { DataService } from "@/server/services/data-service";
 
 /**
  * GET /api/guilds/[guildId]/settings
@@ -24,7 +25,7 @@ export async function GET(
     if (auth instanceof NextResponse) return auth;
 
     // Get guild settings
-    const settings = await getGuildSettings(guildId);
+    const settings = await DataService.getGuildSettings(guildId);
 
     if (!settings) {
         return NextResponse.json({
@@ -47,6 +48,7 @@ export async function GET(
  * Update guild settings. This performs a partial update (merge) with existing settings.
  * Requires guild ownership.
  */
+// TODO: Upsert settigns into database by using data service
 export async function PATCH(
     req: NextRequest,
     { params }: { params: Promise<{ guildId: string }> }

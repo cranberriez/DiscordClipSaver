@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireGuildAccess } from "@/lib/middleware/auth";
 import { queueGuildPurge } from "@/lib/redis/jobs";
-import { db } from "@/lib/db";
+import { db } from "@/server/db";
 
 /**
  * POST /api/guilds/[guildId]/purge
@@ -37,9 +37,7 @@ export async function POST(
     // Get clip count for confirmation
     const stats = await db
         .selectFrom("clip")
-        .select((eb) => [
-            eb.fn.count<number>("id").as("clip_count"),
-        ])
+        .select(eb => [eb.fn.count<number>("id").as("clip_count")])
         .where("guild_id", "=", guildId)
         .executeTakeFirst();
 

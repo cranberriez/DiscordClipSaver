@@ -94,47 +94,7 @@ export interface UseGuildSettingsReturn {
     ) => void;
 }
 
-/**
- * Full-featured guild settings hook with builder pattern.
- *
- * This replaces the old useGuildSettings hook and provides the same API,
- * but uses TanStack Query under the hood.
- *
- * @example
- * ```tsx
- * function GuildSettingsPage({ guildId }: { guildId: string }) {
- *   const {
- *     settings,
- *     defaultChannelSettings,
- *     loading,
- *     saving,
- *     error,
- *     hasChanges,
- *     setGuildSetting,
- *     save,
- *     reset,
- *   } = useGuildSettingsWithBuilder(guildId);
- *
- *   if (loading) return <div>Loading...</div>;
- *   if (error) return <div>Error: {error}</div>;
- *
- *   return (
- *     <form onSubmit={(e) => { e.preventDefault(); save(); }}>
- *       <input
- *         value={settings?.tz ?? 'UTC'}
- *         onChange={(e) => setGuildSetting('tz', e.target.value)}
- *       />
- *       <button type="submit" disabled={!hasChanges || saving}>
- *         {saving ? 'Saving...' : 'Save'}
- *       </button>
- *       <button type="button" onClick={reset} disabled={!hasChanges}>
- *         Reset
- *       </button>
- *     </form>
- *   );
- * }
- * ```
- */
+// TODO: Replace with api > query > mutator pattern
 export function useGuildSettingsWithBuilder(
     guildId: string
 ): UseGuildSettingsReturn {

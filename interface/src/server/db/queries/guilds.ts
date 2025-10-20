@@ -1,7 +1,7 @@
 import { getDb } from "../db";
-import type { Guild } from "../types";
+import type { DbGuild } from "../types";
 
-export async function getGuildsByIds(guildIds: string[]): Promise<Guild[]> {
+export async function getGuildsByIds(guildIds: string[]): Promise<DbGuild[]> {
     if (guildIds.length === 0) return [];
 
     const guilds = await getDb()
@@ -16,7 +16,7 @@ export async function getGuildsByIds(guildIds: string[]): Promise<Guild[]> {
 
 export async function getSingleGuildById(
     guildId: string
-): Promise<Guild | null> {
+): Promise<DbGuild | null> {
     const guild = await getDb()
         .selectFrom("guild")
         .selectAll()

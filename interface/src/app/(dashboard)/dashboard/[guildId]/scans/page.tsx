@@ -1,4 +1,4 @@
-import { getChannelsByGuildId } from "@/lib/db/queries/channels";
+import { DataService } from "@/server/services/data-service";
 import { ScansPanel } from "@/features/dashboard/scans";
 
 type PageProps = {
@@ -9,7 +9,7 @@ export default async function ScansPage({ params }: PageProps) {
     const { guildId } = await params;
 
     // Fetch channels for the scans panel
-    const channels = await getChannelsByGuildId(guildId);
+    const channels = await DataService.getChannelsByGuildId(guildId);
 
-    return <ScansPanel guildId={guildId} channels={channels} />;
+    return <ScansPanel guildId={guildId} channels={channels || []} />;
 }

@@ -27,7 +27,7 @@ export function ScanStatusTable({
 }: ScanStatusTableProps) {
     // Group channels by type and sort alphabetically by name within each group
     const groupedChannels = useMemo(
-        () => groupChannelsByType(channels, "channelName"),
+        () => groupChannelsByType(channels, "name"),
         [channels]
     );
 
@@ -89,18 +89,16 @@ export function ScanStatusTable({
                                     {/* Channel rows */}
                                     {channelsOfType.map(channel => (
                                         <tr
-                                            key={channel.channelId}
+                                            key={channel.id}
                                             className="border-t hover:bg-muted/50"
                                         >
                                             <td className="p-3">
                                                 <div className="flex flex-col gap-1">
                                                     <div className="flex items-center gap-2">
                                                         <span className="font-mono text-base">
-                                                            {
-                                                                channel.channelName
-                                                            }
+                                                            {channel.name}
                                                         </span>
-                                                        {!channel.messageScanEnabled && (
+                                                        {!channel.message_scan_enabled && (
                                                             <Badge
                                                                 variant="destructive"
                                                                 className="text-xs"
@@ -109,12 +107,15 @@ export function ScanStatusTable({
                                                             </Badge>
                                                         )}
                                                     </div>
-                                                    {channel.errorMessage && (
+                                                    {channel.scanStatus
+                                                        ?.error_message && (
                                                         <div className="flex items-start gap-1.5 text-xs text-destructive">
                                                             <AlertCircle className="h-3.5 w-3.5 mt-0.5 flex-shrink-0" />
                                                             <span className="line-clamp-2">
                                                                 {
-                                                                    channel.errorMessage
+                                                                    channel
+                                                                        .scanStatus
+                                                                        ?.error_message
                                                                 }
                                                             </span>
                                                         </div>
@@ -123,50 +124,58 @@ export function ScanStatusTable({
                                             </td>
                                             <td className="p-3">
                                                 <StatusBadge
-                                                    status={channel.status}
+                                                    status={
+                                                        channel.scanStatus
+                                                            ?.status || ""
+                                                    }
                                                 />
                                             </td>
                                             <td className="p-3 text-right text-muted-foreground text-sm">
-                                                {channel.messageCount || "-"}
+                                                {channel.scanStatus
+                                                    ?.total_messages_scanned ||
+                                                    "-"}
                                             </td>
                                             <td className="p-3 text-right text-muted-foreground text-sm">
-                                                {channel.totalMessagesScanned ||
+                                                {channel.scanStatus
+                                                    ?.total_messages_scanned ||
                                                     "-"}
                                             </td>
                                             <td className="p-3 text-right text-muted-foreground text-sm">
                                                 {formatRelativeTime(
-                                                    channel.updatedAt
+                                                    channel.updated_at
                                                 )}
                                             </td>
                                             <td className="p-3 text-right">
                                                 <Button
                                                     onClick={() =>
-                                                        onStartScan(
-                                                            channel.channelId
-                                                        )
+                                                        onStartScan(channel.id)
                                                     }
                                                     disabled={
-                                                        !channel.messageScanEnabled ||
+                                                        !channel.message_scan_enabled ||
                                                         isPending ||
-                                                        channel.status ===
+                                                        channel.scanStatus
+                                                            ?.status ===
                                                             "RUNNING" ||
-                                                        channel.status ===
+                                                        channel.scanStatus
+                                                            ?.status ===
                                                             "PENDING"
                                                     }
                                                     variant="outline"
                                                     size="sm"
                                                     title={
-                                                        !channel.messageScanEnabled
+                                                        !channel.message_scan_enabled
                                                             ? "Enable scanning in Overview tab first"
                                                             : ""
                                                     }
                                                 >
-                                                    {!channel.messageScanEnabled
+                                                    {!channel.message_scan_enabled
                                                         ? "Disabled"
-                                                        : channel.status ===
+                                                        : channel.scanStatus
+                                                              ?.status ===
                                                           "RUNNING"
                                                         ? "Running..."
-                                                        : channel.status ===
+                                                        : channel.scanStatus
+                                                              ?.status ===
                                                           "PENDING"
                                                         ? "Queued..."
                                                         : "Scan"}

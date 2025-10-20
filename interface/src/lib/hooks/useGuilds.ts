@@ -2,8 +2,8 @@
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api/client";
-import type { Guild } from "@/lib/db/types";
 import { guildKeys, guildQuery, guildsQuery } from "@/lib/queries";
+import { Guild } from "../api/guild";
 
 // ============================================================================
 // Queries
@@ -30,8 +30,8 @@ import { guildKeys, guildQuery, guildsQuery } from "@/lib/queries";
  * }
  * ```
  */
-export function useGuilds() {
-    return useQuery(guildsQuery());
+export function useGuilds(includePerms?: boolean) {
+    return useQuery(guildsQuery(includePerms));
 }
 
 /**
@@ -43,9 +43,8 @@ export function useGuilds() {
  * 2. Create a GET /api/guilds/[guildId] route
  *
  * @param guildId - The guild ID
- * @param initialData - Optional initial data from Server Component
  */
-export function useGuild(guildId: string, initialData?: Guild) {
+export function useGuild(guildId: string) {
     return useQuery(guildQuery(guildId));
 }
 

@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import type { Guild, Channel, Clip, Message, Thumbnail } from "@/lib/db/types";
+import type { Guild, Channel, Clip, Message, Thumbnail } from "@/lib/api/types";
 import { ClipGrid } from "./ClipGrid";
 import { ClipModal } from "./ClipModal";
 

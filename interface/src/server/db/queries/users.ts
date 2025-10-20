@@ -1,12 +1,12 @@
 import { getDb } from "../db";
-import type { User, NewUser, UserUpdate } from "../types";
+import type { DbUser, DbNewUser, DbUserUpdate } from "../types";
 
-export async function upsertUser(params: NewUser): Promise<User> {
+export async function upsertUser(params: DbNewUser): Promise<DbUser> {
     if (!params.id) throw new Error("User ID is required");
     if (!params.username) throw new Error("Username is required");
     if (!params.discriminator) throw new Error("Discriminator is required");
 
-    const newUser: NewUser = {
+    const newUser: DbNewUser = {
         id: params.id,
         username: params.username,
         discriminator: params.discriminator,
@@ -16,7 +16,7 @@ export async function upsertUser(params: NewUser): Promise<User> {
     return getDb()
         .insertInto("user")
         .values(newUser)
-        .onConflict((oc) =>
+        .onConflict(oc =>
             oc.column("id").doUpdateSet({
                 username: newUser.username,
                 discriminator: newUser.discriminator,
@@ -27,7 +27,7 @@ export async function upsertUser(params: NewUser): Promise<User> {
         .executeTakeFirstOrThrow();
 }
 
-export async function updateUser(params: UserUpdate): Promise<User> {
+export async function updateUser(params: DbUserUpdate): Promise<DbUser> {
     if (!params.id) throw new Error("User ID is required");
 
     return getDb()
@@ -40,7 +40,7 @@ export async function updateUser(params: UserUpdate): Promise<User> {
 
 export async function getUserByDiscordId(
     discordUserId: string
-): Promise<User | null> {
+): Promise<DbUser | null> {
     const row = await getDb()
         .selectFrom("user")
         .selectAll()

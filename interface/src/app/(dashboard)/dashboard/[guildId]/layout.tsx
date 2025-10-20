@@ -1,5 +1,5 @@
-import { getAuthInfo } from "@/lib/auth";
-import { getSingleGuildById } from "@/lib/db/queries/guilds";
+import { getAuthInfo } from "@/server/auth";
+import { DataService } from "@/server/services/data-service";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import {
@@ -27,8 +27,8 @@ export default async function GuildLayout({ children, params }: LayoutProps) {
         redirect("/dashboard");
     }
 
-    // Fetch guild data from database
-    const guild = await getSingleGuildById(guildId);
+    // Fetch guild from database
+    const guild = await DataService.getSingleGuildById(guildId);
 
     if (!guild) {
         return (
@@ -99,7 +99,7 @@ export default async function GuildLayout({ children, params }: LayoutProps) {
             />
 
             {/* Tab Navigation */}
-            <GuildTabNav guildId={guildId} />
+            <GuildTabNav guildId={guild.id} />
 
             {/* Tab Content */}
             <div className="mt-6">{children}</div>

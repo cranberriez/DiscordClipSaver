@@ -4,8 +4,10 @@
  */
 import { NextRequest, NextResponse } from "next/server";
 import { requireGuildAccess } from "@/lib/middleware/auth";
-import { getChannelScanStatus } from "@/lib/db/queries/scan_status";
+import { DataService } from "@/server/services/data-service";
 
+// GET /api/guilds/[guildId]/channels/[channelId]/scan-status
+// Returns the scan status for a specific channel
 export async function GET(
     req: NextRequest,
     { params }: { params: Promise<{ guildId: string; channelId: string }> }
@@ -17,7 +19,10 @@ export async function GET(
     if (auth instanceof NextResponse) return auth;
 
     try {
-        const status = await getChannelScanStatus(guildId, channelId);
+        const status = await DataService.getScanStatusByChannelId(
+            guildId,
+            channelId
+        );
 
         return NextResponse.json({ status });
     } catch (error) {

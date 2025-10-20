@@ -1,16 +1,6 @@
-import type { ChannelType } from "@/lib/db/types";
+import type { Channel } from "@/lib/api/channel";
+import type { ScanStatus } from "@/lib/api/scan";
 
-// Re-export for convenience
-export type { ChannelType };
-
-export interface ChannelWithStatus {
-    channelId: string;
-    channelName: string;
-    type: ChannelType;
-    messageScanEnabled: boolean;
-    status: string | null;
-    messageCount: number;
-    totalMessagesScanned: number;
-    updatedAt: Date | null;
-    errorMessage: string | null;
+export interface ChannelWithStatus extends Channel {
+    scanStatus: ScanStatus | null;
 }

@@ -1,6 +1,6 @@
 "use client";
 
-import type { Clip, Message, Thumbnail } from "@/lib/db/types";
+import type { Clip, Message, Thumbnail } from "@/lib/api/types";
 
 interface ClipWithMetadata extends Clip {
     message: Message;
@@ -14,11 +14,11 @@ interface ClipGridProps {
 
 export function ClipGrid({ clips, onClipClick }: ClipGridProps) {
     const getThumbnailUrl = (clip: ClipWithMetadata): string | null => {
-        const smallThumb = clip.thumbnails.find((t) => t.size_type === "small");
+        const smallThumb = clip.thumbnails.find(t => t.size === "small");
         if (smallThumb) {
             // Use API route to serve thumbnails from storage
             // storage_path is like "thumbnails/guild_xxx/file.webp"
-            return `/api/storage/${smallThumb.storage_path}`;
+            return `/api/storage/${smallThumb.url}`;
         }
         return null;
     };
@@ -39,9 +39,9 @@ export function ClipGrid({ clips, onClipClick }: ClipGridProps) {
 
     return (
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-            {clips.map((clip) => {
+            {clips.map(clip => {
                 const thumbnailUrl = getThumbnailUrl(clip);
-                
+
                 return (
                     <div
                         key={clip.id}
@@ -79,7 +79,7 @@ export function ClipGrid({ clips, onClipClick }: ClipGridProps) {
                                     </svg>
                                 </div>
                             )}
-                            
+
                             {/* Duration overlay */}
                             {clip.duration && (
                                 <div className="absolute bottom-2 right-2 bg-black/75 text-white text-xs px-2 py-1 rounded">
@@ -90,12 +90,17 @@ export function ClipGrid({ clips, onClipClick }: ClipGridProps) {
 
                         {/* Info */}
                         <div className="p-3">
-                            <p className="text-sm font-medium truncate" title={clip.filename}>
+                            <p
+                                className="text-sm font-medium truncate"
+                                title={clip.filename}
+                            >
                                 {clip.filename}
                             </p>
                             <div className="flex items-center justify-between mt-1 text-xs text-muted-foreground">
                                 <span>{formatFileSize(clip.file_size)}</span>
-                                {clip.resolution && <span>{clip.resolution}</span>}
+                                {clip.resolution && (
+                                    <span>{clip.resolution}</span>
+                                )}
                             </div>
                         </div>
                     </div>

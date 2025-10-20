@@ -1,17 +1,17 @@
-import type { FullGuild, GuildRelation } from "@/lib/discord/types";
+import type { Guild } from "@/lib/api/types";
 import Link from "next/link";
 
 export function GuildItemComponent({
     guild,
     relation,
 }: {
-    guild: FullGuild;
-    relation: GuildRelation;
+    guild: Guild;
+    relation: string;
 }) {
-    const id = guild.discord.id;
-    const name = guild.discord.name ?? guild.db?.name ?? "Unknown";
-    const owner = guild.db?.owner_id ?? null;
-    const icon = guild.discord.icon ?? null;
+    const id = guild.id;
+    const name = guild.name ?? "Unknown";
+    const owner = guild.owner_id ?? null;
+    const icon = guild.icon_url ?? null;
 
     return (
         <li key={id} className="rounded border border-white/40 gap-4 p-3 flex">
@@ -38,7 +38,7 @@ function RelationButton({
     relation,
 }: {
     guildId: string;
-    relation: GuildRelation;
+    relation: string;
 }) {
     const relations = {
         owned: {
@@ -55,7 +55,7 @@ function RelationButton({
         other: { text: "View", link: "#", colorClass: "text-blue-200" },
     };
 
-    const rel = relations[relation];
+    const rel = relations[relation as keyof typeof relations];
 
     // Use a normal anchor for API routes to force full browser navigation and avoid RSC fetch errors
     if (relation === "invitable") {

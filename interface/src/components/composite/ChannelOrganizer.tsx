@@ -1,6 +1,6 @@
 import React from "react";
 import { Hash, Volume2, MessageSquare, Folder } from "lucide-react";
-import type { ChannelType } from "@/lib/db/types";
+import type { ChannelType } from "@/lib/api/types";
 
 export interface ChannelTypeConfig {
     label: string;

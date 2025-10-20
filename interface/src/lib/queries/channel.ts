@@ -1,12 +1,11 @@
 import { queryOptions } from "@tanstack/react-query";
 import { api } from "@/lib/api/client";
-import type { Channel } from "@/lib/db/types";
+import type { Channel } from "@/lib/api/channel";
 import { QueryClient } from "@tanstack/react-query";
 
 export const channelKeys = {
     all: ["channels"] as const,
-    byGuild: (guildId: string) =>
-        [...channelKeys.all, "guild", guildId] as const,
+    byGuild: (guildId: string) => [...channelKeys.all, guildId] as const,
     statsByGuild: (guildId: string) =>
         [...channelKeys.byGuild(guildId), "stats"] as const,
     // add more as you grow:

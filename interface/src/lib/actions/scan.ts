@@ -4,9 +4,9 @@
 "use server";
 
 import { startBatchScan } from "../redis/jobs";
-import { getChannelScanStatus } from "../db/queries/scan_status";
-import { getChannelsByGuildId } from "../db/queries/channels";
-import { getSingleGuildById } from "../db/queries/guilds";
+import { getChannelScanStatus } from "@/server/db/queries/scan_status";
+import { getChannelsByGuildId } from "@/server/db/queries/channels";
+import { getSingleGuildById } from "@/server/db/queries/guilds";
 
 export type ScanResult =
     | { success: true; jobId: string; messageId: string }
@@ -53,7 +53,10 @@ export async function startChannelScan(
         // Check if scan is already running
         const existingStatus = await getChannelScanStatus(guildId, channelId);
 
-        if (existingStatus?.status === "RUNNING" || existingStatus?.status === "PENDING") {
+        if (
+            existingStatus?.status === "RUNNING" ||
+            existingStatus?.status === "PENDING"
+        ) {
             return {
                 success: false,
                 error: "Scan is already running for this channel",
@@ -79,7 +82,10 @@ export async function startChannelScan(
             afterMessageId = existingStatus?.forward_message_id || undefined;
         } else {
             // Initial/continuation scan: use channel settings or continue from last position
-            if (existingStatus?.forward_message_id || existingStatus?.backward_message_id) {
+            if (
+                existingStatus?.forward_message_id ||
+                existingStatus?.backward_message_id
+            ) {
                 // Has scan history - continue from where we left off
                 // TODO: Read channel scan_mode setting to determine preferred direction
                 // For now, default to forward continuation

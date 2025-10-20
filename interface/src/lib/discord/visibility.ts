@@ -4,7 +4,7 @@
  * Pure utility functions for checking Discord permissions.
  * Safe to use in both client and server components.
  */
-import type { DiscordGuild } from "@/lib/discord/types";
+import type { DiscordGuild } from "@/server/discord/types";
 
 const ADMINISTRATOR = BigInt(8); // 1 << 3
 const MANAGE_GUILD = BigInt(32); // 1 << 5
@@ -18,6 +18,9 @@ export function canInviteBot(g: DiscordGuild): boolean {
     if (g.owner) return true;
     if (!g.permissions) return false;
     const perms = BigInt((g.permissions as string | number | undefined) ?? 0);
+    return (perms & (ADMINISTRATOR | MANAGE_GUILD)) !== BigInt(0);
+}
+export function canInviteBotPerms(perms: bigint): boolean {
     return (perms & (ADMINISTRATOR | MANAGE_GUILD)) !== BigInt(0);
 }
 

@@ -1,15 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
 import crypto from "node:crypto";
 import { requireAuth } from "@/lib/middleware/auth";
-import { createInstallIntent } from "@/lib/db";
-import { buildInviteUrl } from "@/lib/discord/generateBotInvite";
+import { createInstallIntent } from "@/server/db";
+import { buildInviteUrl } from "@/server/discord/generateBotInvite";
 
 /**
  * GET /api/discord/bot/invite
- * 
+ *
  * Generate a Discord bot invite URL with state tracking.
  * Creates an install intent that expires in 10 minutes.
- * 
+ *
  * Query params:
  * - guildId: The Discord guild ID to invite the bot to
  */
