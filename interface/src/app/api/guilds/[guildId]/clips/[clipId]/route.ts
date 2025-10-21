@@ -21,7 +21,7 @@ export async function GET(
     if (auth instanceof NextResponse) return auth;
 
     try {
-        let clipWithMetadata = await DataService.getClipById(clipId);
+        const clipWithMetadata = await DataService.getClipById(clipId);
 
         if (!clipWithMetadata) {
             return NextResponse.json(
@@ -36,15 +36,18 @@ export async function GET(
         }
 
         // Check if CDN URL has expired and refresh if needed
-        const isExpired = new Date(clipWithMetadata.clip.expires_at) < new Date();
-        
+        const isExpired =
+            new Date(clipWithMetadata.clip.expires_at) < new Date();
+
         if (isExpired) {
             console.log(`CDN URL expired for clip ${clipId}, refreshing...`);
-            
+
             try {
                 const botApiUrl = process.env.BOT_API_URL;
                 if (!botApiUrl) {
-                    console.error("BOT_API_URL not configured, returning expired URL");
+                    console.error(
+                        "BOT_API_URL not configured, returning expired URL"
+                    );
                     return NextResponse.json(clipWithMetadata);
                 }
 
@@ -60,29 +63,46 @@ export async function GET(
                 if (response.ok) {
                     const data = await response.json();
                     const attachment = data.attachments.find(
-                        (att: any) => att.filename === clipWithMetadata!.clip.filename
+                        (att: any) =>
+                            att.filename === clipWithMetadata!.clip.filename
                     );
 
                     if (attachment) {
                         // Update database with new CDN URL
-                        const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
-                        await updateClipCdnUrl(clipId, attachment.url, expiresAt);
-                        
+                        const expiresAt = new Date(
+                            Date.now() + 24 * 60 * 60 * 1000
+                        );
+                        await updateClipCdnUrl(
+                            clipId,
+                            attachment.url,
+                            expiresAt
+                        );
+
                         // Update the response object
                         clipWithMetadata.clip.cdn_url = attachment.url;
                         clipWithMetadata.clip.expires_at = expiresAt;
-                        
-                        console.log(`Successfully refreshed CDN URL for clip ${clipId}`);
+
+                        console.log(
+                            `Successfully refreshed CDN URL for clip ${clipId}`
+                        );
                     } else {
-                        console.warn(`Attachment not found for clip ${clipId}, returning expired URL`);
+                        console.warn(
+                            `Attachment not found for clip ${clipId}, returning expired URL`
+                        );
                     }
                 } else {
                     const errorData = await response.json().catch(() => ({}));
-                    console.warn(`Failed to refresh CDN URL for clip ${clipId}:`, errorData);
+                    console.warn(
+                        `Failed to refresh CDN URL for clip ${clipId}:`,
+                        errorData
+                    );
                     // Continue with expired URL rather than failing the request
                 }
             } catch (refreshError) {
-                console.error(`Error refreshing CDN URL for clip ${clipId}:`, refreshError);
+                console.error(
+                    `Error refreshing CDN URL for clip ${clipId}:`,
+                    refreshError
+                );
                 // Continue with expired URL rather than failing the request
             }
         }
