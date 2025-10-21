@@ -15,13 +15,17 @@ export async function getClipsByGuildId(
     limit: number = 50,
     offset: number = 0
 ): Promise<ClipWithMetadata[]> {
+    // Fetch extra clips to account for potential filtering (deleted messages)
+    // We fetch 2x limit to ensure we have enough after filtering
+    const fetchLimit = Math.min(limit * 2, 200); // Cap at 200 to avoid excessive queries
+    
     const clips = await getDb()
         .selectFrom("clip")
         .selectAll("clip")
         .where("clip.guild_id", "=", guildId)
         .where("clip.deleted_at", "is", null)
         .orderBy("clip.created_at", "desc")
-        .limit(limit)
+        .limit(fetchLimit)
         .offset(offset)
         .execute();
 
@@ -38,6 +42,7 @@ export async function getClipsByGuildId(
             .selectFrom("message")
             .selectAll()
             .where("id", "in", messageIds)
+            .where("deleted_at", "is", null)
             .execute(),
         getDb()
             .selectFrom("thumbnail")
@@ -57,12 +62,17 @@ export async function getClipsByGuildId(
         thumbnailMap.get(thumb.clip_id)!.push(thumb);
     }
 
-    // Combine data
-    return clips.map(clip => ({
-        clip: clip,
-        message: messageMap.get(clip.message_id)!,
-        thumbnails: thumbnailMap.get(clip.id) || [],
-    }));
+    // Combine data - filter out clips without valid messages, then slice to requested limit
+    const validClips = clips
+        .filter(clip => messageMap.has(clip.message_id))
+        .map(clip => ({
+            clip: clip,
+            message: messageMap.get(clip.message_id)!,
+            thumbnails: thumbnailMap.get(clip.id) || [],
+        }));
+    
+    // Return exactly the requested limit (API will add +1 for hasMore check)
+    return validClips.slice(0, limit);
 }
 
 /**
@@ -73,13 +83,17 @@ export async function getClipsByChannelId(
     limit: number = 50,
     offset: number = 0
 ): Promise<ClipWithMetadata[]> {
+    // Fetch extra clips to account for potential filtering (deleted messages)
+    // We fetch 2x limit to ensure we have enough after filtering
+    const fetchLimit = Math.min(limit * 2, 200); // Cap at 200 to avoid excessive queries
+    
     const clips = await getDb()
         .selectFrom("clip")
         .selectAll("clip")
         .where("clip.channel_id", "=", channelId)
         .where("clip.deleted_at", "is", null)
         .orderBy("clip.created_at", "desc")
-        .limit(limit)
+        .limit(fetchLimit)
         .offset(offset)
         .execute();
 
@@ -96,6 +110,7 @@ export async function getClipsByChannelId(
             .selectFrom("message")
             .selectAll()
             .where("id", "in", messageIds)
+            .where("deleted_at", "is", null)
             .execute(),
         getDb()
             .selectFrom("thumbnail")
@@ -115,12 +130,17 @@ export async function getClipsByChannelId(
         thumbnailMap.get(thumb.clip_id)!.push(thumb);
     }
 
-    // Combine data
-    return clips.map(clip => ({
-        clip: clip,
-        message: messageMap.get(clip.message_id)!,
-        thumbnails: thumbnailMap.get(clip.id) || [],
-    }));
+    // Combine data - filter out clips without valid messages, then slice to requested limit
+    const validClips = clips
+        .filter(clip => messageMap.has(clip.message_id))
+        .map(clip => ({
+            clip: clip,
+            message: messageMap.get(clip.message_id)!,
+            thumbnails: thumbnailMap.get(clip.id) || [],
+        }));
+    
+    // Return exactly the requested limit (API will add +1 for hasMore check)
+    return validClips.slice(0, limit);
 }
 
 /**
@@ -143,6 +163,7 @@ export async function getClipById(
             .selectFrom("message")
             .selectAll()
             .where("id", "=", clip.message_id)
+            .where("deleted_at", "is", null)
             .executeTakeFirst(),
         getDb()
             .selectFrom("thumbnail")

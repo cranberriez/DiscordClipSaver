@@ -6,7 +6,6 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { ClipGrid, ClipModal } from "@/features/clips";
 import { ClipFilters } from "@/features/clips/components/ClipFilters";
-import { useClipFilters } from "@/features/clips";
 import { useClipsInfinite, useChannelStats, useGuild } from "@/lib/hooks";
 import type { FullClip } from "@/lib/api/clip";
 import { PageContainer } from "@/components/layout";
@@ -31,11 +30,13 @@ export default function GuildClipsPage() {
     const guildId = params.guildId as string;
 
     const [selectedClip, setSelectedClip] = useState<FullClip | null>(null);
+    const [selectedChannelId, setSelectedChannelId] = useState<string | null>(null);
+    const [searchQuery, setSearchQuery] = useState("");
 
     // Fetch guild info
     const { data: guild } = useGuild(guildId);
 
-    // Fetch all clips for the guild
+    // Fetch clips with server-side channel filtering
     const {
         data,
         fetchNextPage,
@@ -43,7 +44,11 @@ export default function GuildClipsPage() {
         isFetchingNextPage,
         isLoading,
         error,
-    } = useClipsInfinite({ guildId, limit: 50 });
+    } = useClipsInfinite({ 
+        guildId, 
+        channelId: selectedChannelId || undefined,
+        limit: 50 
+    });
 
     // Fetch channels for filter dropdown (only show channels with clips)
     const { data: channelsData = [] } = useChannelStats(guildId);
@@ -52,9 +57,18 @@ export default function GuildClipsPage() {
     // Flatten paginated clips
     const allClips = data?.pages.flatMap(page => page.clips) ?? [];
 
-    // Apply client-side filters
-    const { filters, setFilters, filteredClips, totalClips, filteredCount } =
-        useClipFilters(allClips);
+    // Apply client-side search filter only (channel filter is server-side)
+    const filteredClips = searchQuery
+        ? allClips.filter(clip => {
+              const messageContent = clip.message.content?.toLowerCase() || "";
+              const filename = clip.clip.filename.toLowerCase();
+              const query = searchQuery.toLowerCase();
+              return messageContent.includes(query) || filename.includes(query);
+          })
+        : allClips;
+
+    const totalClips = allClips.length;
+    const filteredCount = filteredClips.length;
 
     return (
         <PageContainer maxWidth="7xl">
@@ -93,8 +107,11 @@ export default function GuildClipsPage() {
                     <div className="lg:col-span-1">
                         <ClipFilters
                             channels={channels}
-                            filters={filters}
-                            onFiltersChange={setFilters}
+                            filters={{ channelId: selectedChannelId, searchQuery }}
+                            onFiltersChange={(newFilters) => {
+                                setSelectedChannelId(newFilters.channelId);
+                                setSearchQuery(newFilters.searchQuery);
+                            }}
                             totalClips={totalClips}
                             filteredClips={filteredCount}
                         />
@@ -104,17 +121,18 @@ export default function GuildClipsPage() {
                     <div className="lg:col-span-3">
                         <Card>
                             <CardContent className="pt-6">
-                                {isLoading && allClips.length === 0 ? (
+                                {isLoading ? (
                                     <div className="text-center py-12 text-muted-foreground">
                                         Loading clips...
                                     </div>
                                 ) : filteredClips.length === 0 ? (
                                     <div className="text-center py-12 text-muted-foreground">
-                                        {totalClips === 0 ? (
+                                        {allClips.length === 0 ? (
                                             <>
                                                 <p>
-                                                    No clips found in this
-                                                    server.
+                                                    {selectedChannelId
+                                                        ? "No clips found in this channel."
+                                                        : "No clips found in this server."}
                                                 </p>
                                                 <p className="text-sm mt-2">
                                                     Clips will appear here after
@@ -124,11 +142,10 @@ export default function GuildClipsPage() {
                                         ) : (
                                             <>
                                                 <p>
-                                                    No clips match your filters.
+                                                    No clips match your search.
                                                 </p>
                                                 <p className="text-sm mt-2">
-                                                    Try adjusting your search or
-                                                    channel filter.
+                                                    Try adjusting your search query.
                                                 </p>
                                             </>
                                         )}
