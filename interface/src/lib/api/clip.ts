@@ -40,11 +40,24 @@ export interface FullClip {
     thumbnail: Thumbnail;
 }
 
-export interface ClipList {
+export interface ClipListResponse {
     clips: FullClip[];
     pagination: {
         limit: number;
         offset: number;
+        total: number;
         hasMore: boolean;
     };
+}
+
+export interface ClipListParams {
+    guildId: string;
+    channelId?: string; // Optional - if omitted, returns all clips for guild
+    limit?: number;
+    offset?: number;
+}
+
+export interface RefreshCdnResponse {
+    cdn_url: string;
+    expires_at: string;
 }

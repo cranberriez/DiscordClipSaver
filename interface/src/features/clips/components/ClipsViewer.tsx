@@ -1,128 +1,50 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import type { Guild, Channel, Clip, Message, Thumbnail } from "@/lib/api/types";
 import { ClipGrid } from "./ClipGrid";
 import { ClipModal } from "./ClipModal";
+import { useGuilds, useChannels, useClipsInfinite } from "@/lib/hooks";
+import type { FullClip } from "@/lib/api/clip";
 
-interface ClipWithMetadata extends Clip {
-    message: Message;
-    thumbnails: Thumbnail[];
-}
-
-interface ClipsResponse {
-    clips: ClipWithMetadata[];
-    pagination: {
-        limit: number;
-        offset: number;
-        total: number;
-        hasMore: boolean;
-    };
-}
-
+/**
+ * ClipsViewer - Legacy component for browsing clips
+ *
+ * This component uses the new TanStack Query hooks but maintains
+ * the original three-step selection UI (guild → channel → clips).
+ *
+ * For a better UX, consider using the new /clips routes with
+ * client-side filtering instead.
+ */
 export function ClipsViewer() {
-    const [guilds, setGuilds] = useState<Guild[]>([]);
-    const [channels, setChannels] = useState<Channel[]>([]);
-    const [clips, setClips] = useState<ClipWithMetadata[]>([]);
     const [selectedGuild, setSelectedGuild] = useState<string | null>(null);
     const [selectedChannel, setSelectedChannel] = useState<string | null>(null);
-    const [selectedClip, setSelectedClip] = useState<ClipWithMetadata | null>(
-        null
+    const [selectedClip, setSelectedClip] = useState<FullClip | null>(null);
+
+    // Use TanStack Query hooks
+    const { data: guilds, isLoading: guildsLoading } = useGuilds();
+    const { data: channels, isLoading: channelsLoading } = useChannels(
+        selectedGuild || ""
     );
-    const [loading, setLoading] = useState(false);
-    const [pagination, setPagination] = useState({
-        offset: 0,
+    const {
+        data,
+        fetchNextPage,
+        hasNextPage,
+        isFetchingNextPage,
+        isLoading: clipsLoading,
+    } = useClipsInfinite({
+        guildId: selectedGuild || "",
+        channelId: selectedChannel || undefined,
         limit: 50,
-        total: 0,
-        hasMore: false,
     });
 
-    // Fetch guilds on mount
-    useEffect(() => {
-        fetchGuilds();
-    }, []);
+    // Flatten paginated clips
+    const allClips = data?.pages.flatMap(page => page.clips) ?? [];
 
-    // Fetch channels when guild is selected
-    useEffect(() => {
-        if (selectedGuild) {
-            fetchChannels(selectedGuild);
-        } else {
-            setChannels([]);
-            setSelectedChannel(null);
-        }
-    }, [selectedGuild]);
-
-    // Fetch clips when channel is selected
-    useEffect(() => {
-        if (selectedGuild && selectedChannel) {
-            fetchClips(selectedGuild, selectedChannel, 0);
-        } else {
-            setClips([]);
-        }
-    }, [selectedChannel]);
-
-    const fetchGuilds = async () => {
-        try {
-            const response = await fetch("/api/guilds");
-            if (!response.ok) throw new Error("Failed to fetch guilds");
-            const data = await response.json();
-            setGuilds(data.guilds);
-        } catch (error) {
-            console.error("Error fetching guilds:", error);
-        }
-    };
-
-    const fetchChannels = async (guildId: string) => {
-        try {
-            setLoading(true);
-            const response = await fetch(`/api/guilds/${guildId}/channels`);
-            if (!response.ok) throw new Error("Failed to fetch channels");
-            const data = await response.json();
-            setChannels(data.channels);
-        } catch (error) {
-            console.error("Error fetching channels:", error);
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    const fetchClips = async (
-        guildId: string,
-        channelId: string,
-        offset: number
-    ) => {
-        try {
-            setLoading(true);
-            const response = await fetch(
-                `/api/guilds/${guildId}/clips?channelId=${channelId}&limit=50&offset=${offset}`
-            );
-            if (!response.ok) throw new Error("Failed to fetch clips");
-            const data: ClipsResponse = await response.json();
-
-            if (offset === 0) {
-                setClips(data.clips);
-            } else {
-                setClips(prev => [...prev, ...data.clips]);
-            }
-
-            setPagination(data.pagination);
-        } catch (error) {
-            console.error("Error fetching clips:", error);
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    const loadMore = () => {
-        if (selectedGuild && selectedChannel && pagination.hasMore) {
-            fetchClips(
-                selectedGuild,
-                selectedChannel,
-                pagination.offset + pagination.limit
-            );
-        }
+    const handleGuildSelect = (guildId: string) => {
+        setSelectedGuild(guildId);
+        setSelectedChannel(null);
     };
 
     return (
@@ -133,36 +55,43 @@ export function ClipsViewer() {
                     <CardTitle>Select Server</CardTitle>
                 </CardHeader>
                 <CardContent>
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                        {guilds.map(guild => (
-                            <Button
-                                key={guild.id}
-                                variant={
-                                    selectedGuild === guild.id
-                                        ? "default"
-                                        : "outline"
-                                }
-                                className="h-auto py-4 justify-start"
-                                onClick={() => {
-                                    setSelectedGuild(guild.id);
-                                    setSelectedChannel(null);
-                                }}
-                            >
-                                <div className="flex items-center gap-3">
-                                    {guild.icon_url && (
-                                        <img
-                                            src={guild.icon_url}
-                                            alt={guild.name}
-                                            className="w-8 h-8 rounded-full"
-                                        />
-                                    )}
-                                    <span className="font-medium">
-                                        {guild.name}
-                                    </span>
-                                </div>
-                            </Button>
-                        ))}
-                    </div>
+                    {guildsLoading ? (
+                        <div className="text-center py-8 text-muted-foreground">
+                            Loading servers...
+                        </div>
+                    ) : !guilds || guilds.length === 0 ? (
+                        <div className="text-center py-8 text-muted-foreground">
+                            No servers found
+                        </div>
+                    ) : (
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                            {guilds.map(guild => (
+                                <Button
+                                    key={guild.id}
+                                    variant={
+                                        selectedGuild === guild.id
+                                            ? "default"
+                                            : "outline"
+                                    }
+                                    className="h-auto py-4 justify-start"
+                                    onClick={() => handleGuildSelect(guild.id)}
+                                >
+                                    <div className="flex items-center gap-3">
+                                        {guild.icon_url && (
+                                            <img
+                                                src={guild.icon_url}
+                                                alt={guild.name}
+                                                className="w-8 h-8 rounded-full"
+                                            />
+                                        )}
+                                        <span className="font-medium">
+                                            {guild.name}
+                                        </span>
+                                    </div>
+                                </Button>
+                            ))}
+                        </div>
+                    )}
                 </CardContent>
             </Card>
 
@@ -173,26 +102,36 @@ export function ClipsViewer() {
                         <CardTitle>Select Channel</CardTitle>
                     </CardHeader>
                     <CardContent>
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-2">
-                            {channels.map(channel => (
-                                <Button
-                                    key={channel.id}
-                                    variant={
-                                        selectedChannel === channel.id
-                                            ? "default"
-                                            : "outline"
-                                    }
-                                    className="justify-start"
-                                    onClick={() =>
-                                        setSelectedChannel(channel.id)
-                                    }
-                                >
-                                    <span className="truncate">
-                                        #{channel.name}
-                                    </span>
-                                </Button>
-                            ))}
-                        </div>
+                        {channelsLoading ? (
+                            <div className="text-center py-8 text-muted-foreground">
+                                Loading channels...
+                            </div>
+                        ) : !channels || channels.length === 0 ? (
+                            <div className="text-center py-8 text-muted-foreground">
+                                No channels found
+                            </div>
+                        ) : (
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-2">
+                                {channels.map(channel => (
+                                    <Button
+                                        key={channel.id}
+                                        variant={
+                                            selectedChannel === channel.id
+                                                ? "default"
+                                                : "outline"
+                                        }
+                                        className="justify-start"
+                                        onClick={() =>
+                                            setSelectedChannel(channel.id)
+                                        }
+                                    >
+                                        <span className="truncate">
+                                            #{channel.name}
+                                        </span>
+                                    </Button>
+                                ))}
+                            </div>
+                        )}
                     </CardContent>
                 </Card>
             )}
@@ -201,31 +140,34 @@ export function ClipsViewer() {
             {selectedChannel && (
                 <Card>
                     <CardHeader>
-                        <CardTitle>Clips ({pagination.total})</CardTitle>
+                        <CardTitle>
+                            Clips ({allClips.length}
+                            {hasNextPage && "+"})
+                        </CardTitle>
                     </CardHeader>
                     <CardContent>
-                        {loading && clips.length === 0 ? (
+                        {clipsLoading && allClips.length === 0 ? (
                             <div className="text-center py-12 text-muted-foreground">
                                 Loading clips...
                             </div>
-                        ) : clips.length === 0 ? (
+                        ) : allClips.length === 0 ? (
                             <div className="text-center py-12 text-muted-foreground">
                                 No clips found in this channel
                             </div>
                         ) : (
                             <>
                                 <ClipGrid
-                                    clips={clips}
+                                    clips={allClips}
                                     onClipClick={setSelectedClip}
                                 />
-                                {pagination.hasMore && (
+                                {hasNextPage && (
                                     <div className="mt-6 text-center">
                                         <Button
-                                            onClick={loadMore}
-                                            disabled={loading}
+                                            onClick={() => fetchNextPage()}
+                                            disabled={isFetchingNextPage}
                                             variant="outline"
                                         >
-                                            {loading
+                                            {isFetchingNextPage
                                                 ? "Loading..."
                                                 : "Load More"}
                                         </Button>

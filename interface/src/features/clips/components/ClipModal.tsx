@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import {
     Dialog,
     DialogContent,
@@ -10,131 +10,53 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { VideoPlayer } from "./VideoPlayer";
-import type { Clip, Message, Thumbnail } from "@/lib/api/types";
-
-interface ClipWithMetadata extends Clip {
-    message: Message;
-    thumbnails: Thumbnail[];
-}
+import { useClip } from "@/lib/hooks";
+import type { FullClip } from "@/lib/api/clip";
 
 interface ClipModalProps {
-    clip: ClipWithMetadata;
+    clip: FullClip;
     onClose: () => void;
 }
 
-export function ClipModal({ clip, onClose }: ClipModalProps) {
-    const [videoUrl, setVideoUrl] = useState<string>(clip.cdn_url);
-    const [hasPlaybackError, setHasPlaybackError] = useState(false);
-    const [refreshing, setRefreshing] = useState(false);
-    const [autoRefreshed, setAutoRefreshed] = useState(false);
-    const [errorRefreshAttempted, setErrorRefreshAttempted] = useState(false);
-    const [isDeleted, setIsDeleted] = useState(false);
-    const [deletionMessage, setDeletionMessage] = useState<string>("");
+/**
+ * ClipModal - Video player modal for clips
+ *
+ * Automatically refetches clip data if CDN URL is expired.
+ * The server-side route handles refreshing expired URLs from Discord.
+ */
+export function ClipModal({ clip: initialClip, onClose }: ClipModalProps) {
+    const { clip: initialClipData, message, thumbnail } = initialClip;
 
-    const refreshCdnUrl = useCallback(
-        async (isFromPlaybackError: boolean = false) => {
-            try {
-                setRefreshing(true);
-                setHasPlaybackError(false);
-                setIsDeleted(false);
-                const response = await fetch(
-                    `/api/clips/${clip.id}/refresh-cdn`,
-                    {
-                        method: "POST",
-                    }
-                );
+    // Check if URL is expired
+    const isExpired = new Date(initialClipData.expires_at) < new Date();
 
-                if (!response.ok) {
-                    const errorData = await response.json();
-
-                    // Check if this is a deletion error
-                    if (
-                        response.status === 410 &&
-                        errorData.error_type === "MESSAGE_DELETED"
-                    ) {
-                        setIsDeleted(true);
-                        setDeletionMessage(
-                            errorData.error ||
-                                "This clip was deleted from Discord and is no longer available"
-                        );
-                        return; // Don't throw, just set state
-                    }
-
-                    const errorMsg =
-                        errorData.details ||
-                        errorData.error ||
-                        "Failed to refresh CDN URL";
-                    throw new Error(errorMsg);
-                }
-
-                const data = await response.json();
-                setVideoUrl(data.cdn_url);
-                // Reset error flags on success
-                setErrorRefreshAttempted(false);
-            } catch (error) {
-                console.error("Error refreshing CDN URL:", error);
-
-                // If this was triggered by playback error, show playback error UI
-                // If this was user-triggered, show alert
-                if (isFromPlaybackError) {
-                    setHasPlaybackError(true);
-                } else {
-                    const errorMsg =
-                        error instanceof Error
-                            ? error.message
-                            : "Unknown error";
-                    alert(
-                        `Failed to refresh video URL: ${errorMsg}\n\nPlease check that the bot is running and try again.`
-                    );
-                    setHasPlaybackError(true);
-                }
-            } finally {
-                setRefreshing(false);
-            }
-        },
-        [clip.id]
+    // Refetch clip if expired (server will refresh CDN URL automatically)
+    // Only enable the query if the URL is expired
+    const shouldRefetch = isExpired;
+    const { data: refreshedClip, isLoading: isRefreshing } = useClip(
+        initialClipData.guild_id,
+        initialClipData.id
     );
 
-    const handleVideoError = useCallback(async () => {
-        // When video fails to load, first check if Discord CDN returns 404
-        // Only refresh (call bot API) if the file is actually gone from Discord
-        if (errorRefreshAttempted || refreshing) {
-            setHasPlaybackError(true);
-            return;
-        }
+    // Use refreshed clip if available and was needed, otherwise use initial
+    const clip =
+        shouldRefetch && refreshedClip ? refreshedClip.clip : initialClipData;
+    const [videoUrl, setVideoUrl] = useState<string>(clip.cdn_url);
+    const [hasPlaybackError, setHasPlaybackError] = useState(false);
 
-        try {
-            // Check if Discord CDN URL is valid (HEAD request = no download)
-            const cdnCheck = await fetch(videoUrl, { method: "HEAD" });
-
-            if (cdnCheck.status === 404 || cdnCheck.status === 403) {
-                // Discord CDN says file is gone - likely deleted
-                // Now check with bot to confirm and queue cleanup
-                setErrorRefreshAttempted(true);
-                refreshCdnUrl(true); // isFromPlaybackError = true
-            } else {
-                // CDN URL is valid - this is a playback error (codec, browser support, etc.)
-                setHasPlaybackError(true);
-            }
-        } catch (error) {
-            // CORS error or network issue checking CDN
-            // Just show playback error - don't spam bot API
-            console.warn("Could not check Discord CDN:", error);
-            setHasPlaybackError(true);
-        }
-    }, [videoUrl, errorRefreshAttempted, refreshing, refreshCdnUrl]);
-
+    // Update video URL when clip is refreshed
     useEffect(() => {
-        // Auto-refresh if URL is expired
-        const expiresAt = new Date(clip.expires_at);
-        const now = new Date();
-        const isExpired = expiresAt < now;
-
-        if (isExpired && !autoRefreshed) {
-            setAutoRefreshed(true);
-            refreshCdnUrl(false);
+        if (shouldRefetch && refreshedClip) {
+            setVideoUrl(refreshedClip.clip.cdn_url);
+            setHasPlaybackError(false);
         }
-    }, [clip.expires_at, autoRefreshed, refreshCdnUrl]);
+    }, [shouldRefetch, refreshedClip]);
+
+    const handleVideoError = useCallback(() => {
+        // Simple error handling - CDN refresh is now automatic on server
+        setHasPlaybackError(true);
+        console.error("Video playback error for clip:", clip.id);
+    }, [clip.id]);
 
     const formatDate = (date: Date | string): string => {
         return new Date(date).toLocaleString();
@@ -147,12 +69,10 @@ export function ClipModal({ clip, onClose }: ClipModalProps) {
         return `${(size / (1024 * 1024)).toFixed(1)} MB`;
     };
 
-    const getLargeThumbnail = (): string | null => {
-        const largeThumb = clip.thumbnails.find(t => t.size === "large");
-        if (largeThumb) {
+    const getThumbnailUrl = (): string | null => {
+        if (thumbnail && thumbnail.url) {
             // Use API route to serve thumbnails from storage
-            // storage_path is like "thumbnails/guild_xxx/file.webp"
-            return `/api/storage/${largeThumb.url}`;
+            return `/api/storage/${thumbnail.url}`;
         }
         return null;
     };
@@ -167,27 +87,10 @@ export function ClipModal({ clip, onClose }: ClipModalProps) {
                 <div className="space-y-6">
                     {/* Video Player */}
                     <div className="relative">
-                        {refreshing ? (
+                        {shouldRefetch && isRefreshing ? (
                             <div className="aspect-video bg-muted rounded-lg flex flex-col items-center justify-center gap-4">
                                 <p className="text-muted-foreground text-center px-4">
                                     Refreshing video URL...
-                                </p>
-                            </div>
-                        ) : isDeleted ? (
-                            <div className="aspect-video bg-destructive/10 border-2 border-destructive/20 rounded-lg flex flex-col items-center justify-center gap-4 p-6">
-                                <div className="text-destructive text-5xl">
-                                    🗑️
-                                </div>
-                                <p className="text-destructive font-semibold text-lg text-center">
-                                    Clip Deleted
-                                </p>
-                                <p className="text-destructive/80 text-sm text-center max-w-md">
-                                    {deletionMessage}
-                                </p>
-                                <p className="text-muted-foreground text-xs text-center max-w-md mt-2">
-                                    The original Discord message was deleted.
-                                    This clip and its data will be removed from
-                                    the database automatically.
                                 </p>
                             </div>
                         ) : hasPlaybackError ? (
@@ -196,31 +99,23 @@ export function ClipModal({ clip, onClose }: ClipModalProps) {
                                     Video cannot be played
                                 </p>
                                 <p className="text-sm text-muted-foreground text-center px-4">
-                                    This may be due to an unsupported video
-                                    codec (HEVC/H.265) or a playback error.
+                                    This may be due to an expired CDN URL,
+                                    unsupported video codec (HEVC/H.265), or the
+                                    clip was deleted from Discord.
                                 </p>
-                                <div className="flex gap-2">
-                                    <Button
-                                        onClick={() => refreshCdnUrl(false)}
-                                        disabled={refreshing}
-                                        variant="outline"
-                                    >
-                                        Retry
-                                    </Button>
-                                    <Button
-                                        onClick={() =>
-                                            window.open(videoUrl, "_blank")
-                                        }
-                                        variant="default"
-                                    >
-                                        Download Video
-                                    </Button>
-                                </div>
+                                <Button
+                                    onClick={() =>
+                                        window.open(videoUrl, "_blank")
+                                    }
+                                    variant="default"
+                                >
+                                    Download Video
+                                </Button>
                             </div>
                         ) : (
                             <VideoPlayer
                                 src={videoUrl}
-                                poster={getLargeThumbnail() || undefined}
+                                poster={getThumbnailUrl() || undefined}
                                 title={clip.filename}
                                 onError={handleVideoError}
                             />
@@ -297,7 +192,7 @@ export function ClipModal({ clip, onClose }: ClipModalProps) {
                                         Message ID:
                                     </span>
                                     <code className="ml-2 bg-muted px-2 py-1 rounded text-xs">
-                                        {clip.message.id}
+                                        {message.id}
                                     </code>
                                 </div>
                                 <div>
@@ -305,7 +200,7 @@ export function ClipModal({ clip, onClose }: ClipModalProps) {
                                         Author ID:
                                     </span>
                                     <code className="ml-2 bg-muted px-2 py-1 rounded text-xs">
-                                        {clip.message.author_id}
+                                        {message.author_id}
                                     </code>
                                 </div>
                                 <div>
@@ -313,16 +208,16 @@ export function ClipModal({ clip, onClose }: ClipModalProps) {
                                         Timestamp:
                                     </span>
                                     <span className="ml-2">
-                                        {formatDate(clip.message.created_at)}
+                                        {formatDate(message.created_at)}
                                     </span>
                                 </div>
-                                {clip.message.content && (
+                                {message.content && (
                                     <div>
                                         <span className="text-muted-foreground">
                                             Content:
                                         </span>
                                         <p className="mt-1 bg-muted p-2 rounded text-xs whitespace-pre-wrap">
-                                            {clip.message.content}
+                                            {message.content}
                                         </p>
                                     </div>
                                 )}
@@ -330,17 +225,16 @@ export function ClipModal({ clip, onClose }: ClipModalProps) {
                         </div>
 
                         <div>
-                            <h3 className="font-semibold mb-2">Thumbnails</h3>
+                            <h3 className="font-semibold mb-2">Thumbnail</h3>
                             <div className="flex gap-2">
-                                {clip.thumbnails.map(thumb => (
-                                    <Badge key={thumb.url} variant="secondary">
-                                        {thumb.size} ({thumb.width}x
-                                        {thumb.height})
+                                {thumbnail ? (
+                                    <Badge variant="secondary">
+                                        {thumbnail.size} ({thumbnail.width}x
+                                        {thumbnail.height})
                                     </Badge>
-                                ))}
-                                {clip.thumbnails.length === 0 && (
+                                ) : (
                                     <span className="text-sm text-muted-foreground">
-                                        No thumbnails available
+                                        No thumbnail available
                                     </span>
                                 )}
                             </div>
@@ -352,26 +246,7 @@ export function ClipModal({ clip, onClose }: ClipModalProps) {
                                 Raw Metadata (JSON)
                             </summary>
                             <pre className="mt-2 bg-muted p-4 rounded overflow-x-auto text-xs">
-                                {JSON.stringify(
-                                    {
-                                        clip: {
-                                            id: clip.id,
-                                            filename: clip.filename,
-                                            file_size:
-                                                clip.file_size.toString(),
-                                            mime_type: clip.mime_type,
-                                            duration: clip.duration,
-                                            resolution: clip.resolution,
-                                            cdn_url: clip.cdn_url,
-                                            expires_at: clip.expires_at,
-                                            created_at: clip.created_at,
-                                        },
-                                        message: clip.message,
-                                        thumbnails: clip.thumbnails,
-                                    },
-                                    null,
-                                    2
-                                )}
+                                {JSON.stringify(initialClip, null, 2)}
                             </pre>
                         </details>
                     </div>

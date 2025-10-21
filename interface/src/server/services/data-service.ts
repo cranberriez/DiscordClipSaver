@@ -102,12 +102,27 @@ export class DataService {
     }
 
     // Clips
+    static async getClipsByGuildId(
+        guildId: string,
+        offset: number = 0,
+        limit: number = 50
+    ) {
+        const clips = await db.getClipsByGuildId(guildId, limit, offset);
+
+        if (!clips) {
+            console.error("Clips not found, guildId: " + guildId);
+            return undefined;
+        }
+
+        return clips.map(clip => ClipMapper.toClipWithMetadata(clip));
+    }
+
     static async getClipsByChannelId(
         channelId: string,
         offset: number = 0,
         limit: number = 50
     ) {
-        const clips = await db.getClipsByChannelId(channelId, offset, limit);
+        const clips = await db.getClipsByChannelId(channelId, limit, offset);
 
         if (!clips) {
             console.error("Clips not found, channelId: " + channelId);

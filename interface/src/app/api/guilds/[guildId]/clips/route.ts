@@ -5,7 +5,10 @@ import { DataService } from "@/server/services/data-service";
 /**
  * GET /api/guilds/[guildId]/clips?channelId=xxx&limit=50&offset=0
  *
- * Get clips for a specific channel with pagination.
+ * Get clips for a guild with pagination.
+ * - If channelId is provided: Returns clips for that specific channel
+ * - If channelId is omitted: Returns all clips for the guild (all channels)
+ * 
  * Requires user to have access to the guild.
  */
 export async function GET(
@@ -24,34 +27,41 @@ export async function GET(
     const limit = Math.min(parseInt(searchParams.get("limit") || "50"), 100);
     const offset = parseInt(searchParams.get("offset") || "0");
 
-    if (!channelId) {
-        return NextResponse.json(
-            { error: "channelId is required" },
-            { status: 400 }
-        );
-    }
-
     try {
-        const clips = await DataService.getClipsByChannelId(
-            channelId,
-            offset,
-            limit + 1
-        );
+        // Fetch one extra to determine if there are more results
+        const clips = channelId
+            ? await DataService.getClipsByChannelId(
+                  channelId,
+                  offset,
+                  limit + 1
+              )
+            : await DataService.getClipsByGuildId(
+                  guildId,
+                  offset,
+                  limit + 1
+              );
 
         if (!clips) {
-            console.error("Clips not found, channelId: " + channelId);
+            console.error(
+                `Clips not found, guildId: ${guildId}${channelId ? `, channelId: ${channelId}` : ""}`
+            );
             return NextResponse.json(
                 { error: "Clips not found" },
                 { status: 404 }
             );
         }
 
+        // Check if there are more results
+        const hasMore = clips.length > limit;
+        const clipsToReturn = hasMore ? clips.slice(0, limit) : clips;
+
         return NextResponse.json({
-            clips,
+            clips: clipsToReturn,
             pagination: {
                 limit,
                 offset,
-                hasMore: clips.length > limit,
+                total: offset + clipsToReturn.length + (hasMore ? 1 : 0), // Approximate total
+                hasMore,
             },
         });
     } catch (error) {

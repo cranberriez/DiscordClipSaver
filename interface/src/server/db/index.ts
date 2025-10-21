@@ -23,6 +23,7 @@ export {
 } from "./queries/channels";
 export {
     getClipById,
+    getClipsByGuildId,
     getClipsByChannelId,
     getClipCountByChannelId,
     updateClipCdnUrl,

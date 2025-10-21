@@ -1,24 +1,20 @@
 "use client";
 
-import type { Clip, Message, Thumbnail } from "@/lib/api/types";
-
-interface ClipWithMetadata extends Clip {
-    message: Message;
-    thumbnails: Thumbnail[];
-}
+import type { FullClip } from "@/lib/api/clip";
+import { formatClipName } from "../lib/formatClipName";
 
 interface ClipGridProps {
-    clips: ClipWithMetadata[];
-    onClipClick: (clip: ClipWithMetadata) => void;
+    clips: FullClip[];
+    onClipClick: (clip: FullClip) => void;
 }
 
 export function ClipGrid({ clips, onClipClick }: ClipGridProps) {
-    const getThumbnailUrl = (clip: ClipWithMetadata): string | null => {
-        const smallThumb = clip.thumbnails.find(t => t.size === "small");
-        if (smallThumb) {
+    const getThumbnailUrl = (fullClip: FullClip): string | null => {
+        const thumbnail = fullClip.thumbnail;
+        if (thumbnail && thumbnail.url) {
             // Use API route to serve thumbnails from storage
             // storage_path is like "thumbnails/guild_xxx/file.webp"
-            return `/api/storage/${smallThumb.url}`;
+            return `/api/storage/${thumbnail.url}`;
         }
         return null;
     };
@@ -39,14 +35,15 @@ export function ClipGrid({ clips, onClipClick }: ClipGridProps) {
 
     return (
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-            {clips.map(clip => {
-                const thumbnailUrl = getThumbnailUrl(clip);
+            {clips.map(fullClip => {
+                const thumbnailUrl = getThumbnailUrl(fullClip);
+                const { clip } = fullClip;
 
                 return (
                     <div
                         key={clip.id}
                         className="group relative cursor-pointer rounded-lg overflow-hidden border bg-card hover:shadow-lg transition-all"
-                        onClick={() => onClipClick(clip)}
+                        onClick={() => onClipClick(fullClip)}
                     >
                         {/* Thumbnail */}
                         <div className="aspect-video bg-muted relative">
@@ -94,7 +91,7 @@ export function ClipGrid({ clips, onClipClick }: ClipGridProps) {
                                 className="text-sm font-medium truncate"
                                 title={clip.filename}
                             >
-                                {clip.filename}
+                                {formatClipName(clip.filename)}
                             </p>
                             <div className="flex items-center justify-between mt-1 text-xs text-muted-foreground">
                                 <span>{formatFileSize(clip.file_size)}</span>

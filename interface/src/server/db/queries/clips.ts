@@ -8,6 +8,64 @@ export interface ClipWithMetadata {
 }
 
 /**
+ * Get all clips for a guild (all channels) with message and thumbnail data
+ */
+export async function getClipsByGuildId(
+    guildId: string,
+    limit: number = 50,
+    offset: number = 0
+): Promise<ClipWithMetadata[]> {
+    const clips = await getDb()
+        .selectFrom("clip")
+        .selectAll("clip")
+        .where("clip.guild_id", "=", guildId)
+        .where("clip.deleted_at", "is", null)
+        .orderBy("clip.created_at", "desc")
+        .limit(limit)
+        .offset(offset)
+        .execute();
+
+    if (clips.length === 0) {
+        return [];
+    }
+
+    // Fetch related messages and thumbnails
+    const clipIds = clips.map(c => c.id);
+    const messageIds = clips.map(c => c.message_id);
+
+    const [messages, thumbnails] = await Promise.all([
+        getDb()
+            .selectFrom("message")
+            .selectAll()
+            .where("id", "in", messageIds)
+            .execute(),
+        getDb()
+            .selectFrom("thumbnail")
+            .selectAll()
+            .where("clip_id", "in", clipIds)
+            .where("deleted_at", "is", null)
+            .execute(),
+    ]);
+
+    // Create lookup maps
+    const messageMap = new Map(messages.map(m => [m.id, m]));
+    const thumbnailMap = new Map<string, DbThumbnail[]>();
+    for (const thumb of thumbnails) {
+        if (!thumbnailMap.has(thumb.clip_id)) {
+            thumbnailMap.set(thumb.clip_id, []);
+        }
+        thumbnailMap.get(thumb.clip_id)!.push(thumb);
+    }
+
+    // Combine data
+    return clips.map(clip => ({
+        clip: clip,
+        message: messageMap.get(clip.message_id)!,
+        thumbnails: thumbnailMap.get(clip.id) || [],
+    }));
+}
+
+/**
  * Get all clips for a specific channel with message and thumbnail data
  */
 export async function getClipsByChannelId(
@@ -20,7 +78,7 @@ export async function getClipsByChannelId(
         .selectAll("clip")
         .where("clip.channel_id", "=", channelId)
         .where("clip.deleted_at", "is", null)
-        .orderBy("clip.created_at", "asc")
+        .orderBy("clip.created_at", "desc")
         .limit(limit)
         .offset(offset)
         .execute();

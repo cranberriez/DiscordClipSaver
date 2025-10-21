@@ -12,6 +12,7 @@ import { GuildResponse, ToggleScanningResponse } from "./guild";
 import { UpdateGuildSettingsPayload } from "../schema/guild-settings.schema";
 import { Channel, ChannelStatsResponse } from "./channel";
 import { ScanStatus } from "./scan";
+import { ClipListResponse, FullClip } from "./clip";
 
 // ============================================================================
 // Error Handling
@@ -199,5 +200,42 @@ export const api = {
                     body: JSON.stringify(payload),
                 }
             ),
+    },
+
+    // ========================================================================
+    // Clips
+    // ========================================================================
+    clips: {
+        /**
+         * Get clips for a guild or specific channel with pagination
+         * GET /api/guilds/[guildId]/clips?channelId=xxx&limit=50&offset=0
+         */
+        list: (params: {
+            guildId: string;
+            channelId?: string;
+            limit?: number;
+            offset?: number;
+        }) => {
+            const searchParams = new URLSearchParams();
+            if (params.channelId)
+                searchParams.set("channelId", params.channelId);
+            if (params.limit)
+                searchParams.set("limit", params.limit.toString());
+            if (params.offset)
+                searchParams.set("offset", params.offset.toString());
+
+            const query = searchParams.toString();
+            return apiRequest<ClipListResponse>(
+                `/api/guilds/${params.guildId}/clips${query ? `?${query}` : ""}`
+            );
+        },
+
+        /**
+         * Get a single clip by ID with full metadata
+         * Automatically refreshes expired CDN URLs on the server
+         * GET /api/guilds/[guildId]/clips/[clipId]
+         */
+        get: (guildId: string, clipId: string) =>
+            apiRequest<FullClip>(`/api/guilds/${guildId}/clips/${clipId}`),
     },
 };
