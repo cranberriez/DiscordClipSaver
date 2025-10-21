@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
+import { BackButton } from "@/components/ui/back-button";
 import {
     Card,
     CardContent,
@@ -80,13 +81,7 @@ export function DeletedGuildBanner({
                         />
                         Re-Invite Bot
                     </Button>
-                    <Button
-                        onClick={() => router.push("/dashboard")}
-                        variant="outline"
-                        size="sm"
-                    >
-                        Back to Dashboard
-                    </Button>
+                    <BackButton text="Back to Dashboard" url="/dashboard" />
                 </div>
             </CardContent>
         </Card>

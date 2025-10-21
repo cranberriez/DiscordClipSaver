@@ -1,13 +1,13 @@
 import { getAuthInfo } from "@/server/auth";
 import { DataService } from "@/server/services/data-service";
 import { redirect } from "next/navigation";
-import Link from "next/link";
 import {
     GuildHeader,
     GuildTabNav,
     DeletedGuildBanner,
 } from "@/features/dashboard/";
 import { PageContainer } from "@/components/layout";
+import { BackButton } from "@/components/ui/back-button";
 
 type LayoutProps = {
     children: React.ReactNode;
@@ -39,12 +39,7 @@ export default async function GuildLayout({ children, params }: LayoutProps) {
                     This guild is not registered in the system or has been
                     deleted.
                 </p>
-                <Link
-                    href="/dashboard"
-                    className="text-blue-500 hover:underline"
-                >
-                    ← Back to Dashboard
-                </Link>
+                <BackButton text="Back to Dashboard" url="/dashboard" />
             </PageContainer>
         );
     }
@@ -59,12 +54,7 @@ export default async function GuildLayout({ children, params }: LayoutProps) {
                 <p className="text-red-400 mb-4">
                     You do not have permission to view this guild.
                 </p>
-                <Link
-                    href="/dashboard"
-                    className="text-blue-500 hover:underline"
-                >
-                    ← Back to Dashboard
-                </Link>
+                <BackButton text="Back to Dashboard" url="/dashboard" />
             </PageContainer>
         );
     }
@@ -72,12 +62,7 @@ export default async function GuildLayout({ children, params }: LayoutProps) {
     return (
         <PageContainer>
             {/* Back Link */}
-            <Link
-                href="/dashboard"
-                className="text-blue-500 hover:underline mb-6 inline-block"
-            >
-                ← Back to Dashboard
-            </Link>
+            <BackButton text="Back to Dashboard" url="/dashboard" className="mb-6" />
 
             {/* Deleted Guild Banner */}
             {guild.deleted_at && (

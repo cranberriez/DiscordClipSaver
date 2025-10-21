@@ -3,6 +3,7 @@
 import { useParams, useRouter } from "next/navigation";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
+import { BackButton } from "@/components/ui/back-button";
 import { Card, CardContent } from "@/components/ui/card";
 import { ClipGrid, ClipModal } from "@/features/clips";
 import { ClipFilters } from "@/features/clips/components/ClipFilters";
@@ -74,13 +75,7 @@ export default function GuildClipsPage() {
         <PageContainer maxWidth="7xl">
             {/* Header */}
             <div className="mb-8">
-                <Button
-                    variant="ghost"
-                    onClick={() => router.push("/clips")}
-                    className="mb-4"
-                >
-                    ← Back to Servers
-                </Button>
+                <BackButton text="Back to Servers" url="/clips" className="mb-4" />
                 <h1 className="text-3xl font-bold">
                     {guild?.name || "Loading..."}
                 </h1>
