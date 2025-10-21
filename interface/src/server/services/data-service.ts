@@ -123,9 +123,16 @@ export class DataService {
         guildId: string,
         offset: number = 0,
         limit: number = 50,
-        sort: "asc" | "desc" = "desc"
+        sort: "asc" | "desc" = "desc",
+        authorIds?: string[]
     ) {
-        const clips = await db.getClipsByGuildId(guildId, limit, offset, sort);
+        const clips = await db.getClipsByGuildId(
+            guildId,
+            limit,
+            offset,
+            sort,
+            authorIds
+        );
 
         if (!clips) {
             console.error("Clips not found, guildId: " + guildId);
@@ -139,13 +146,15 @@ export class DataService {
         channelIds: string[],
         offset: number = 0,
         limit: number = 50,
-        sort: "asc" | "desc" = "desc"
+        sort: "asc" | "desc" = "desc",
+        authorIds?: string[]
     ) {
         const clips = await db.getClipsByChannelIds(
             channelIds,
             limit,
             offset,
-            sort
+            sort,
+            authorIds
         );
 
         if (!clips) {

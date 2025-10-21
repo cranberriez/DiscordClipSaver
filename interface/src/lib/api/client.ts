@@ -233,12 +233,13 @@ export const api = {
     // ========================================================================
     clips: {
         /**
-         * Get clips for a guild or specific channels with pagination
-         * GET /api/guilds/[guildId]/clips?channelIds=xxx,yyy&limit=50&offset=0&sort=desc
+         * Get clips for a guild or specific channels/authors with pagination
+         * GET /api/guilds/[guildId]/clips?channelIds=xxx,yyy&authorIds=aaa,bbb&limit=50&offset=0&sort=desc
          */
         list: (params: {
             guildId: string;
             channelIds?: string[];
+            authorIds?: string[];
             limit?: number;
             offset?: number;
             sort?: "asc" | "desc";
@@ -246,6 +247,8 @@ export const api = {
             const searchParams = new URLSearchParams();
             if (params.channelIds && params.channelIds.length > 0)
                 searchParams.set("channelIds", params.channelIds.join(","));
+            if (params.authorIds && params.authorIds.length > 0)
+                searchParams.set("authorIds", params.authorIds.join(","));
             if (params.limit)
                 searchParams.set("limit", params.limit.toString());
             if (params.offset)

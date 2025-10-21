@@ -3,11 +3,12 @@ import { requireGuildAccess } from "@/server/middleware/auth";
 import { DataService } from "@/server/services/data-service";
 
 /**
- * GET /api/guilds/[guildId]/clips?channelIds=xxx,yyy&limit=50&offset=0&sort=desc
+ * GET /api/guilds/[guildId]/clips?channelIds=xxx,yyy&authorIds=aaa,bbb&limit=50&offset=0&sort=desc
  *
  * Get clips for a guild with pagination.
  * - If channelIds is provided: Returns clips for those specific channels (comma-separated)
- * - If channelIds is omitted: Returns all clips for the guild (all channels)
+ * - If authorIds is provided: Returns clips from those specific authors (comma-separated)
+ * - If both omitted: Returns all clips for the guild
  * - sort: "desc" (newest first) or "asc" (oldest first), defaults to "desc"
  *
  * Requires user to have access to the guild.
@@ -26,6 +27,8 @@ export async function GET(
     const searchParams = req.nextUrl.searchParams;
     const channelIdsParam = searchParams.get("channelIds");
     const channelIds = channelIdsParam ? channelIdsParam.split(",") : null;
+    const authorIdsParam = searchParams.get("authorIds");
+    const authorIds = authorIdsParam ? authorIdsParam.split(",") : undefined;
     const limit = Math.min(parseInt(searchParams.get("limit") || "50"), 100);
     const offset = parseInt(searchParams.get("offset") || "0");
     const sort = (searchParams.get("sort") || "desc") as "asc" | "desc";
@@ -37,13 +40,15 @@ export async function GET(
                   channelIds,
                   offset,
                   limit + 1,
-                  sort
+                  sort,
+                  authorIds
               )
             : await DataService.getClipsByGuildId(
                   guildId,
                   offset,
                   limit + 1,
-                  sort
+                  sort,
+                  authorIds
               );
 
         if (!clips) {

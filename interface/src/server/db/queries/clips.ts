@@ -14,19 +14,27 @@ export async function getClipsByGuildId(
     guildId: string,
     limit: number = 50,
     offset: number = 0,
-    sort: "asc" | "desc" = "desc"
+    sort: "asc" | "desc" = "desc",
+    authorIds?: string[]
 ): Promise<ClipWithMetadata[]> {
     // Fetch extra clips to account for potential filtering (deleted messages)
     // We fetch 2x limit to ensure we have enough after filtering
     const fetchLimit = Math.min(limit * 2, 200); // Cap at 200 to avoid excessive queries
 
-    const clips = await getDb()
+    let query = getDb()
         .selectFrom("clip")
         .innerJoin("message", "message.id", "clip.message_id")
         .selectAll("clip")
         .where("clip.guild_id", "=", guildId)
         .where("clip.deleted_at", "is", null)
-        .where("message.deleted_at", "is", null)
+        .where("message.deleted_at", "is", null);
+
+    // Filter by author IDs if provided
+    if (authorIds && authorIds.length > 0) {
+        query = query.where("message.author_id", "in", authorIds);
+    }
+
+    const clips = await query
         .orderBy("message.timestamp", sort)
         .limit(fetchLimit)
         .offset(offset)
@@ -85,19 +93,27 @@ export async function getClipsByChannelIds(
     channelIds: string[],
     limit: number = 50,
     offset: number = 0,
-    sort: "asc" | "desc" = "desc"
+    sort: "asc" | "desc" = "desc",
+    authorIds?: string[]
 ): Promise<ClipWithMetadata[]> {
     // Fetch extra clips to account for potential filtering (deleted messages)
     // We fetch 2x limit to ensure we have enough after filtering
     const fetchLimit = Math.min(limit * 2, 200); // Cap at 200 to avoid excessive queries
 
-    const clips = await getDb()
+    let query = getDb()
         .selectFrom("clip")
         .innerJoin("message", "message.id", "clip.message_id")
         .selectAll("clip")
         .where("clip.channel_id", "in", channelIds)
         .where("clip.deleted_at", "is", null)
-        .where("message.deleted_at", "is", null)
+        .where("message.deleted_at", "is", null);
+
+    // Filter by author IDs if provided
+    if (authorIds && authorIds.length > 0) {
+        query = query.where("message.author_id", "in", authorIds);
+    }
+
+    const clips = await query
         .orderBy("message.timestamp", sort)
         .limit(fetchLimit)
         .offset(offset)

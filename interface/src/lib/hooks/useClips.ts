@@ -45,6 +45,7 @@ import type { FullClip } from "@/lib/api/clip";
 export function useChannelClips(params: {
     guildId: string;
     channelIds?: string[];
+    authorIds?: string[];
     limit?: number;
     offset?: number;
     sort?: "asc" | "desc";
@@ -113,6 +114,7 @@ export function useClips(params: {
 export function useChannelClipsInfinite(params: {
     guildId: string;
     channelIds?: string[];
+    authorIds?: string[];
     limit?: number;
     sort?: "asc" | "desc";
 }) {

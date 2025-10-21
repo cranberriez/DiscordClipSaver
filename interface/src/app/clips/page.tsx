@@ -67,7 +67,7 @@ export default function ClipsPage() {
     // Prefetch hook for authors
     const prefetchAuthors = usePrefetchAuthorStats();
 
-    // Fetch clips
+    // Fetch clips with server-side filtering
     const {
         data: clipsData,
         isLoading: clipsLoading,
@@ -78,6 +78,10 @@ export default function ClipsPage() {
             selectedChannelIds.length > 0 &&
             selectedChannelIds.length < channels.length
                 ? selectedChannelIds
+                : undefined,
+        authorIds:
+            selectedAuthorIds.length > 0 && selectedAuthorIds.length < authors.length
+                ? selectedAuthorIds
                 : undefined,
         limit,
         offset,
@@ -99,37 +103,25 @@ export default function ClipsPage() {
     // Get selected guild info
     const selectedGuild = guilds.find(g => g.id === selectedGuildId);
 
-    // Apply client-side search and author filters
+    // Apply client-side search filter only (authors filtered server-side)
     const allClips = clipsData?.clips || [];
     const filteredClips = useMemo(() => {
-        let filtered = allClips;
+        if (!searchQuery.trim()) return allClips;
 
-        // Filter by selected authors
-        if (selectedAuthorIds.length > 0) {
-            filtered = filtered.filter((clip: FullClip) =>
-                selectedAuthorIds.includes(clip.message.author_id)
+        const query = searchQuery.toLowerCase();
+        return allClips.filter((clip: FullClip) => {
+            const messageContent =
+                clip.message.content?.toLowerCase() || "";
+            const filename = clip.clip.filename.toLowerCase();
+            const author = authorMap.get(clip.message.author_id);
+            const authorName = author?.username.toLowerCase() || "";
+            return (
+                messageContent.includes(query) ||
+                filename.includes(query) ||
+                authorName.includes(query)
             );
-        }
-
-        // Filter by search query
-        if (searchQuery.trim()) {
-            const query = searchQuery.toLowerCase();
-            filtered = filtered.filter((clip: FullClip) => {
-                const messageContent =
-                    clip.message.content?.toLowerCase() || "";
-                const filename = clip.clip.filename.toLowerCase();
-                const author = authorMap.get(clip.message.author_id);
-                const authorName = author?.username.toLowerCase() || "";
-                return (
-                    messageContent.includes(query) ||
-                    filename.includes(query) ||
-                    authorName.includes(query)
-                );
-            });
-        }
-
-        return filtered;
-    }, [allClips, selectedAuthorIds, searchQuery, authorMap]);
+        });
+    }, [allClips, searchQuery, authorMap]);
 
     const hasMore = clipsData?.pagination?.hasMore || false;
 
