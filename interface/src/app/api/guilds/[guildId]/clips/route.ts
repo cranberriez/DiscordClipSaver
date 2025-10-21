@@ -3,12 +3,13 @@ import { requireGuildAccess } from "@/server/middleware/auth";
 import { DataService } from "@/server/services/data-service";
 
 /**
- * GET /api/guilds/[guildId]/clips?channelId=xxx&limit=50&offset=0
+ * GET /api/guilds/[guildId]/clips?channelIds=xxx,yyy&limit=50&offset=0&sort=desc
  *
  * Get clips for a guild with pagination.
- * - If channelId is provided: Returns clips for that specific channel
- * - If channelId is omitted: Returns all clips for the guild (all channels)
- * 
+ * - If channelIds is provided: Returns clips for those specific channels (comma-separated)
+ * - If channelIds is omitted: Returns all clips for the guild (all channels)
+ * - sort: "desc" (newest first) or "asc" (oldest first), defaults to "desc"
+ *
  * Requires user to have access to the guild.
  */
 export async function GET(
@@ -23,27 +24,33 @@ export async function GET(
 
     // Get query parameters
     const searchParams = req.nextUrl.searchParams;
-    const channelId = searchParams.get("channelId");
+    const channelIdsParam = searchParams.get("channelIds");
+    const channelIds = channelIdsParam ? channelIdsParam.split(",") : null;
     const limit = Math.min(parseInt(searchParams.get("limit") || "50"), 100);
     const offset = parseInt(searchParams.get("offset") || "0");
+    const sort = (searchParams.get("sort") || "desc") as "asc" | "desc";
 
     try {
         // Fetch one extra to determine if there are more results
-        const clips = channelId
-            ? await DataService.getClipsByChannelId(
-                  channelId,
+        const clips = channelIds
+            ? await DataService.getClipsByChannelIds(
+                  channelIds,
                   offset,
-                  limit + 1
+                  limit + 1,
+                  sort
               )
             : await DataService.getClipsByGuildId(
                   guildId,
                   offset,
-                  limit + 1
+                  limit + 1,
+                  sort
               );
 
         if (!clips) {
             console.error(
-                `Clips not found, guildId: ${guildId}${channelId ? `, channelId: ${channelId}` : ""}`
+                `Clips not found, guildId: ${guildId}${
+                    channelIds ? `, channelIds: ${channelIds.join(",")}` : ""
+                }`
             );
             return NextResponse.json(
                 { error: "Clips not found" },

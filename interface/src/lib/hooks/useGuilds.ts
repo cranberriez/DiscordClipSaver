@@ -7,6 +7,7 @@ import {
     guildQuery,
     guildsQuery,
     guildsDiscordQuery,
+    guildsWithClipCountQuery,
 } from "@/lib/queries";
 import { Guild } from "../api/guild";
 
@@ -62,6 +63,35 @@ export function useGuilds(includePerms?: boolean) {
  */
 export function useGuildsDiscord(includeDB?: boolean) {
     return useQuery(guildsDiscordQuery(includeDB));
+}
+
+/**
+ * Fetch list of user's guilds with clip counts.
+ *
+ * Returns guilds that exist in the database with their clip counts.
+ * Useful for the clips viewer guild selection.
+ *
+ * @example
+ * ```tsx
+ * function GuildSelector() {
+ *   const { data: guilds, isLoading } = useGuildsWithClipCount();
+ *
+ *   if (isLoading) return <div>Loading...</div>;
+ *
+ *   return (
+ *     <div>
+ *       {guilds?.map(guild => (
+ *         <div key={guild.id}>
+ *           {guild.name} - {guild.clip_count} clips
+ *         </div>
+ *       ))}
+ *     </div>
+ *   );
+ * }
+ * ```
+ */
+export function useGuildsWithClipCount() {
+    return useQuery(guildsWithClipCountQuery());
 }
 
 /**

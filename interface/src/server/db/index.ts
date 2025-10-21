@@ -6,10 +6,12 @@ export {
 } from "./queries/install_intents";
 export {
     getGuildsByIds,
+    getGuildsByIdsWithClipCount,
     getSingleGuildById,
     setGuildOwnerIfUnclaimed,
     updateGuildMessageScanEnabled,
 } from "./queries/guilds";
+export type { GuildWithClipCount } from "./queries/guilds";
 export {
     getGuildSettings,
     upsertGuildSettings,
@@ -25,6 +27,7 @@ export {
     getClipById,
     getClipsByGuildId,
     getClipsByChannelId,
+    getClipsByChannelIds,
     getClipCountByChannelId,
     updateClipCdnUrl,
     isClipExpired,

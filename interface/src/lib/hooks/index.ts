@@ -10,6 +10,7 @@ export {
     useGuild,
     useToggleScanning,
     useGuildsDiscord,
+    useGuildsWithClipCount,
 } from "./useGuilds";
 
 // Channel hooks
@@ -36,4 +37,12 @@ export {
 } from "./useSettings";
 
 // Clip hooks
-export { useClips, useClipsInfinite, useClip, clipKeys } from "./useClips";
+export {
+    useChannelClips,
+    useChannelClipsInfinite,
+    useClip,
+    clipKeys,
+    // Deprecated - use useChannelClips instead
+    useClips,
+    useClipsInfinite,
+} from "./useClips";

@@ -5,7 +5,13 @@ import {
     toggleScanning,
     getGuildsDiscord,
 } from "../api/guild";
-import type { EnrichedDiscordGuild, Guild, GuildResponse } from "../api/guild";
+import type {
+    EnrichedDiscordGuild,
+    Guild,
+    GuildResponse,
+    GuildWithClipCount,
+} from "../api/guild";
+import { api } from "../api/client";
 
 // ============================================================================
 // Query Keys Factory
@@ -25,6 +31,7 @@ export const guildKeys = {
             "list",
             { includePerms: !!params.includePerms },
         ] as const,
+    listWithClipCount: () => [...guildKeys.all, "with-clip-count"] as const,
     discordList: (params: { includeDB?: boolean } = {}) =>
         [
             ...guildKeys.all,
@@ -65,6 +72,13 @@ export const guildQuery = (
         enabled: !!guildId,
         staleTime: 60_000,
         ...options,
+    });
+
+export const guildsWithClipCountQuery = () =>
+    queryOptions<GuildWithClipCount[]>({
+        queryKey: guildKeys.listWithClipCount(),
+        queryFn: () => api.guilds.listWithClipCount(),
+        staleTime: 60_000,
     });
 
 export const toggleGuildScanning = async (guildId: string, enabled: boolean) =>

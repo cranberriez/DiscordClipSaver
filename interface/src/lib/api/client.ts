@@ -8,7 +8,11 @@
 import { signOut } from "next-auth/react";
 import type { GuildSettingsResponse } from "./setting";
 import type { EnrichedDiscordGuild, Guild } from "@/lib/api/guild";
-import { GuildResponse, ToggleScanningResponse } from "./guild";
+import {
+    GuildResponse,
+    GuildWithClipCount,
+    ToggleScanningResponse,
+} from "./guild";
 import { UpdateGuildSettingsPayload } from "../schema/guild-settings.schema";
 import { Channel, ChannelStatsResponse } from "./channel";
 import { ScanStatus } from "./scan";
@@ -98,6 +102,13 @@ export const api = {
          * GET /api/guilds/[guildId]
          */
         get: (guildId: string) => apiRequest<Guild>(`/api/guilds/${guildId}`),
+
+        /**
+         * Get list of user's guilds with clip counts
+         * GET /api/guilds/?withClipCount=1
+         */
+        listWithClipCount: () =>
+            apiRequest<GuildWithClipCount[]>("/api/guilds?withClipCount=1"),
 
         /**
          * Toggle message scanning for a guild
@@ -207,22 +218,24 @@ export const api = {
     // ========================================================================
     clips: {
         /**
-         * Get clips for a guild or specific channel with pagination
-         * GET /api/guilds/[guildId]/clips?channelId=xxx&limit=50&offset=0
+         * Get clips for a guild or specific channels with pagination
+         * GET /api/guilds/[guildId]/clips?channelIds=xxx,yyy&limit=50&offset=0&sort=desc
          */
         list: (params: {
             guildId: string;
-            channelId?: string;
+            channelIds?: string[];
             limit?: number;
             offset?: number;
+            sort?: "asc" | "desc";
         }) => {
             const searchParams = new URLSearchParams();
-            if (params.channelId)
-                searchParams.set("channelId", params.channelId);
+            if (params.channelIds && params.channelIds.length > 0)
+                searchParams.set("channelIds", params.channelIds.join(","));
             if (params.limit)
                 searchParams.set("limit", params.limit.toString());
             if (params.offset)
                 searchParams.set("offset", params.offset.toString());
+            if (params.sort) searchParams.set("sort", params.sort);
 
             const query = searchParams.toString();
             return apiRequest<ClipListResponse>(

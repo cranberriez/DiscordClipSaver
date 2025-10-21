@@ -22,6 +22,7 @@ export interface Message {
     channel_id: string;
     content: string | null;
     author_id: string;
+    timestamp: Date;
     created_at: Date;
     updated_at: Date;
     deleted_at: Date | null;

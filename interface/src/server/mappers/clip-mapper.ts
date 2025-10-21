@@ -34,6 +34,7 @@ export class ClipMapper {
             channel_id: dbMessage.channel_id,
             content: dbMessage.content,
             author_id: dbMessage.author_id,
+            timestamp: dbMessage.timestamp,
             created_at: dbMessage.created_at,
             updated_at: dbMessage.updated_at,
             deleted_at: dbMessage.deleted_at,

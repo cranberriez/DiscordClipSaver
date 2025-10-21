@@ -15,13 +15,20 @@ import type { FullClip } from "@/lib/api/clip";
 
 /**
  * Fetch clips with standard pagination.
+ * Supports filtering by multiple channels and custom sort order.
  *
- * For most use cases, prefer `useClipsInfinite` for better UX.
+ * For most use cases, prefer `useChannelClipsInfinite` for better UX.
  *
  * @example
  * ```tsx
- * function ClipsList({ guildId, channelId }: Props) {
- *   const { data, isLoading } = useClips({ guildId, channelId, limit: 50, offset: 0 });
+ * function ClipsList({ guildId, channelIds }: Props) {
+ *   const { data, isLoading } = useChannelClips({
+ *     guildId,
+ *     channelIds: ['123', '456'],
+ *     limit: 50,
+ *     offset: 0,
+ *     sort: 'desc'
+ *   });
  *
  *   if (isLoading) return <div>Loading...</div>;
  *
@@ -35,30 +42,52 @@ import type { FullClip } from "@/lib/api/clip";
  * }
  * ```
  */
+export function useChannelClips(params: {
+    guildId: string;
+    channelIds?: string[];
+    limit?: number;
+    offset?: number;
+    sort?: "asc" | "desc";
+}) {
+    return useQuery(clipsQuery(params));
+}
+
+/**
+ * @deprecated Use useChannelClips instead
+ */
 export function useClips(params: {
     guildId: string;
     channelId?: string;
     limit?: number;
     offset?: number;
 }) {
-    return useQuery(clipsQuery(params));
+    return useChannelClips({
+        ...params,
+        channelIds: params.channelId ? [params.channelId] : undefined,
+    });
 }
 
 /**
  * Fetch clips with infinite scroll pagination (recommended).
+ * Supports filtering by multiple channels and custom sort order.
  *
  * This hook provides automatic "Load More" functionality with proper caching.
  *
  * @example
  * ```tsx
- * function ClipsInfiniteList({ guildId, channelId }: Props) {
+ * function ClipsInfiniteList({ guildId, channelIds }: Props) {
  *   const {
  *     data,
  *     fetchNextPage,
  *     hasNextPage,
  *     isFetchingNextPage,
  *     isLoading,
- *   } = useClipsInfinite({ guildId, channelId, limit: 50 });
+ *   } = useChannelClipsInfinite({
+ *     guildId,
+ *     channelIds: ['123', '456'],
+ *     limit: 50,
+ *     sort: 'desc'
+ *   });
  *
  *   const allClips = data?.pages.flatMap(page => page.clips) ?? [];
  *
@@ -81,12 +110,27 @@ export function useClips(params: {
  * }
  * ```
  */
+export function useChannelClipsInfinite(params: {
+    guildId: string;
+    channelIds?: string[];
+    limit?: number;
+    sort?: "asc" | "desc";
+}) {
+    return useInfiniteQuery(clipsInfiniteQuery(params));
+}
+
+/**
+ * @deprecated Use useChannelClipsInfinite instead
+ */
 export function useClipsInfinite(params: {
     guildId: string;
     channelId?: string;
     limit?: number;
 }) {
-    return useInfiniteQuery(clipsInfiniteQuery(params));
+    return useChannelClipsInfinite({
+        ...params,
+        channelIds: params.channelId ? [params.channelId] : undefined,
+    });
 }
 
 /**

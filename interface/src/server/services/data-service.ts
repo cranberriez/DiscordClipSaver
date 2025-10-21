@@ -32,6 +32,20 @@ export class DataService {
         return guilds.map(guild => GuildMapper.toGuild(guild));
     }
 
+    static async getGuildsByIdsWithClipCount(ids: string[]) {
+        const guilds = await db.getGuildsByIdsWithClipCount(ids);
+
+        if (!guilds) {
+            console.error("Guilds not found, ids: " + ids.join(", "));
+            return undefined;
+        }
+
+        return guilds.map(guild => ({
+            ...GuildMapper.toGuild(guild),
+            clip_count: guild.clip_count,
+        }));
+    }
+
     // Channels
     static async getChannelsByGuildId(guildId: string) {
         const channels = await db.getChannelsByGuildId(guildId);
@@ -68,7 +82,9 @@ export class DataService {
             return undefined;
         }
 
-        return channels.map(channel => ChannelMapper.toChannelWithStats(channel));
+        return channels.map(channel =>
+            ChannelMapper.toChannelWithStats(channel)
+        );
     }
 
     // Scans
@@ -105,9 +121,10 @@ export class DataService {
     static async getClipsByGuildId(
         guildId: string,
         offset: number = 0,
-        limit: number = 50
+        limit: number = 50,
+        sort: "asc" | "desc" = "desc"
     ) {
-        const clips = await db.getClipsByGuildId(guildId, limit, offset);
+        const clips = await db.getClipsByGuildId(guildId, limit, offset, sort);
 
         if (!clips) {
             console.error("Clips not found, guildId: " + guildId);
@@ -117,12 +134,41 @@ export class DataService {
         return clips.map(clip => ClipMapper.toClipWithMetadata(clip));
     }
 
+    static async getClipsByChannelIds(
+        channelIds: string[],
+        offset: number = 0,
+        limit: number = 50,
+        sort: "asc" | "desc" = "desc"
+    ) {
+        const clips = await db.getClipsByChannelIds(
+            channelIds,
+            limit,
+            offset,
+            sort
+        );
+
+        if (!clips) {
+            console.error(
+                "Clips not found, channelIds: " + channelIds.join(", ")
+            );
+            return undefined;
+        }
+
+        return clips.map(clip => ClipMapper.toClipWithMetadata(clip));
+    }
+
     static async getClipsByChannelId(
         channelId: string,
         offset: number = 0,
-        limit: number = 50
+        limit: number = 50,
+        sort: "asc" | "desc" = "desc"
     ) {
-        const clips = await db.getClipsByChannelId(channelId, limit, offset);
+        const clips = await db.getClipsByChannelId(
+            channelId,
+            limit,
+            offset,
+            sort
+        );
 
         if (!clips) {
             console.error("Clips not found, channelId: " + channelId);

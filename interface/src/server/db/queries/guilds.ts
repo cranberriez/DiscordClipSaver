@@ -1,6 +1,10 @@
 import { getDb } from "../db";
 import type { DbGuild } from "../types";
 
+export interface GuildWithClipCount extends DbGuild {
+    clip_count: number;
+}
+
 export async function getGuildsByIds(guildIds: string[]): Promise<DbGuild[]> {
     if (guildIds.length === 0) return [];
 
@@ -62,4 +66,29 @@ export async function updateGuildMessageScanEnabled(
         })
         .where("id", "=", guildId)
         .executeTakeFirst();
+}
+
+/**
+ * Get guilds by IDs with clip counts
+ */
+export async function getGuildsByIdsWithClipCount(
+    guildIds: string[]
+): Promise<GuildWithClipCount[]> {
+    if (guildIds.length === 0) return [];
+
+    const guilds = await getDb()
+        .selectFrom("guild")
+        .leftJoin("clip", join =>
+            join
+                .onRef("clip.guild_id", "=", "guild.id")
+                .on("clip.deleted_at", "is", null)
+        )
+        .selectAll("guild")
+        .select(eb => eb.fn.count<number>("clip.id").as("clip_count"))
+        .where("guild.id", "in", guildIds)
+        .where("guild.deleted_at", "is", null)
+        .groupBy("guild.id")
+        .execute();
+
+    return guilds as GuildWithClipCount[];
 }

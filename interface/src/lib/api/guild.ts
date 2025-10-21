@@ -45,6 +45,14 @@ export interface GuildResponse extends Guild {
 }
 
 /**
+ * Guild with clip count
+ * Response from GET /api/guilds/?withClipCount=1
+ */
+export interface GuildWithClipCount extends Guild {
+    clip_count: number;
+}
+
+/**
  * Response from POST /api/guilds/[guildId]/toggle
  */
 export interface ToggleScanningResponse {

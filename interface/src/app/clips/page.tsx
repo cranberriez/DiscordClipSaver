@@ -1,94 +1,190 @@
 "use client";
 
-import { useRouter } from "next/navigation";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useEffect, useState, useMemo } from "react";
+import {
+    useGuildsWithClipCount,
+    useChannelStats,
+    useChannelClips,
+} from "@/lib/hooks";
 import { Button } from "@/components/ui/button";
-import { useGuilds } from "@/lib/hooks";
-import { PageContainer } from "@/components/layout";
+import { FilterBar } from "@/features/clips/components/FilterBar";
+import { ClipCard } from "@/features/clips/components/ClipCard";
+import { ClipModal } from "@/features/clips";
+import {
+    GuildSelectModal,
+    ChannelSelectModal,
+    AuthorSelectModal,
+} from "@/features/clips/components/modals";
+import { useClipFiltersStore } from "@/features/clips/stores/useClipFiltersStore";
+import type { FullClip } from "@/lib/api/clip";
 
 /**
- * Clips Viewer - Guild Selection
+ * Centralized Clips Viewer
  *
- * Shows all guilds that:
- * 1. The bot is in (has database entry)
- * 2. The user has access to (Discord permissions)
- *
- * Uses the existing useGuilds() hook which returns guilds from the database
- * that the user has Discord access to.
+ * Features:
+ * - Persistent filter state with Zustand
+ * - Guild/Channel/Author selection modals
+ * - Sticky filter bar
+ * - Server-side filtering for channels
+ * - Client-side search
+ * - Infinite scroll pagination
+ * - Sort by date (asc/desc)
  */
 export default function ClipsPage() {
-    const router = useRouter();
-    const { data: guilds, isLoading, error } = useGuilds();
+    const {
+        selectedGuildId,
+        selectedChannelIds,
+        searchQuery,
+        sortOrder,
+        openGuildModal,
+    } = useClipFiltersStore();
 
-    const handleGuildClick = (guildId: string) => {
-        router.push(`/clips/${guildId}`);
-    };
+    const [selectedClip, setSelectedClip] = useState<FullClip | null>(null);
+    const [offset, setOffset] = useState(0);
+    const limit = 50;
+
+    // Fetch guilds with clip counts
+    const { data: guilds = [], isLoading: guildsLoading } =
+        useGuildsWithClipCount();
+
+    // Fetch channels for selected guild
+    const { data: channels = [], isLoading: channelsLoading } = useChannelStats(
+        selectedGuildId || ""
+    );
+
+    // Fetch clips
+    const {
+        data: clipsData,
+        isLoading: clipsLoading,
+        error: clipsError,
+    } = useChannelClips({
+        guildId: selectedGuildId || "",
+        channelIds:
+            selectedChannelIds.length > 0 &&
+            selectedChannelIds.length < channels.length
+                ? selectedChannelIds
+                : undefined,
+        limit,
+        offset,
+        sort: sortOrder,
+    });
+
+    // Auto-open guild modal if no guild selected
+    useEffect(() => {
+        if (!selectedGuildId && !guildsLoading) {
+            openGuildModal();
+        }
+    }, [selectedGuildId, guildsLoading, openGuildModal]);
+
+    // Reset offset when filters change
+    useEffect(() => {
+        setOffset(0);
+    }, [selectedGuildId, selectedChannelIds, sortOrder]);
+
+    // Get selected guild info
+    const selectedGuild = guilds.find(g => g.id === selectedGuildId);
+
+    // Apply client-side search filter
+    const allClips = clipsData?.clips || [];
+    const filteredClips = useMemo(() => {
+        if (!searchQuery.trim()) return allClips;
+
+        const query = searchQuery.toLowerCase();
+        return allClips.filter((clip: FullClip) => {
+            const messageContent = clip.message.content?.toLowerCase() || "";
+            const filename = clip.clip.filename.toLowerCase();
+            return messageContent.includes(query) || filename.includes(query);
+        });
+    }, [allClips, searchQuery]);
+
+    const hasMore = clipsData?.pagination?.hasMore || false;
 
     return (
-        <PageContainer>
-            <div className="mb-8">
-                <h1 className="text-3xl font-bold">Clips Viewer</h1>
-                <p className="text-muted-foreground mt-2">
-                    Browse and watch clips from your Discord servers
-                </p>
-            </div>
+        <div className="min-h-screen bg-background">
+            {/* Sticky Filter Bar */}
+            <FilterBar
+                guildName={selectedGuild?.name}
+                channelCount={channels.length}
+                authorCount={0} // TODO: Implement author fetching
+            />
 
-            <Card>
-                <CardHeader>
-                    <CardTitle>Select a Server</CardTitle>
-                </CardHeader>
-                <CardContent>
-                    {error ? (
-                        <div className="text-center py-12 text-destructive">
-                            Error loading servers. Please try again.
-                        </div>
-                    ) : isLoading ? (
-                        <div className="text-center py-12 text-muted-foreground">
-                            Loading servers...
-                        </div>
-                    ) : !guilds || guilds.length === 0 ? (
-                        <div className="text-center py-12 text-muted-foreground">
-                            <p>No servers found.</p>
-                            <p className="text-sm mt-2">
-                                Make sure the bot is added to your server and
-                                has scanned some clips.
-                            </p>
-                        </div>
-                    ) : (
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                            {guilds.map(guild => (
-                                <Button
-                                    key={guild.id}
-                                    variant="outline"
-                                    className="h-auto py-6 justify-start hover:bg-accent"
-                                    onClick={() => handleGuildClick(guild.id)}
-                                >
-                                    <div className="flex items-center gap-3 w-full">
-                                        {guild.icon_url ? (
-                                            <img
-                                                src={guild.icon_url}
-                                                alt={guild.name}
-                                                className="w-12 h-12 rounded-full flex-shrink-0"
-                                            />
-                                        ) : (
-                                            <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
-                                                <span className="text-xl font-bold text-primary">
-                                                    {guild.name
-                                                        .charAt(0)
-                                                        .toUpperCase()}
-                                                </span>
-                                            </div>
-                                        )}
-                                        <span className="font-medium text-lg truncate">
-                                            {guild.name}
-                                        </span>
-                                    </div>
-                                </Button>
+            {/* Main Content */}
+            <div className="container mx-auto px-4 py-8">
+                {!selectedGuildId ? (
+                    <div className="text-center py-24">
+                        <h2 className="text-2xl font-bold mb-4">
+                            No Server Selected
+                        </h2>
+                        <p className="text-muted-foreground mb-6">
+                            Please select a server to view clips
+                        </p>
+                        <Button onClick={openGuildModal}>Select Server</Button>
+                    </div>
+                ) : clipsLoading ? (
+                    <div className="text-center py-24 text-muted-foreground">
+                        Loading clips...
+                    </div>
+                ) : clipsError ? (
+                    <div className="text-center py-24 text-destructive">
+                        Error loading clips. Please try again.
+                    </div>
+                ) : filteredClips.length === 0 ? (
+                    <div className="text-center py-24 text-muted-foreground">
+                        <p>
+                            {allClips.length === 0
+                                ? "No clips found in this server."
+                                : "No clips match your search."}
+                        </p>
+                        <p className="text-sm mt-2">
+                            {allClips.length === 0
+                                ? "Clips will appear here after the bot scans your channels."
+                                : "Try adjusting your search query."}
+                        </p>
+                    </div>
+                ) : (
+                    <>
+                        {/* Clips Grid */}
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                            {filteredClips.map((clip: FullClip) => (
+                                <ClipCard
+                                    key={clip.clip.id}
+                                    clip={clip}
+                                    onClick={setSelectedClip}
+                                />
                             ))}
                         </div>
-                    )}
-                </CardContent>
-            </Card>
-        </PageContainer>
+
+                        {/* Load More Button */}
+                        {hasMore && (
+                            <div className="mt-8 text-center">
+                                <Button
+                                    onClick={() => setOffset(offset + limit)}
+                                    variant="outline"
+                                    size="lg"
+                                >
+                                    Load More Clips
+                                </Button>
+                            </div>
+                        )}
+                    </>
+                )}
+            </div>
+
+            {/* Modals */}
+            <GuildSelectModal guilds={guilds} isLoading={guildsLoading} />
+            <ChannelSelectModal
+                channels={channels}
+                isLoading={channelsLoading}
+            />
+            <AuthorSelectModal authors={[]} isLoading={false} />
+
+            {/* Clip Modal */}
+            {selectedClip && (
+                <ClipModal
+                    clip={selectedClip}
+                    onClose={() => setSelectedClip(null)}
+                />
+            )}
+        </div>
     );
 }

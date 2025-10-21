@@ -11,24 +11,28 @@ import type { FullClip, ClipListResponse } from "@/lib/api/clip";
  *
  * Key Strategy:
  * - Individual clips: ['clips', clipId] - Allows sharing across different lists
- * - Channel clips: ['clips', 'list', { guildId, channelId }]
- * - Guild clips: ['clips', 'list', { guildId }] - All channels
+ * - Channel clips: ['clips', 'list', { guildId, channelIds, sort }]
+ * - Guild clips: ['clips', 'list', { guildId, sort }] - All channels
  *
  * This structure allows TanStack Query to:
  * 1. Cache individual clips and reuse them in lists
  * 2. Invalidate all clips for a guild: queryClient.invalidateQueries({ queryKey: clipKeys.byGuild(guildId) })
- * 3. Invalidate clips for a channel: queryClient.invalidateQueries({ queryKey: clipKeys.byChannel(guildId, channelId) })
+ * 3. Invalidate clips for specific channels: queryClient.invalidateQueries({ queryKey: clipKeys.byChannels(guildId, channelIds) })
  */
 export const clipKeys = {
     all: ["clips"] as const,
     lists: () => [...clipKeys.all, "list"] as const,
 
     // List by guild (all channels)
-    byGuild: (guildId: string) => [...clipKeys.lists(), { guildId }] as const,
+    byGuild: (guildId: string, sort?: "asc" | "desc") =>
+        [...clipKeys.lists(), { guildId, sort }] as const,
 
-    // List by channel
-    byChannel: (guildId: string, channelId: string) =>
-        [...clipKeys.lists(), { guildId, channelId }] as const,
+    // List by specific channels
+    byChannels: (
+        guildId: string,
+        channelIds: string[],
+        sort?: "asc" | "desc"
+    ) => [...clipKeys.lists(), { guildId, channelIds, sort }] as const,
 
     // Single clip detail
     detail: (clipId: string) => [...clipKeys.all, clipId] as const,
@@ -40,18 +44,24 @@ export const clipKeys = {
 
 /**
  * Query options for fetching clips with pagination.
- * Supports both per-channel and guild-wide queries.
+ * Supports filtering by multiple channels and sorting.
  */
 export const clipsQuery = (params: {
     guildId: string;
-    channelId?: string;
+    channelIds?: string[];
     limit?: number;
     offset?: number;
+    sort?: "asc" | "desc";
 }) =>
     queryOptions<ClipListResponse>({
-        queryKey: params.channelId
-            ? clipKeys.byChannel(params.guildId, params.channelId)
-            : clipKeys.byGuild(params.guildId),
+        queryKey:
+            params.channelIds && params.channelIds.length > 0
+                ? clipKeys.byChannels(
+                      params.guildId,
+                      params.channelIds,
+                      params.sort
+                  )
+                : clipKeys.byGuild(params.guildId, params.sort),
         queryFn: () => api.clips.list(params),
         enabled: !!params.guildId,
         staleTime: 60_000, // 1 minute
@@ -68,20 +78,26 @@ export const clipsQuery = (params: {
  *   fetchNextPage,
  *   hasNextPage,
  *   isFetchingNextPage,
- * } = useInfiniteQuery(clipsInfiniteQuery({ guildId, channelId, limit: 50 }));
+ * } = useInfiniteQuery(clipsInfiniteQuery({ guildId, channelIds: ['123'], limit: 50 }));
  *
  * const allClips = data?.pages.flatMap(page => page.clips) ?? [];
  * ```
  */
 export const clipsInfiniteQuery = (params: {
     guildId: string;
-    channelId?: string;
+    channelIds?: string[];
     limit?: number;
+    sort?: "asc" | "desc";
 }) =>
     infiniteQueryOptions<ClipListResponse>({
-        queryKey: params.channelId
-            ? clipKeys.byChannel(params.guildId, params.channelId)
-            : clipKeys.byGuild(params.guildId),
+        queryKey:
+            params.channelIds && params.channelIds.length > 0
+                ? clipKeys.byChannels(
+                      params.guildId,
+                      params.channelIds,
+                      params.sort
+                  )
+                : clipKeys.byGuild(params.guildId, params.sort),
         queryFn: ({ pageParam }) =>
             api.clips.list({
                 ...params,
