@@ -7,5 +7,5 @@ type PageProps = {
 export default async function ChannelsPage({ params }: PageProps) {
     const { guildId } = await params;
 
-    return <ChannelsList guildId={guildId} guildScanEnabled={false} />;
+    return <ChannelsList guildId={guildId} />;
 }

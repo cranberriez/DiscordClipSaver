@@ -10,14 +10,17 @@ import {
 } from "@/components/composite/ChannelOrganizer";
 import { Channel } from "@/lib/api/channel";
 import { useChannels } from "@/lib/hooks";
+import { useGuild } from "@/lib/hooks";
 
 type ChannelsListProps = {
     guildId: string;
-    guildScanEnabled: boolean;
 };
 
-export function ChannelsList({ guildId, guildScanEnabled }: ChannelsListProps) {
+export function ChannelsList({ guildId }: ChannelsListProps) {
     const bulkUpdateMutation = useBulkUpdateChannels(guildId);
+
+    const { data: guild } = useGuild(guildId);
+    const guildScanEnabled = guild?.message_scan_enabled;
 
     // Track live channels state from React Query cache
     const { isLoading, error, data: channelsList } = useChannels(guildId);
@@ -61,7 +64,9 @@ export function ChannelsList({ guildId, guildScanEnabled }: ChannelsListProps) {
                         <Button
                             onClick={() => handleBulkToggle(true)}
                             disabled={
-                                bulkUpdateMutation.isPending || allEnabled
+                                bulkUpdateMutation.isPending ||
+                                allEnabled ||
+                                !guildScanEnabled
                             }
                             size="sm"
                             variant="ghost"
@@ -118,7 +123,9 @@ export function ChannelsList({ guildId, guildScanEnabled }: ChannelsListProps) {
                                         <ChannelItem
                                             key={channel.id}
                                             channel={channel}
-                                            guildScanEnabled={guildScanEnabled}
+                                            guildScanEnabled={
+                                                guildScanEnabled ?? false
+                                            }
                                         />
                                     ))}
                                 </div>
