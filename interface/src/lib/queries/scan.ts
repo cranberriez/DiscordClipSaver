@@ -114,3 +114,65 @@ export function optimisticStartScan(
 
     return { prev };
 }
+
+/**
+ * Optimistically update scan statuses to PENDING when starting bulk scans.
+ * Returns snapshot for rollback on error.
+ */
+export function optimisticStartBulkScan(
+    qc: QueryClient,
+    guildId: string,
+    channelIds: string[]
+) {
+    const key = scanKeys.statuses(guildId);
+    const prev = qc.getQueryData<ScanStatus[]>(key);
+    if (!prev) return { prev };
+
+    const optimistic = [...prev];
+
+    // Update or add PENDING status for each channel
+    channelIds.forEach(channelId => {
+        const existingIndex = optimistic.findIndex(
+            s => s.channel_id === channelId
+        );
+
+        const optimisticStatus: ScanStatus = {
+            channel_id: channelId,
+            guild_id: guildId,
+            status: "PENDING",
+            message_count:
+                existingIndex >= 0
+                    ? optimistic[existingIndex].message_count
+                    : 0,
+            total_messages_scanned:
+                existingIndex >= 0
+                    ? optimistic[existingIndex].total_messages_scanned
+                    : 0,
+            forward_message_id:
+                existingIndex >= 0
+                    ? optimistic[existingIndex].forward_message_id
+                    : null,
+            backward_message_id:
+                existingIndex >= 0
+                    ? optimistic[existingIndex].backward_message_id
+                    : null,
+            created_at:
+                existingIndex >= 0
+                    ? optimistic[existingIndex].created_at
+                    : new Date(),
+            updated_at: new Date(),
+            error_message: null,
+            deleted_at: null,
+        };
+
+        if (existingIndex >= 0) {
+            optimistic[existingIndex] = optimisticStatus;
+        } else {
+            optimistic.push(optimisticStatus);
+        }
+    });
+
+    qc.setQueryData(key, optimistic);
+
+    return { prev };
+}

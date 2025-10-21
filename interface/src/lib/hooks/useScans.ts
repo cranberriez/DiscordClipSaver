@@ -6,6 +6,7 @@ import {
     scanStatusQuery,
     scanKeys,
     optimisticStartScan,
+    optimisticStartBulkScan,
 } from "../queries/scan";
 import {
     startSingleScan,
@@ -189,15 +190,31 @@ export function useStartBulkScan(guildId: string) {
             options?: StartScanOptions;
         }) => startBulkScan(guildId, channelIds, options),
 
-        onSuccess: () => {
-            // Invalidate to fetch updated statuses
+        onMutate: async ({ channelIds }) => {
+            // Stop any in-flight refetches of scan statuses
+            await qc.cancelQueries({
+                queryKey: scanKeys.statuses(guildId),
+            });
+
+            // Optimistically update all channels to PENDING status
+            const snapshot = optimisticStartBulkScan(qc, guildId, channelIds);
+
+            return { snapshot };
+        },
+
+        onError: (_err, _payload, ctx) => {
+            console.error("Failed to start bulk scan:", _err);
+
+            // Roll back if we had a snapshot
+            const prev = ctx?.snapshot?.prev;
+            if (prev) qc.setQueryData(scanKeys.statuses(guildId), prev);
+        },
+
+        onSettled: () => {
+            // Revalidate canonical data
             qc.invalidateQueries({
                 queryKey: scanKeys.statuses(guildId),
             });
-        },
-
-        onError: err => {
-            console.error("Failed to start bulk scan:", err);
         },
     });
 }
