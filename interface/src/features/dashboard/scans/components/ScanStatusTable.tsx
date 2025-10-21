@@ -132,8 +132,7 @@ export function ScanStatusTable({
                                             </td>
                                             <td className="p-3 text-right text-muted-foreground text-sm">
                                                 {channel.scanStatus
-                                                    ?.total_messages_scanned ||
-                                                    "-"}
+                                                    ?.message_count || "-"}
                                             </td>
                                             <td className="p-3 text-right text-muted-foreground text-sm">
                                                 {channel.scanStatus
