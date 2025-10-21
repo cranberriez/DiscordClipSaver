@@ -28,7 +28,7 @@ export interface Message {
 }
 
 export interface Thumbnail {
-    url: string;
+    url: string | null;
     size: "small" | "large";
     width: number;
     height: number;
@@ -37,7 +37,7 @@ export interface Thumbnail {
 export interface FullClip {
     clip: Clip;
     message: Message;
-    thumbnail: Thumbnail;
+    thumbnail: Thumbnail | null;
 }
 
 export interface ClipListResponse {

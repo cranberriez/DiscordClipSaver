@@ -42,7 +42,7 @@ export class ClipMapper {
 
     static toThumbnail(dbThumbnail: DbThumbnail): Thumbnail {
         return {
-            url: dbThumbnail.storage_path,
+            url: dbThumbnail.storage_path || null,
             size: dbThumbnail.size_type as "small" | "large",
             width: dbThumbnail.width,
             height: dbThumbnail.height,
@@ -55,7 +55,9 @@ export class ClipMapper {
         return {
             clip: ClipMapper.toClip(dbClipWithMetadata.clip),
             message: ClipMapper.toMessage(dbClipWithMetadata.message),
-            thumbnail: ClipMapper.toThumbnail(dbClipWithMetadata.thumbnails[0]),
+            thumbnail: dbClipWithMetadata.thumbnails.length > 0
+                ? ClipMapper.toThumbnail(dbClipWithMetadata.thumbnails[0])
+                : null,
         };
     }
 }
