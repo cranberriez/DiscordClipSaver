@@ -1,6 +1,7 @@
 "use client";
 
 import type { FullClip } from "@/lib/api/clip";
+import type { AuthorWithStats } from "@/lib/api/author";
 import { formatClipName } from "../lib/formatClipName";
 import { formatDuration, formatRelativeTime } from "@/lib/utils/time-helpers";
 import { UserAvatar } from "@/components/user/UserAvatar";
@@ -9,6 +10,7 @@ import { Play } from "lucide-react";
 interface ClipCardProps {
     clip: FullClip;
     onClick: (clip: FullClip) => void;
+    authorMap?: Map<string, AuthorWithStats>;
 }
 
 /**
@@ -19,7 +21,7 @@ interface ClipCardProps {
  * - Author avatar and name
  * - Time posted (relative)
  */
-export function ClipCard({ clip, onClick }: ClipCardProps) {
+export function ClipCard({ clip, onClick, authorMap }: ClipCardProps) {
     const getThumbnailUrl = (): string | null => {
         const thumbnail = clip.thumbnail;
         if (thumbnail && thumbnail.url) {
@@ -30,6 +32,7 @@ export function ClipCard({ clip, onClick }: ClipCardProps) {
 
     const thumbnailUrl = getThumbnailUrl();
     const { clip: clipData, message } = clip;
+    const author = authorMap?.get(message.author_id);
 
     return (
         <div
@@ -80,6 +83,8 @@ export function ClipCard({ clip, onClick }: ClipCardProps) {
                 <div className="flex items-center gap-2">
                     <UserAvatar
                         userId={message.author_id}
+                        username={author?.username}
+                        avatarUrl={author?.avatar_url ?? undefined}
                         size="sm"
                         showName={true}
                     />

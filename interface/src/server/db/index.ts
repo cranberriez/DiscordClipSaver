@@ -1,4 +1,9 @@
-export { getUserByDiscordId, upsertUser, updateUser } from "./queries/users";
+export {
+    getUserByDiscordId,
+    upsertUser,
+    updateUser,
+    getAuthorStatsByGuildId,
+} from "./queries/users";
 export { db, getDb } from "./db";
 export {
     consumeInstallIntent,

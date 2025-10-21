@@ -46,3 +46,10 @@ export {
     useClips,
     useClipsInfinite,
 } from "./useClips";
+
+// Author hooks
+export {
+    useAuthorStats,
+    usePrefetchAuthorStats,
+    authorKeys,
+} from "./useAuthors";

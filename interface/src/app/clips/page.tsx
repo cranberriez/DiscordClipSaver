@@ -5,6 +5,8 @@ import {
     useGuildsWithClipCount,
     useChannelStats,
     useChannelClips,
+    useAuthorStats,
+    usePrefetchAuthorStats,
 } from "@/lib/hooks";
 import { Button } from "@/components/ui/button";
 import { FilterBar } from "@/features/clips/components/FilterBar";
@@ -34,6 +36,7 @@ export default function ClipsPage() {
     const {
         selectedGuildId,
         selectedChannelIds,
+        selectedAuthorIds,
         searchQuery,
         sortOrder,
         openGuildModal,
@@ -51,6 +54,18 @@ export default function ClipsPage() {
     const { data: channels = [], isLoading: channelsLoading } = useChannelStats(
         selectedGuildId || ""
     );
+
+    // Fetch authors for selected guild
+    const { data: authors = [] } = useAuthorStats(selectedGuildId || "");
+
+    // Create author lookup map for O(1) access
+    const authorMap = useMemo(
+        () => new Map(authors.map(a => [a.id, a])),
+        [authors]
+    );
+
+    // Prefetch hook for authors
+    const prefetchAuthors = usePrefetchAuthorStats();
 
     // Fetch clips
     const {
@@ -79,23 +94,42 @@ export default function ClipsPage() {
     // Reset offset when filters change
     useEffect(() => {
         setOffset(0);
-    }, [selectedGuildId, selectedChannelIds, sortOrder]);
+    }, [selectedGuildId, selectedChannelIds, selectedAuthorIds, sortOrder]);
 
     // Get selected guild info
     const selectedGuild = guilds.find(g => g.id === selectedGuildId);
 
-    // Apply client-side search filter
+    // Apply client-side search and author filters
     const allClips = clipsData?.clips || [];
     const filteredClips = useMemo(() => {
-        if (!searchQuery.trim()) return allClips;
+        let filtered = allClips;
 
-        const query = searchQuery.toLowerCase();
-        return allClips.filter((clip: FullClip) => {
-            const messageContent = clip.message.content?.toLowerCase() || "";
-            const filename = clip.clip.filename.toLowerCase();
-            return messageContent.includes(query) || filename.includes(query);
-        });
-    }, [allClips, searchQuery]);
+        // Filter by selected authors
+        if (selectedAuthorIds.length > 0) {
+            filtered = filtered.filter((clip: FullClip) =>
+                selectedAuthorIds.includes(clip.message.author_id)
+            );
+        }
+
+        // Filter by search query
+        if (searchQuery.trim()) {
+            const query = searchQuery.toLowerCase();
+            filtered = filtered.filter((clip: FullClip) => {
+                const messageContent =
+                    clip.message.content?.toLowerCase() || "";
+                const filename = clip.clip.filename.toLowerCase();
+                const author = authorMap.get(clip.message.author_id);
+                const authorName = author?.username.toLowerCase() || "";
+                return (
+                    messageContent.includes(query) ||
+                    filename.includes(query) ||
+                    authorName.includes(query)
+                );
+            });
+        }
+
+        return filtered;
+    }, [allClips, selectedAuthorIds, searchQuery, authorMap]);
 
     const hasMore = clipsData?.pagination?.hasMore || false;
 
@@ -105,7 +139,7 @@ export default function ClipsPage() {
             <FilterBar
                 guildName={selectedGuild?.name}
                 channelCount={channels.length}
-                authorCount={0} // TODO: Implement author fetching
+                authorCount={authors.length}
             />
 
             {/* Main Content */}
@@ -150,6 +184,7 @@ export default function ClipsPage() {
                                     key={clip.clip.id}
                                     clip={clip}
                                     onClick={setSelectedClip}
+                                    authorMap={authorMap}
                                 />
                             ))}
                         </div>
@@ -176,7 +211,7 @@ export default function ClipsPage() {
                 channels={channels}
                 isLoading={channelsLoading}
             />
-            <AuthorSelectModal authors={[]} isLoading={false} />
+            <AuthorSelectModal authors={authors} isLoading={false} />
 
             {/* Clip Modal */}
             {selectedClip && (

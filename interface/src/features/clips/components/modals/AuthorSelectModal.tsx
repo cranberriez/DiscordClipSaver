@@ -13,13 +13,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Search } from "lucide-react";
 import { UserAvatar } from "@/components/user/UserAvatar";
 import { useClipFiltersStore } from "../../stores/useClipFiltersStore";
-
-interface AuthorWithStats {
-    id: string;
-    username?: string;
-    avatarUrl?: string;
-    clip_count: number;
-}
+import type { AuthorWithStats } from "@/lib/api/author";
 
 interface AuthorSelectModalProps {
     authors: AuthorWithStats[];
@@ -70,7 +64,7 @@ export function AuthorSelectModal({
 
     return (
         <Dialog open={isAuthorModalOpen} onOpenChange={closeAuthorModal}>
-            <DialogContent className="max-w-2xl max-h-[80vh] flex flex-col">
+            <DialogContent className="sm:!max-w-6xl max-h-[80vh] flex flex-col">
                 <DialogHeader>
                     <DialogTitle>Select Authors</DialogTitle>
                 </DialogHeader>
@@ -122,7 +116,7 @@ export function AuthorSelectModal({
                                 : "No authors found"}
                         </div>
                     ) : (
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
                             {filteredAuthors.map(author => {
                                 const isSelected = selectedAuthorIds.includes(
                                     author.id
@@ -154,16 +148,15 @@ export function AuthorSelectModal({
                                             <UserAvatar
                                                 userId={author.id}
                                                 username={author.username}
-                                                avatarUrl={author.avatarUrl}
+                                                avatarUrl={
+                                                    author.avatar_url ??
+                                                    undefined
+                                                }
                                                 size="md"
                                             />
                                             <div className="flex-1 min-w-0">
                                                 <p className="font-medium truncate">
-                                                    {author.username ||
-                                                        `User ${author.id.slice(
-                                                            0,
-                                                            8
-                                                        )}`}
+                                                    {author.username}
                                                 </p>
                                                 <p className="text-xs text-muted-foreground">
                                                     {author.clip_count}{" "}

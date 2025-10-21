@@ -17,6 +17,7 @@ import { UpdateGuildSettingsPayload } from "../schema/guild-settings.schema";
 import { Channel, ChannelStatsResponse } from "./channel";
 import { ScanStatus } from "./scan";
 import { ClipListResponse, FullClip } from "./clip";
+import type { AuthorStatsResponse } from "./author";
 
 // ============================================================================
 // Error Handling
@@ -157,6 +158,20 @@ export const api = {
                 method: "POST",
                 body: JSON.stringify({ enabled }),
             }),
+    },
+
+    // ========================================================================
+    // Authors
+    // ========================================================================
+    authors: {
+        /**
+         * Get all authors with clip statistics for a guild
+         * GET /api/guilds/[guildId]/authors/stats
+         */
+        stats: (guildId: string) =>
+            apiRequest<AuthorStatsResponse>(
+                `/api/guilds/${guildId}/authors/stats`
+            ),
     },
 
     // ========================================================================

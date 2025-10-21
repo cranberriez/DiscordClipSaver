@@ -5,6 +5,7 @@ import {
     ClipMapper,
     ScanMapper,
     SettingsMapper,
+    AuthorMapper,
 } from "../mappers";
 
 // Handles DTO mapping, and caching (later) for relevant database queries
@@ -198,6 +199,18 @@ export class DataService {
         }
 
         return clipCount;
+    }
+
+    // Authors
+    static async getAuthorStatsByGuildId(guildId: string) {
+        const authors = await db.getAuthorStatsByGuildId(guildId);
+
+        if (!authors) {
+            console.error("Authors not found, guildId: " + guildId);
+            return undefined;
+        }
+
+        return authors.map(author => AuthorMapper.toAuthorWithStats(author));
     }
 
     // Settings
