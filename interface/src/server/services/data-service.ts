@@ -68,7 +68,7 @@ export class DataService {
             return undefined;
         }
 
-        return channels.map(channel => ChannelMapper.toChannel(channel));
+        return channels.map(channel => ChannelMapper.toChannelWithStats(channel));
     }
 
     // Scans
