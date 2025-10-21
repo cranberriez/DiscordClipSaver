@@ -35,6 +35,7 @@ export default function GuildClipsPage() {
     const guildId = params.guildId as string;
 
     const [selectedClip, setSelectedClip] = useState<FullClip | null>(null);
+    const [selectedClipIndex, setSelectedClipIndex] = useState<number>(-1);
     const [selectedChannelId, setSelectedChannelId] = useState<string | null>(
         null
     );
@@ -165,7 +166,13 @@ export default function GuildClipsPage() {
                                     <>
                                         <ClipGrid
                                             clips={filteredClips}
-                                            onClipClick={setSelectedClip}
+                                            onClipClick={(clip) => {
+                                                const index = filteredClips.findIndex(
+                                                    (c) => c.clip.id === clip.clip.id
+                                                );
+                                                setSelectedClipIndex(index);
+                                                setSelectedClip(clip);
+                                            }}
                                         />
 
                                         {/* Load More Button */}
@@ -199,7 +206,28 @@ export default function GuildClipsPage() {
             {selectedClip && (
                 <ClipModal
                     clip={selectedClip}
-                    onClose={() => setSelectedClip(null)}
+                    onClose={() => {
+                        setSelectedClip(null);
+                        setSelectedClipIndex(-1);
+                    }}
+                    onPrevious={
+                        selectedClipIndex > 0
+                            ? () => {
+                                  const newIndex = selectedClipIndex - 1;
+                                  setSelectedClipIndex(newIndex);
+                                  setSelectedClip(filteredClips[newIndex]);
+                              }
+                            : undefined
+                    }
+                    onNext={
+                        selectedClipIndex < filteredClips.length - 1
+                            ? () => {
+                                  const newIndex = selectedClipIndex + 1;
+                                  setSelectedClipIndex(newIndex);
+                                  setSelectedClip(filteredClips[newIndex]);
+                              }
+                            : undefined
+                    }
                 />
             )}
         </PageContainer>

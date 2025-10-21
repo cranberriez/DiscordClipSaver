@@ -43,6 +43,7 @@ export default function ClipsPage() {
     } = useClipFiltersStore();
 
     const [selectedClip, setSelectedClip] = useState<FullClip | null>(null);
+    const [selectedClipIndex, setSelectedClipIndex] = useState<number>(-1);
     const [offset, setOffset] = useState(0);
     const limit = 50;
 
@@ -171,11 +172,14 @@ export default function ClipsPage() {
                     <>
                         {/* Clips Grid */}
                         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                            {filteredClips.map((clip: FullClip) => (
+                            {filteredClips.map((clip: FullClip, index: number) => (
                                 <ClipCard
                                     key={clip.clip.id}
                                     clip={clip}
-                                    onClick={setSelectedClip}
+                                    onClick={(clip) => {
+                                        setSelectedClipIndex(index);
+                                        setSelectedClip(clip);
+                                    }}
                                     authorMap={authorMap}
                                 />
                             ))}
@@ -209,7 +213,29 @@ export default function ClipsPage() {
             {selectedClip && (
                 <ClipModal
                     clip={selectedClip}
-                    onClose={() => setSelectedClip(null)}
+                    onClose={() => {
+                        setSelectedClip(null);
+                        setSelectedClipIndex(-1);
+                    }}
+                    onPrevious={
+                        selectedClipIndex > 0
+                            ? () => {
+                                  const newIndex = selectedClipIndex - 1;
+                                  setSelectedClipIndex(newIndex);
+                                  setSelectedClip(filteredClips[newIndex]);
+                              }
+                            : undefined
+                    }
+                    onNext={
+                        selectedClipIndex < filteredClips.length - 1
+                            ? () => {
+                                  const newIndex = selectedClipIndex + 1;
+                                  setSelectedClipIndex(newIndex);
+                                  setSelectedClip(filteredClips[newIndex]);
+                              }
+                            : undefined
+                    }
+                    authorMap={authorMap}
                 />
             )}
         </div>
