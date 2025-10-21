@@ -66,7 +66,7 @@ export function ChannelSelectModal({
 
     return (
         <Dialog open={isChannelModalOpen} onOpenChange={closeChannelModal}>
-            <DialogContent className="max-w-3xl max-h-[80vh] flex flex-col">
+            <DialogContent className="max-w-5xl max-h-[80vh] flex flex-col">
                 <DialogHeader>
                     <DialogTitle>Select Channels</DialogTitle>
                 </DialogHeader>
@@ -169,11 +169,8 @@ export function ChannelSelectModal({
                 </div>
 
                 {/* Footer */}
-                <div className="flex justify-end gap-2 pt-4 border-t">
-                    <Button variant="outline" onClick={closeChannelModal}>
-                        Cancel
-                    </Button>
-                    <Button onClick={closeChannelModal}>Apply</Button>
+                <div className="flex justify-end pt-4">
+                    <Button onClick={closeChannelModal}>Close</Button>
                 </div>
             </DialogContent>
         </Dialog>

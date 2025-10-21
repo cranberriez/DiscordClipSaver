@@ -8,6 +8,7 @@ import {
     DialogTitle,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 import { Search, Server } from "lucide-react";
 import { useClipFiltersStore } from "../../stores/useClipFiltersStore";
 import type { GuildWithClipCount } from "@/lib/api/guild";
@@ -136,6 +137,11 @@ export function GuildSelectModal({
                             })}
                         </div>
                     )}
+                </div>
+
+                {/* Footer */}
+                <div className="flex justify-end pt-4">
+                    <Button onClick={closeGuildModal}>Close</Button>
                 </div>
             </DialogContent>
         </Dialog>

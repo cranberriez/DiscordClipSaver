@@ -181,11 +181,8 @@ export function AuthorSelectModal({
                 </div>
 
                 {/* Footer */}
-                <div className="flex justify-end gap-2 pt-4 border-t">
-                    <Button variant="outline" onClick={closeAuthorModal}>
-                        Cancel
-                    </Button>
-                    <Button onClick={closeAuthorModal}>Apply</Button>
+                <div className="flex justify-end pt-4">
+                    <Button onClick={closeAuthorModal}>Close</Button>
                 </div>
             </DialogContent>
         </Dialog>
