@@ -6,7 +6,7 @@
  */
 
 import { signOut } from "next-auth/react";
-import type { GuildSettingsResponse } from "./settings";
+import type { GuildSettingsResponse } from "./setting";
 import type { EnrichedDiscordGuild, Guild } from "@/lib/api/guild";
 import { GuildResponse, ToggleScanningResponse } from "./guild";
 import { UpdateGuildSettingsPayload } from "../schema/guild-settings.schema";
@@ -96,8 +96,7 @@ export const api = {
          * Get a single guild by ID from the database
          * GET /api/guilds/[guildId]
          */
-        get: (guildId: string) =>
-            apiRequest<Guild>(`/api/guilds/${guildId}`),
+        get: (guildId: string) => apiRequest<Guild>(`/api/guilds/${guildId}`),
 
         /**
          * Toggle message scanning for a guild

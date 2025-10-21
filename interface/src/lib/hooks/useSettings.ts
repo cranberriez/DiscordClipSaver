@@ -1,56 +1,43 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { api } from "@/lib/api/client";
-import { guildKeys } from "@/lib/queries";
-import { GuildSettingsBuilder } from "@/lib/react-query/guild-settings-builder";
+import { guildSettingsQuery, settingsKeys } from "@/lib/queries/setting";
+import { updateGuildSettings } from "@/lib/api/setting";
 import type {
     GuildSettings,
     DefaultChannelSettings,
 } from "@/lib/schema/guild-settings.schema";
+import type { UpdateGuildSettingsPayload } from "@/lib/api/setting";
 
 // ============================================================================
-// Queries
+// Query Hook
 // ============================================================================
 
 /**
- * Fetch guild settings.
- *
- * This is a simpler query-only version. For the full builder pattern,
- * use useGuildSettingsWithBuilder below.
+ * Fetch guild settings
  */
 export function useGuildSettings(guildId: string) {
-    return useQuery({
-        queryKey: guildKeys.settings(guildId),
-        queryFn: () => api.settings.get(guildId),
-        enabled: !!guildId,
-    });
+    return useQuery(guildSettingsQuery(guildId));
 }
 
 // ============================================================================
-// Mutations
+// Mutation Hook
 // ============================================================================
 
 /**
- * Update guild settings mutation.
+ * Update guild settings mutation
  */
 export function useUpdateGuildSettings(guildId: string) {
     const queryClient = useQueryClient();
 
     return useMutation({
-        mutationFn: (payload: {
-            settings?: Record<string, unknown>;
-            default_channel_settings?: Record<string, unknown>;
-        }) =>
-            api.settings.update(guildId, {
-                guild_id: guildId,
-                ...payload,
-            }),
+        mutationFn: (payload: UpdateGuildSettingsPayload) =>
+            updateGuildSettings(guildId, payload),
 
         onSuccess: data => {
             // Update cache with new data
-            queryClient.setQueryData(guildKeys.settings(guildId), data);
+            queryClient.setQueryData(settingsKeys.guild(guildId), data);
         },
 
         onError: error => {
@@ -60,47 +47,17 @@ export function useUpdateGuildSettings(guildId: string) {
 }
 
 // ============================================================================
-// Combined Hook with Builder Pattern (replaces old useGuildSettings)
+// Combined Hook with Local State (for forms)
 // ============================================================================
 
-export interface UseGuildSettingsReturn {
-    // Current settings (includes pending changes)
-    settings: GuildSettings | null;
-    defaultChannelSettings: DefaultChannelSettings | null;
+/**
+ * Combined hook for managing guild settings with local state tracking.
+ * Useful for forms that need to track changes before saving.
+ */
+export function useGuildSettingsForm(guildId: string) {
+    const queryClient = useQueryClient();
 
-    // Builder for collecting changes
-    builder: GuildSettingsBuilder;
-
-    // State
-    loading: boolean;
-    saving: boolean;
-    error: string | null;
-    hasChanges: boolean;
-
-    // Actions
-    refresh: () => void;
-    save: () => Promise<void>;
-    reset: () => void;
-    resetToDefaults: () => Promise<void>;
-
-    // Convenience setters
-    setGuildSetting: <K extends keyof GuildSettings>(
-        key: K,
-        value: GuildSettings[K]
-    ) => void;
-    setDefaultChannelSetting: <K extends keyof DefaultChannelSettings>(
-        key: K,
-        value: DefaultChannelSettings[K]
-    ) => void;
-}
-
-// TODO: Replace with api > query > mutator pattern
-export function useGuildSettingsWithBuilder(
-    guildId: string
-): UseGuildSettingsReturn {
-    const [builder] = useState(() => new GuildSettingsBuilder(guildId));
-
-    // Fetch settings
+    // Fetch settings from server
     const {
         data: serverData,
         isLoading,
@@ -111,47 +68,61 @@ export function useGuildSettingsWithBuilder(
     // Update mutation
     const updateMutation = useUpdateGuildSettings(guildId);
 
-    // Working state (server state + pending changes)
-    const [workingSettings, setWorkingSettings] =
-        useState<GuildSettings | null>(null);
-    const [workingDefaultChannelSettings, setWorkingDefaultChannelSettings] =
+    // Local working state (server + pending changes)
+    const [localSettings, setLocalSettings] = useState<GuildSettings | null>(
+        null
+    );
+    const [localChannelSettings, setLocalChannelSettings] =
         useState<DefaultChannelSettings | null>(null);
     const [hasChanges, setHasChanges] = useState(false);
 
-    // Sync server data to working state when it changes
-    useMemo(() => {
+    // Sync server data to local state when it loads
+    useEffect(() => {
         if (serverData && !hasChanges) {
-            setWorkingSettings(serverData.settings as GuildSettings | null);
-            setWorkingDefaultChannelSettings(
+            setLocalSettings(serverData.settings as GuildSettings | null);
+            setLocalChannelSettings(
                 serverData.default_channel_settings as DefaultChannelSettings | null
             );
         }
     }, [serverData, hasChanges]);
 
-    // Save changes
-    const save = async () => {
-        const payload = builder.build();
-        if (!payload) return;
-
-        try {
-            await updateMutation.mutateAsync({
-                settings: payload.settings,
-                default_channel_settings: payload.default_channel_settings,
-            });
-
-            builder.clearAll();
-            setHasChanges(false);
-        } catch (err) {
-            // Error is already logged by mutation
-            throw err;
-        }
+    // Update a guild setting
+    const setGuildSetting = <K extends keyof GuildSettings>(
+        key: K,
+        value: GuildSettings[K]
+    ) => {
+        setLocalSettings(prev => ({ ...prev, [key]: value } as GuildSettings));
+        setHasChanges(true);
     };
 
-    // Reset pending changes
+    // Update a default channel setting
+    const setDefaultChannelSetting = <K extends keyof DefaultChannelSettings>(
+        key: K,
+        value: DefaultChannelSettings[K]
+    ) => {
+        setLocalChannelSettings(
+            prev => ({ ...prev, [key]: value } as DefaultChannelSettings)
+        );
+        setHasChanges(true);
+    };
+
+    // Save all changes
+    const save = async () => {
+        if (!hasChanges) return;
+
+        await updateMutation.mutateAsync({
+            guild_id: guildId,
+            settings: localSettings ?? undefined,
+            default_channel_settings: localChannelSettings ?? undefined,
+        });
+
+        setHasChanges(false);
+    };
+
+    // Reset to server state
     const reset = () => {
-        builder.clearAll();
-        setWorkingSettings(serverData?.settings as GuildSettings | null);
-        setWorkingDefaultChannelSettings(
+        setLocalSettings(serverData?.settings as GuildSettings | null);
+        setLocalChannelSettings(
             serverData?.default_channel_settings as DefaultChannelSettings | null
         );
         setHasChanges(false);
@@ -159,58 +130,32 @@ export function useGuildSettingsWithBuilder(
 
     // Reset to system defaults
     const resetToDefaults = async () => {
-        try {
-            await updateMutation.mutateAsync({
-                settings: {},
-                default_channel_settings: {},
-            });
+        await updateMutation.mutateAsync({
+            guild_id: guildId,
+            settings: {},
+            default_channel_settings: {},
+        });
 
-            builder.clearAll();
-            setHasChanges(false);
-        } catch (err) {
-            throw err;
-        }
-    };
-
-    // Convenience setter for guild settings
-    const setGuildSetting = <K extends keyof GuildSettings>(
-        key: K,
-        value: GuildSettings[K]
-    ) => {
-        builder.setGuildSetting(key, value);
-        setWorkingSettings(
-            prev => ({ ...prev, [key]: value } as GuildSettings)
-        );
-        setHasChanges(true);
-    };
-
-    // Convenience setter for default channel settings
-    const setDefaultChannelSetting = <K extends keyof DefaultChannelSettings>(
-        key: K,
-        value: DefaultChannelSettings[K]
-    ) => {
-        builder.setDefaultChannelSetting(key, value);
-        setWorkingDefaultChannelSettings(
-            prev => ({ ...prev, [key]: value } as DefaultChannelSettings)
-        );
-        setHasChanges(true);
+        setHasChanges(false);
     };
 
     return {
-        settings: workingSettings,
-        defaultChannelSettings: workingDefaultChannelSettings,
-        builder,
+        // Current state (includes pending changes)
+        settings: localSettings,
+        defaultChannelSettings: localChannelSettings,
+
+        // Status
         loading: isLoading,
         saving: updateMutation.isPending,
         error: queryError?.message ?? null,
         hasChanges,
-        refresh: () => {
-            refetch();
-        },
+
+        // Actions
+        setGuildSetting,
+        setDefaultChannelSetting,
         save,
         reset,
         resetToDefaults,
-        setGuildSetting,
-        setDefaultChannelSetting,
+        refresh: refetch,
     };
 }

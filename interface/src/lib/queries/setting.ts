@@ -1,27 +1,31 @@
 import { queryOptions } from "@tanstack/react-query";
-import { api } from "../api/client";
+import { getGuildSettings } from "../api/setting";
+import type { GuildSettingsResponse } from "../api/setting";
 
-export const guildSettingsKeys = {
-    all: ["guildSettings"] as const,
-    guild: (guildId: string) => [...guildSettingsKeys.all, guildId] as const,
+// ============================================================================
+// Query Keys Factory
+// ============================================================================
+
+/**
+ * Centralized query keys for guild settings.
+ * This ensures consistent cache keys across the app.
+ */
+export const settingsKeys = {
+    all: ["settings"] as const,
+    guild: (guildId: string) => [...settingsKeys.all, guildId] as const,
 };
 
-export const defaultChannelSettingsKeys = {
-    all: ["defaultChannelSettings"] as const,
-    guild: (guildId: string) =>
-        [...defaultChannelSettingsKeys.all, guildId] as const,
-};
+// ============================================================================
+// Queries
+// ============================================================================
 
+/**
+ * Query options for fetching guild settings
+ */
 export const guildSettingsQuery = (guildId: string) =>
-    queryOptions({
-        queryKey: guildSettingsKeys.guild(guildId),
-        queryFn: () => api.settings.get(guildId),
+    queryOptions<GuildSettingsResponse>({
+        queryKey: settingsKeys.guild(guildId),
+        queryFn: () => getGuildSettings(guildId),
         enabled: !!guildId,
-    });
-
-export const defaultChannelSettingsQuery = (guildId: string) =>
-    queryOptions({
-        queryKey: defaultChannelSettingsKeys.guild(guildId),
-        queryFn: () => api.settings.get(guildId),
-        enabled: !!guildId,
+        staleTime: 60_000,
     });

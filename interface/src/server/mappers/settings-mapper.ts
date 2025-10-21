@@ -1,5 +1,5 @@
 import { DbGuildSettings } from "../db/types";
-import { GuildSettingsResponse } from "@/lib/api/settings";
+import { GuildSettingsResponse } from "@/lib/api/setting";
 
 export class SettingsMapper {
     static toGuildSettings(dbSettings: DbGuildSettings): GuildSettingsResponse {

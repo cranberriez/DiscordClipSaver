@@ -6,7 +6,7 @@ import {
     scanStatusQuery,
     scanKeys,
     optimisticStartScan,
-} from "../queries/scans";
+} from "../queries/scan";
 import { startScan } from "../api/scan";
 import { BatchScanJob } from "../redis";
 

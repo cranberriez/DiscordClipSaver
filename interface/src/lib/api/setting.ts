@@ -1,5 +1,9 @@
 import { api } from "./client";
 
+// ============================================================================
+// Types
+// ============================================================================
+
 /**
  * Response from GET /api/guilds/[guildId]/settings
  * Response from PATCH /api/guilds/[guildId]/settings
@@ -22,13 +26,23 @@ export interface UpdateGuildSettingsPayload {
     default_channel_settings?: Record<string, unknown>;
 }
 
+// ============================================================================
+// API Functions
+// ============================================================================
+
+/**
+ * Get guild settings
+ */
 export function getGuildSettings(guildId: string) {
-    return api.settings.get(guildId); // GET /api/guilds/[guildId]/settings
+    return api.settings.get(guildId);
 }
 
+/**
+ * Update guild settings (partial update)
+ */
 export function updateGuildSettings(
     guildId: string,
     payload: UpdateGuildSettingsPayload
 ) {
-    return api.settings.update(guildId, payload); // PATCH /api/guilds/[guildId]/settings
+    return api.settings.update(guildId, payload);
 }

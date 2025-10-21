@@ -23,5 +23,5 @@ export interface APIErrorResponse {
 export * from "./guild";
 export * from "./channel";
 export * from "./clip";
-export * from "./settings";
+export * from "./setting";
 export * from "./scan";

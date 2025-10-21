@@ -31,6 +31,5 @@ export {
 export {
     useGuildSettings,
     useUpdateGuildSettings,
-    useGuildSettingsWithBuilder,
+    useGuildSettingsForm,
 } from "./useSettings";
-export type { UseGuildSettingsReturn } from "./useSettings";

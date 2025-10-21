@@ -1,5 +1,4 @@
 import { queryOptions, type UseQueryOptions } from "@tanstack/react-query";
-import { getGuildSettings, type GuildSettingsResponse } from "../api/settings";
 import {
     getGuilds,
     getGuild,
