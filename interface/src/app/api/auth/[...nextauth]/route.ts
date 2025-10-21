@@ -73,6 +73,24 @@ export const authOptions: NextAuthOptions = {
             }
             return session;
         },
+        async redirect({ url, baseUrl }) {
+            try {
+                const target = new URL(url, baseUrl);
+                const isSameOrigin = target.origin === baseUrl;
+                if (isSameOrigin) {
+                    if (
+                        target.pathname === "/login" ||
+                        target.pathname === "/"
+                    ) {
+                        return `${baseUrl}/clips`;
+                    }
+                    return target.toString();
+                }
+                return baseUrl;
+            } catch {
+                return baseUrl;
+            }
+        },
     },
 };
 
