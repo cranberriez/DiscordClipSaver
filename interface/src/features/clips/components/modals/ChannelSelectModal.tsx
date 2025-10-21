@@ -66,7 +66,7 @@ export function ChannelSelectModal({
 
     return (
         <Dialog open={isChannelModalOpen} onOpenChange={closeChannelModal}>
-            <DialogContent className="max-w-5xl max-h-[80vh] flex flex-col">
+            <DialogContent className="sm:!max-w-6xl max-h-[80vh] flex flex-col">
                 <DialogHeader>
                     <DialogTitle>Select Channels</DialogTitle>
                 </DialogHeader>
@@ -119,7 +119,7 @@ export function ChannelSelectModal({
                                 : "No channels with clips found"}
                         </div>
                     ) : (
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
                             {filteredChannels.map(channel => {
                                 const isSelected = selectedChannelIds.includes(
                                     channel.id
