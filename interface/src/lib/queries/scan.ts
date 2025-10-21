@@ -24,6 +24,17 @@ export const scanStatusesQuery = (guildId: string) =>
         queryFn: () => getScanStatuses(guildId),
         enabled: !!guildId,
         staleTime: 60_000,
+
+        refetchInterval: query => {
+            const data = query.state.data as ScanStatus[] | undefined;
+            // Check if any scans are running or pending
+            const hasActiveScans = data?.some(
+                status =>
+                    status.status === "RUNNING" || status.status === "PENDING"
+            );
+            // Poll every 3 seconds if any scans are active, otherwise don't poll
+            return hasActiveScans ? 3000 : false;
+        },
     });
 
 export const scanStatusQuery = (guildId: string, channelId: string) =>

@@ -6,7 +6,7 @@ interface StatusBadgeProps {
 
 export function StatusBadge({ status }: StatusBadgeProps) {
     if (!status) {
-        return <Badge variant="outline">Not scanned</Badge>;
+        return <Badge variant="outline">Unscanned</Badge>;
     }
 
     const variantMap: Record<

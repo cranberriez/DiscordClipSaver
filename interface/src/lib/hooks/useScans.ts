@@ -7,8 +7,11 @@ import {
     scanKeys,
     optimisticStartScan,
 } from "../queries/scan";
-import { startScan } from "../api/scan";
-import { BatchScanJob } from "../redis";
+import {
+    startSingleScan,
+    startBulkScan,
+    type StartScanOptions,
+} from "../api/scan";
 
 // ============================================================================
 // Queries
@@ -18,8 +21,9 @@ import { BatchScanJob } from "../redis";
  * Fetch scan statuses for all channels in a guild.
  *
  * Features:
- * - Automatic polling when scans are running
- * - Stops polling when all scans complete
+ * - Automatic polling every 3 seconds when any scans are RUNNING or PENDING
+ * - Stops polling when all scans are completed/failed/cancelled
+ * - Real-time status updates without manual refresh
  *
  * @param guildId - The guild ID
  *
@@ -73,7 +77,7 @@ export function useChannelScanStatus(guildId: string, channelId: string) {
 // ============================================================================
 
 /**
- * Start a scan for a channel using the server action.
+ * Start a scan for a single channel.
  *
  * Features:
  * - Optimistic update: immediately shows PENDING status
@@ -106,16 +110,22 @@ export function useStartScan(guildId: string) {
     const qc = useQueryClient();
 
     return useMutation({
-        mutationFn: (payload: BatchScanJob) => startScan(guildId, payload),
+        mutationFn: ({
+            channelId,
+            options,
+        }: {
+            channelId: string;
+            options?: StartScanOptions;
+        }) => startSingleScan(guildId, channelId, options),
 
-        onMutate: async ({ channel_id }) => {
+        onMutate: async ({ channelId }) => {
             // Stop any in-flight refetches of scan statuses
             await qc.cancelQueries({
                 queryKey: scanKeys.statuses(guildId),
             });
 
             // Optimistically update to PENDING status
-            const snapshot = optimisticStartScan(qc, guildId, channel_id);
+            const snapshot = optimisticStartScan(qc, guildId, channelId);
 
             return { snapshot };
         },
@@ -133,6 +143,61 @@ export function useStartScan(guildId: string) {
             qc.invalidateQueries({
                 queryKey: scanKeys.statuses(guildId),
             });
+        },
+    });
+}
+
+/**
+ * Start scans for multiple channels (bulk operation).
+ *
+ * Features:
+ * - Starts scans for all specified channels
+ * - Invalidates cache on completion
+ * - Returns success/failure counts
+ *
+ * @param guildId - The guild ID
+ *
+ * @example
+ * ```tsx
+ * function BulkScanButton({ guildId, channelIds }: Props) {
+ *   const bulkScan = useStartBulkScan(guildId);
+ *
+ *   const handleStart = () => {
+ *     bulkScan.mutate({
+ *       channelIds,
+ *       options: { isUpdate: true, limit: 100 }
+ *     });
+ *   };
+ *
+ *   return (
+ *     <button onClick={handleStart} disabled={bulkScan.isPending}>
+ *       Start Bulk Scan
+ *     </button>
+ *   );
+ * }
+ * ```
+ */
+export function useStartBulkScan(guildId: string) {
+    const qc = useQueryClient();
+
+    return useMutation({
+        mutationFn: ({
+            channelIds,
+            options,
+        }: {
+            channelIds: string[];
+            options?: StartScanOptions;
+        }) => startBulkScan(guildId, channelIds, options),
+
+        onSuccess: () => {
+            // Invalidate to fetch updated statuses
+            qc.invalidateQueries({
+                queryKey: scanKeys.statuses(guildId),
+            });
+        },
+
+        onError: err => {
+            console.error("Failed to start bulk scan:", err);
         },
     });
 }

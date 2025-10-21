@@ -2,9 +2,8 @@
 // Scan Status API Responses
 // ============================================================================
 
-import type { BatchScanJob } from "../redis";
 import { api } from "./client";
-import { startChannelScan } from "@/lib/actions/scan";
+import { startChannelScan, startMultipleChannelScans } from "@/lib/actions/scan";
 
 export type StatusEnum =
     | "PENDING"
@@ -28,6 +27,17 @@ export interface ScanStatus {
     created_at: Date;
     updated_at: Date;
     deleted_at: Date | null;
+}
+
+/**
+ * Options for starting a scan
+ */
+export interface StartScanOptions {
+    isUpdate?: boolean; // If true, always scan forward from last position
+    isHistorical?: boolean; // If true, force backward scan from beginning
+    limit?: number;
+    autoContinue?: boolean;
+    rescan?: "stop" | "continue" | "update"; // How to handle already-processed messages
 }
 
 /**
@@ -61,15 +71,30 @@ export function getScanStatus(
     return api.scans.status(guildId, channelId);
 }
 
-export async function startScan(
+/**
+ * Start a scan for a single channel
+ */
+export async function startSingleScan(
     guildId: string,
-    payload: BatchScanJob
+    channelId: string,
+    options?: StartScanOptions
 ): Promise<ScanResult> {
-    const result = await startChannelScan(guildId, payload.channel_id, payload);
+    const result = await startChannelScan(guildId, channelId, options);
 
     if (!result.success) {
         throw new Error(result.error);
     }
 
     return result;
+}
+
+/**
+ * Start scans for multiple channels
+ */
+export async function startBulkScan(
+    guildId: string,
+    channelIds: string[],
+    options?: StartScanOptions
+): Promise<MultiScanResult> {
+    return startMultipleChannelScans(guildId, channelIds, options);
 }

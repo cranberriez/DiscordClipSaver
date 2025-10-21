@@ -1,9 +1,8 @@
 "use client";
 
-import { useScanStatuses, useStartScan } from "@/lib/hooks";
-import { startMultipleChannelScans } from "@/lib/actions/scan";
-import { useState } from "react";
+import { useScanStatuses, useStartScan, useStartBulkScan } from "@/lib/hooks";
 import { Channel } from "@/lib/api/channel";
+import type { MultiScanResult } from "@/lib/api/scan";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
     InfoPanel,
@@ -12,7 +11,7 @@ import {
     ScanStatusTable,
 } from "../index";
 import { ChannelWithStatus } from "../types";
-import { randomUUID } from "crypto"; // TODO: Fix by creating DTO for redis jobs properly
+import { mergeChannelsWithStatuses } from "../lib/mergeChannelsWithStatuses";
 
 interface ScansPanelProps {
     guildId: string;
@@ -30,16 +29,13 @@ export function ScansPanel({
         refetch,
     } = useScanStatuses(guildId);
     const startScanMutation = useStartScan(guildId);
-    const [startingUnscanned, setStartingUnscanned] = useState(false);
-    const [startingUpdate, setStartingUpdate] = useState(false);
-    const [startingHistorical, setStartingHistorical] = useState(false);
+    const startBulkScanMutation = useStartBulkScan(guildId);
 
-    const channels: ChannelWithStatus[] = scanStatuses.map(scan => ({
-        ...serverChannels.find(
-            serverChannel => serverChannel.id === scan.channel_id
-        )!,
-        scanStatus: scan,
-    }));
+    // Merge all channels with their scan statuses (channels without statuses will have scanStatus: null)
+    const channels: ChannelWithStatus[] = mergeChannelsWithStatuses(
+        serverChannels,
+        scanStatuses
+    );
 
     const unscannedOrFailedCount = channels.filter(
         ch =>
@@ -58,23 +54,19 @@ export function ScansPanel({
         ch => ch.message_scan_enabled
     ).length;
 
-    const handleStartScan = (channelId: string, isUpdate: boolean = false) => {
+    const handleStartScan = (channelId: string) => {
         startScanMutation.mutate({
-            job_id: randomUUID(),
-            channel_id: channelId,
-            guild_id: guildId,
-            type: "batch",
-            direction: "forward",
-            limit: 100,
-            auto_continue: true,
-            rescan: "stop",
-            created_at: new Date().toISOString(),
+            channelId,
+            options: {
+                isUpdate: false,
+                limit: 100,
+                autoContinue: true,
+                rescan: "stop",
+            },
         });
     };
 
-    const handleScanUnscannedOrFailed = async () => {
-        setStartingUnscanned(true);
-
+    const handleScanUnscannedOrFailed = () => {
         // Scan channels that are unscanned or failed
         const toScan = channels.filter(
             ch =>
@@ -86,28 +78,31 @@ export function ScansPanel({
 
         if (channelIds.length === 0) {
             alert("No unscanned or failed channels found");
-            setStartingUnscanned(false);
             return;
         }
 
         // Start the scans (isUpdate: false = initial/continuation scan, rescan: "stop")
-        const result = await startMultipleChannelScans(guildId, channelIds, {
-            isUpdate: false,
-            limit: 100,
-            autoContinue: true,
-            rescan: "stop",
-        });
-
-        alert(`Started ${result.success} scans, ${result.failed} failed`);
-
-        // Refetch to get actual server state
-        refetch();
-        setStartingUnscanned(false);
+        startBulkScanMutation.mutate(
+            {
+                channelIds,
+                options: {
+                    isUpdate: false,
+                    limit: 100,
+                    autoContinue: true,
+                    rescan: "stop",
+                },
+            },
+            {
+                onSuccess: (result: MultiScanResult) => {
+                    alert(
+                        `Started ${result.success} scans, ${result.failed} failed`
+                    );
+                },
+            }
+        );
     };
 
-    const handleUpdateAllChannels = async () => {
-        setStartingUpdate(true);
-
+    const handleUpdateAllChannels = () => {
         // Update scan for all enabled channels (forward scan from last known position)
         const toUpdate = channels.filter(ch => ch.message_scan_enabled);
 
@@ -115,32 +110,33 @@ export function ScansPanel({
 
         if (channelIds.length === 0) {
             alert("No channels enabled for scanning");
-            setStartingUpdate(false);
             return;
         }
 
         // Start the scans (isUpdate: true = forward scan from last position, rescan: "stop")
-        const result = await startMultipleChannelScans(guildId, channelIds, {
-            isUpdate: true,
-            limit: 100,
-            autoContinue: true,
-            rescan: "stop",
-        });
-
-        alert(
-            `Started ${result.success} update scans, ${result.failed} failed`
+        startBulkScanMutation.mutate(
+            {
+                channelIds,
+                options: {
+                    isUpdate: true,
+                    limit: 100,
+                    autoContinue: true,
+                    rescan: "stop",
+                },
+            },
+            {
+                onSuccess: (result: MultiScanResult) => {
+                    alert(
+                        `Started ${result.success} update scans, ${result.failed} failed`
+                    );
+                },
+            }
         );
-
-        // Refetch to get actual server state
-        refetch();
-        setStartingUpdate(false);
     };
 
-    const handleHistoricalScan = async (
+    const handleHistoricalScan = (
         rescanMode: "stop" | "continue" | "update"
     ) => {
-        setStartingHistorical(true);
-
         // Historical scan: backward from the beginning for all enabled channels
         const toScan = channels.filter(ch => ch.message_scan_enabled);
 
@@ -148,7 +144,6 @@ export function ScansPanel({
 
         if (channelIds.length === 0) {
             alert("No channels enabled for scanning");
-            setStartingHistorical(false);
             return;
         }
 
@@ -169,27 +164,30 @@ export function ScansPanel({
                     `Continue?`
             );
             if (!confirmed) {
-                setStartingHistorical(false);
                 return;
             }
         }
 
         // Start historical scans (backward from beginning with specified rescan mode)
-        const result = await startMultipleChannelScans(guildId, channelIds, {
-            isUpdate: false,
-            isHistorical: true,
-            limit: 100,
-            autoContinue: true,
-            rescan: rescanMode,
-        });
-
-        alert(
-            `Started ${result.success} historical scans (${modeLabels[rescanMode]}), ${result.failed} failed`
+        startBulkScanMutation.mutate(
+            {
+                channelIds,
+                options: {
+                    isUpdate: false,
+                    isHistorical: true,
+                    limit: 100,
+                    autoContinue: true,
+                    rescan: rescanMode,
+                },
+            },
+            {
+                onSuccess: (result: MultiScanResult) => {
+                    alert(
+                        `Started ${result.success} historical scans (${modeLabels[rescanMode]}), ${result.failed} failed`
+                    );
+                },
+            }
         );
-
-        // Refetch to get actual server state
-        refetch();
-        setStartingHistorical(false);
     };
 
     if (loading) {
@@ -267,18 +265,18 @@ export function ScansPanel({
             <BulkScanActions
                 unscannedOrFailedCount={unscannedOrFailedCount}
                 enabledChannelsCount={enabledChannelsCount}
-                startingUnscanned={startingUnscanned}
-                startingUpdate={startingUpdate}
-                startingHistorical={startingHistorical}
+                startingUnscanned={startBulkScanMutation.isPending}
+                startingUpdate={startBulkScanMutation.isPending}
+                startingHistorical={startBulkScanMutation.isPending}
                 onScanUnscannedOrFailed={handleScanUnscannedOrFailed}
                 onUpdateAllChannels={handleUpdateAllChannels}
             />
 
             <HistoricalScanPanel
                 enabledChannelsCount={enabledChannelsCount}
-                startingUnscanned={startingUnscanned}
-                startingUpdate={startingUpdate}
-                startingHistorical={startingHistorical}
+                startingUnscanned={startBulkScanMutation.isPending}
+                startingUpdate={startBulkScanMutation.isPending}
+                startingHistorical={startBulkScanMutation.isPending}
                 onHistoricalScan={handleHistoricalScan}
             />
 
