@@ -32,8 +32,8 @@ export const scanStatusesQuery = (guildId: string) =>
                 status =>
                     status.status === "RUNNING" || status.status === "PENDING"
             );
-            // Poll every 3 seconds if any scans are active, otherwise don't poll
-            return hasActiveScans ? 3000 : false;
+            // Poll every 6 seconds if any scans are active, otherwise don't poll
+            return hasActiveScans ? 6000 : false;
         },
     });
 
@@ -49,8 +49,8 @@ export const scanStatusQuery = (guildId: string, channelId: string) =>
             const status = data?.status;
             const hasRunningScans =
                 status === "RUNNING" || status === "PENDING";
-            // Poll every 5 seconds if scans are running, otherwise don't poll
-            return hasRunningScans ? 5000 : false;
+            // Poll every 6 seconds if scans are running, otherwise don't poll
+            return hasRunningScans ? 6000 : false;
         },
     });
 
