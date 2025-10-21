@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { requireGuildAccess } from "@/lib/middleware/auth";
+import { requireGuildAccess } from "@/server/middleware/auth";
 import { updateGuildMessageScanEnabled } from "@/server/db";
 import { ToggleSchema } from "@/lib/schema/guild-toggle.schema";
 

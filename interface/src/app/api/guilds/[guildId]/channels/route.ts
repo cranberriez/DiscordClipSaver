@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { requireGuildAccess } from "@/lib/middleware/auth";
-import { filterChannelsByPermissions } from "@/lib/middleware/channels";
+import { requireGuildAccess } from "@/server/middleware/auth";
+import { filterChannelsByPermissions } from "@/server/middleware/channels";
 import { DataService } from "@/server/services/data-service";
 
 /**

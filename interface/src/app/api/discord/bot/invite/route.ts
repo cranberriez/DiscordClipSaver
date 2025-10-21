@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import crypto from "node:crypto";
-import { requireAuth } from "@/lib/middleware/auth";
+import { requireAuth } from "@/server/middleware/auth";
 import { createInstallIntent } from "@/server/db";
 import { buildInviteUrl } from "@/server/discord/generateBotInvite";
 

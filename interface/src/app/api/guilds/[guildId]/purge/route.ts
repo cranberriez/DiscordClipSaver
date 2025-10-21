@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { requireGuildAccess } from "@/lib/middleware/auth";
+import { requireGuildAccess } from "@/server/middleware/auth";
 import { queueGuildPurge } from "@/lib/redis/jobs";
 import { db } from "@/server/db";
 

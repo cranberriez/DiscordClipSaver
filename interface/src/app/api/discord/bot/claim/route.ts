@@ -4,7 +4,7 @@ import {
     setGuildOwnerIfUnclaimed,
     consumeInstallIntent,
 } from "@/server/db";
-import { requireAuth } from "@/lib/middleware/auth";
+import { requireAuth } from "@/server/middleware/auth";
 import { getCurrentUser } from "@/server/discord/discordClient";
 
 /**

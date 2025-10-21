@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { requireAuth } from "@/lib/middleware/auth";
+import { requireAuth } from "@/server/middleware/auth";
 import { DataService } from "@/server/services/data-service";
 import { updateClipCdnUrl } from "@/server/db/queries/clips";
 
