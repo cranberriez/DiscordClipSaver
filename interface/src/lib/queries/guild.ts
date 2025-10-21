@@ -1,7 +1,12 @@
 import { queryOptions } from "@tanstack/react-query";
 import { getGuildSettings, type GuildSettingsResponse } from "../api/settings";
-import { getGuilds, getGuild, toggleScanning } from "../api/guild";
-import type { Guild, GuildResponse } from "../api/guild";
+import {
+    getGuilds,
+    getGuild,
+    toggleScanning,
+    getGuildsDiscord,
+} from "../api/guild";
+import type { EnrichedDiscordGuild, Guild, GuildResponse } from "../api/guild";
 
 // ============================================================================
 // Query Keys Factory
@@ -15,8 +20,19 @@ import type { Guild, GuildResponse } from "../api/guild";
  */
 export const guildKeys = {
     all: ["guilds"] as const,
-    list: (params?: unknown) =>
-        [...guildKeys.all, "list", params ?? {}] as const,
+    list: (params: { includePerms?: boolean } = {}) =>
+        [
+            ...guildKeys.all,
+            "list",
+            { includePerms: !!params.includePerms },
+        ] as const,
+    discordList: (params: { includeDB?: boolean } = {}) =>
+        [
+            ...guildKeys.all,
+            "discord",
+            "list",
+            { includeDB: !!params.includeDB },
+        ] as const,
     detail: (guildId: string) => [...guildKeys.all, guildId] as const,
     settings: (guildId: string) =>
         [...guildKeys.detail(guildId), "settings"] as const,
@@ -28,8 +44,15 @@ export const guildKeys = {
 
 export const guildsQuery = (includePerms?: boolean) =>
     queryOptions<GuildResponse[]>({
-        queryKey: guildKeys.list(),
+        queryKey: guildKeys.list({ includePerms: !!includePerms }),
         queryFn: () => getGuilds(includePerms),
+        staleTime: 60_000,
+    });
+
+export const guildsDiscordQuery = (includeDB?: boolean) =>
+    queryOptions<EnrichedDiscordGuild[]>({
+        queryKey: guildKeys.discordList({ includeDB: !!includeDB }),
+        queryFn: () => getGuildsDiscord(includeDB),
         staleTime: 60_000,
     });
 

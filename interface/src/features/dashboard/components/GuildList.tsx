@@ -2,15 +2,15 @@
 "use client";
 
 import { useSession } from "next-auth/react";
-import { useGuilds } from "@/lib/hooks";
+import { useGuildsDiscord } from "@/lib/hooks";
 import { canInviteBotPerms } from "@/lib/discord/visibility";
 import type { GuildRelation } from "@/server/discord/types";
 import { GuildItemComponent } from "./GuildItemComponent";
-import type { GuildResponse } from "@/lib/api/guild";
+import type { EnrichedDiscordGuild } from "@/lib/api/guild";
 
 export default function GuildList() {
     const { data: session } = useSession();
-    const { isLoading, error, data: guilds } = useGuilds(true);
+    const { isLoading, error, data: guilds } = useGuildsDiscord(true);
 
     if (!session?.user?.id) {
         return (
@@ -43,20 +43,20 @@ export default function GuildList() {
     }
 
     // Categorize
-    const installedNoOwner: GuildResponse[] = guilds.filter(
-        i => i.owner_id == null
+    const installedOwnedByYou: EnrichedDiscordGuild[] = guilds.filter(
+        i => i.db?.owner_id === currentUserId
     );
-    const installedOwnedByYou: GuildResponse[] = guilds.filter(
-        i => i.owner_id === currentUserId
+    const installedNoOwner: EnrichedDiscordGuild[] = guilds.filter(
+        i => i.db != null && i.db.owner_id == null
     );
-    const installedOthers: GuildResponse[] = guilds.filter(
-        i => i.owner_id != null && i.owner_id !== currentUserId
+    const invitable: EnrichedDiscordGuild[] = guilds.filter(
+        i => !i.db && canInviteBotPerms(BigInt(i.permissions))
     );
-    const invitable: GuildResponse[] = guilds.filter(
-        i => !i.owner_id && canInviteBotPerms(BigInt(i.permissions))
+    const installedOthers: EnrichedDiscordGuild[] = guilds.filter(
+        i => i.db?.owner_id != null && i.db?.owner_id !== currentUserId
     );
-    const notInstalled: GuildResponse[] = guilds.filter(
-        i => !i.owner_id && !canInviteBotPerms(BigInt(i.permissions))
+    const notInstalled: EnrichedDiscordGuild[] = guilds.filter(
+        i => !i.db && !canInviteBotPerms(BigInt(i.permissions))
     );
 
     return (
@@ -96,7 +96,7 @@ function Section({
     relation,
 }: {
     title: string;
-    items: GuildResponse[];
+    items: EnrichedDiscordGuild[];
     relation: GuildRelation;
 }) {
     if (items.length === 0) {

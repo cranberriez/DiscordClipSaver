@@ -1,17 +1,17 @@
-import type { Guild } from "@/lib/api/types";
+import type { EnrichedDiscordGuild } from "@/lib/api/guild";
 import Link from "next/link";
 
 export function GuildItemComponent({
     guild,
     relation,
 }: {
-    guild: Guild;
+    guild: EnrichedDiscordGuild;
     relation: string;
 }) {
     const id = guild.id;
     const name = guild.name ?? "Unknown";
     const owner = guild.owner_id ?? null;
-    const icon = guild.icon_url ?? null;
+    const icon = guild.icon ?? null;
 
     return (
         <li key={id} className="rounded border border-white/40 gap-4 p-3 flex">

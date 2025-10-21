@@ -5,7 +5,12 @@
  */
 
 // Guild hooks
-export { useGuilds, useGuild, useToggleScanning } from "./useGuilds";
+export {
+    useGuilds,
+    useGuild,
+    useToggleScanning,
+    useGuildsDiscord,
+} from "./useGuilds";
 
 // Channel hooks
 export {

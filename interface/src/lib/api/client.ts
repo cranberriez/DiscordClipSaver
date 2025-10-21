@@ -7,7 +7,7 @@
 
 import { signOut } from "next-auth/react";
 import type { GuildSettingsResponse } from "./settings";
-import type { Guild } from "@/lib/api/guild";
+import type { EnrichedDiscordGuild, Guild } from "@/lib/api/guild";
 import { GuildResponse, ToggleScanningResponse } from "./guild";
 import { UpdateGuildSettingsPayload } from "../schema/guild-settings.schema";
 import { Channel, ChannelStatsResponse } from "./channel";
@@ -75,12 +75,21 @@ export const api = {
     // ========================================================================
     guilds: {
         /**
-         * Get list of user's guilds from Discord with optional DB enrichment
+         * Get list of user's guilds from DB optionally including permissions
          * GET /api/guilds/?includePerms=1
          */
         list: (withPerms?: boolean) =>
             apiRequest<GuildResponse[]>(
                 `/api/guilds/?includePerms=${withPerms ? 1 : 0}`
+            ),
+
+        /**
+         * Get list of user's guilds from Discord with optional DB enrichment
+         * GET /api/discord/me/guilds/?includeDB=1
+         */
+        listDiscord: (withDB?: boolean) =>
+            apiRequest<EnrichedDiscordGuild[]>(
+                `/api/discord/me/guilds/?includeDB=${withDB ? 1 : 0}`
             ),
 
         /**

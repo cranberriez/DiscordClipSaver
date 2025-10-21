@@ -2,7 +2,12 @@
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api/client";
-import { guildKeys, guildQuery, guildsQuery } from "@/lib/queries";
+import {
+    guildKeys,
+    guildQuery,
+    guildsQuery,
+    guildsDiscordQuery,
+} from "@/lib/queries";
 import { Guild } from "../api/guild";
 
 // ============================================================================
@@ -32,6 +37,31 @@ import { Guild } from "../api/guild";
  */
 export function useGuilds(includePerms?: boolean) {
     return useQuery(guildsQuery(includePerms));
+}
+
+/**
+ * Fetch list of user's guilds from Discord with DB enrichment.
+ *
+ * @example
+ * ```tsx
+ * function GuildList() {
+ *   const { data, isLoading, error } = useGuildsDiscord();
+ *
+ *   if (isLoading) return <div>Loading...</div>;
+ *   if (error) return <div>Error: {error.message}</div>;
+ *
+ *   return (
+ *     <div>
+ *       {data.guilds.map(guild => (
+ *         <div key={guild.id}>{guild.name}</div>
+ *       ))}
+ *     </div>
+ *   );
+ * }
+ * ```
+ */
+export function useGuildsDiscord(includeDB?: boolean) {
+    return useQuery(guildsDiscordQuery(includeDB));
 }
 
 /**

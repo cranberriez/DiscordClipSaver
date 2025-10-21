@@ -31,6 +31,13 @@ export interface DiscordGuild {
 }
 
 /**
+ * Enriched Discord guild with optional DB data
+ */
+export interface EnrichedDiscordGuild extends DiscordGuild {
+    db: Guild | null;
+}
+
+/**
  * Response from GET /api/guilds/?includePerms=1
  */
 export interface GuildResponse extends Guild {
@@ -48,6 +55,11 @@ export interface ToggleScanningResponse {
 // List guilds (Discord + DB enrichment)
 export function getGuilds(includePerms?: boolean) {
     return api.guilds.list(includePerms); // GET /api/guilds/?includePerms=1
+}
+
+// List guilds (Discord + DB enrichment)
+export function getGuildsDiscord(includeDB?: boolean) {
+    return api.guilds.listDiscord(includeDB); // GET /api/guilds/?includeDB=1
 }
 
 // Single guild (if/when you add this endpoint)
