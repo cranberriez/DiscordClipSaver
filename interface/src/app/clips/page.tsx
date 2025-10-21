@@ -4,7 +4,7 @@ import { useEffect, useState, useMemo } from "react";
 import {
     useGuildsWithClipCount,
     useChannelStats,
-    useChannelClips,
+    useChannelClipsInfinite,
     useAuthorStats,
     usePrefetchAuthorStats,
 } from "@/lib/hooks";
@@ -44,8 +44,6 @@ export default function ClipsPage() {
 
     const [selectedClip, setSelectedClip] = useState<FullClip | null>(null);
     const [selectedClipIndex, setSelectedClipIndex] = useState<number>(-1);
-    const [offset, setOffset] = useState(0);
-    const limit = 50;
 
     // Fetch guilds with clip counts
     const { data: guilds = [], isLoading: guildsLoading } =
@@ -68,12 +66,15 @@ export default function ClipsPage() {
     // Prefetch hook for authors
     const prefetchAuthors = usePrefetchAuthorStats();
 
-    // Fetch clips with server-side filtering
+    // Fetch clips with server-side filtering (infinite query)
     const {
-        data: clipsData,
+        data,
+        fetchNextPage,
+        hasNextPage,
+        isFetchingNextPage,
         isLoading: clipsLoading,
         error: clipsError,
-    } = useChannelClips({
+    } = useChannelClipsInfinite({
         guildId: selectedGuildId || "",
         channelIds:
             selectedChannelIds.length > 0 &&
@@ -81,11 +82,11 @@ export default function ClipsPage() {
                 ? selectedChannelIds
                 : undefined,
         authorIds:
-            selectedAuthorIds.length > 0 && selectedAuthorIds.length < authors.length
+            selectedAuthorIds.length > 0 &&
+            selectedAuthorIds.length < authors.length
                 ? selectedAuthorIds
                 : undefined,
-        limit,
-        offset,
+        limit: 50,
         sort: sortOrder,
     });
 
@@ -96,23 +97,19 @@ export default function ClipsPage() {
         }
     }, [selectedGuildId, guildsLoading, openGuildModal]);
 
-    // Reset offset when filters change
-    useEffect(() => {
-        setOffset(0);
-    }, [selectedGuildId, selectedChannelIds, selectedAuthorIds, sortOrder]);
+    // Note: Infinite query automatically resets when filters change (query key changes)
 
     // Get selected guild info
     const selectedGuild = guilds.find(g => g.id === selectedGuildId);
 
     // Apply client-side search filter only (authors filtered server-side)
-    const allClips = clipsData?.clips || [];
+    const allClips = data?.pages.flatMap(page => page.clips) ?? [];
     const filteredClips = useMemo(() => {
         if (!searchQuery.trim()) return allClips;
 
         const query = searchQuery.toLowerCase();
         return allClips.filter((clip: FullClip) => {
-            const messageContent =
-                clip.message.content?.toLowerCase() || "";
+            const messageContent = clip.message.content?.toLowerCase() || "";
             const filename = clip.clip.filename.toLowerCase();
             const author = authorMap.get(clip.message.author_id);
             const authorName = author?.username.toLowerCase() || "";
@@ -124,7 +121,7 @@ export default function ClipsPage() {
         });
     }, [allClips, searchQuery, authorMap]);
 
-    const hasMore = clipsData?.pagination?.hasMore || false;
+    // hasNextPage is provided by infinite query
 
     return (
         <div className="min-h-screen bg-background">
@@ -172,28 +169,33 @@ export default function ClipsPage() {
                     <>
                         {/* Clips Grid */}
                         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                            {filteredClips.map((clip: FullClip, index: number) => (
-                                <ClipCard
-                                    key={clip.clip.id}
-                                    clip={clip}
-                                    onClick={(clip) => {
-                                        setSelectedClipIndex(index);
-                                        setSelectedClip(clip);
-                                    }}
-                                    authorMap={authorMap}
-                                />
-                            ))}
+                            {filteredClips.map(
+                                (clip: FullClip, index: number) => (
+                                    <ClipCard
+                                        key={clip.clip.id}
+                                        clip={clip}
+                                        onClick={clip => {
+                                            setSelectedClipIndex(index);
+                                            setSelectedClip(clip);
+                                        }}
+                                        authorMap={authorMap}
+                                    />
+                                )
+                            )}
                         </div>
 
                         {/* Load More Button */}
-                        {hasMore && (
+                        {hasNextPage && (
                             <div className="mt-8 text-center">
                                 <Button
-                                    onClick={() => setOffset(offset + limit)}
+                                    onClick={() => fetchNextPage()}
+                                    disabled={isFetchingNextPage}
                                     variant="outline"
                                     size="lg"
                                 >
-                                    Load More Clips
+                                    {isFetchingNextPage
+                                        ? "Loading..."
+                                        : "Load More Clips"}
                                 </Button>
                             </div>
                         )}
