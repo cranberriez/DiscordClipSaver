@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useGuilds } from "@/lib/hooks";
+import { PageContainer } from "@/components/layout";
 
 /**
  * Clips Viewer - Guild Selection
@@ -24,7 +25,7 @@ export default function ClipsPage() {
     };
 
     return (
-        <div className="container mx-auto py-8 max-w-6xl">
+        <PageContainer>
             <div className="mb-8">
                 <h1 className="text-3xl font-bold">Clips Viewer</h1>
                 <p className="text-muted-foreground mt-2">
@@ -88,6 +89,6 @@ export default function ClipsPage() {
                     )}
                 </CardContent>
             </Card>
-        </div>
+        </PageContainer>
     );
 }

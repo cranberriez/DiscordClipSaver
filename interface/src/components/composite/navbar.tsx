@@ -24,12 +24,20 @@ export function Navbar() {
                     {/* Navigation Links */}
                     <div className="flex items-center gap-6">
                         {session && (
-                            <Link
-                                href="/dashboard"
-                                className="text-sm font-medium hover:text-blue-400 transition-colors"
-                            >
-                                Dashboard
-                            </Link>
+                            <>
+                                <Link
+                                    href="/clips"
+                                    className="text-sm font-medium hover:text-blue-400 transition-colors"
+                                >
+                                    Clips
+                                </Link>
+                                <Link
+                                    href="/dashboard"
+                                    className="text-sm font-medium hover:text-blue-400 transition-colors"
+                                >
+                                    Dashboard
+                                </Link>
+                            </>
                         )}
 
                         {/* User Menu */}

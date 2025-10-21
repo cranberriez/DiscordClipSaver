@@ -1,8 +1,9 @@
 import GuildList from "@/features/dashboard/components/GuildList";
+import { PageContainer } from "@/components/layout";
 
 export default async function DashboardPage() {
     return (
-        <div className="container mx-auto p-8">
+        <PageContainer>
             <div className="mb-8">
                 <h1 className="text-3xl font-bold mb-2">Your Servers</h1>
                 <p className="text-gray-400">
@@ -11,6 +12,6 @@ export default async function DashboardPage() {
             </div>
 
             <GuildList />
-        </div>
+        </PageContainer>
     );
 }

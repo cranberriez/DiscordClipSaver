@@ -9,6 +9,7 @@ import { ClipFilters } from "@/features/clips/components/ClipFilters";
 import { useClipFilters } from "@/features/clips";
 import { useClipsInfinite, useChannelStats, useGuild } from "@/lib/hooks";
 import type { FullClip } from "@/lib/api/clip";
+import { PageContainer } from "@/components/layout";
 
 /**
  * Guild Clips Viewer
@@ -56,7 +57,7 @@ export default function GuildClipsPage() {
         useClipFilters(allClips);
 
     return (
-        <div className="container mx-auto py-8 max-w-7xl">
+        <PageContainer maxWidth="7xl">
             {/* Header */}
             <div className="mb-8">
                 <Button
@@ -173,6 +174,6 @@ export default function GuildClipsPage() {
                     onClose={() => setSelectedClip(null)}
                 />
             )}
-        </div>
+        </PageContainer>
     );
 }

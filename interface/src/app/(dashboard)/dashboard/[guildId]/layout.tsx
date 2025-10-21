@@ -7,6 +7,7 @@ import {
     GuildTabNav,
     DeletedGuildBanner,
 } from "@/features/dashboard/";
+import { PageContainer } from "@/components/layout";
 
 type LayoutProps = {
     children: React.ReactNode;
@@ -32,7 +33,7 @@ export default async function GuildLayout({ children, params }: LayoutProps) {
 
     if (!guild) {
         return (
-            <div className="container mx-auto p-8">
+            <PageContainer>
                 <h1 className="text-2xl font-semibold mb-4">Guild Not Found</h1>
                 <p className="text-gray-400 mb-4">
                     This guild is not registered in the system or has been
@@ -44,7 +45,7 @@ export default async function GuildLayout({ children, params }: LayoutProps) {
                 >
                     ← Back to Dashboard
                 </Link>
-            </div>
+            </PageContainer>
         );
     }
 
@@ -53,7 +54,7 @@ export default async function GuildLayout({ children, params }: LayoutProps) {
 
     if (!isOwner) {
         return (
-            <div className="container mx-auto p-8">
+            <PageContainer>
                 <h1 className="text-2xl font-semibold mb-4">Access Denied</h1>
                 <p className="text-red-400 mb-4">
                     You do not have permission to view this guild.
@@ -64,12 +65,12 @@ export default async function GuildLayout({ children, params }: LayoutProps) {
                 >
                     ← Back to Dashboard
                 </Link>
-            </div>
+            </PageContainer>
         );
     }
 
     return (
-        <div className="container mx-auto p-8 max-w-6xl">
+        <PageContainer>
             {/* Back Link */}
             <Link
                 href="/dashboard"
@@ -95,6 +96,6 @@ export default async function GuildLayout({ children, params }: LayoutProps) {
 
             {/* Tab Content */}
             <div className="mt-6">{children}</div>
-        </div>
+        </PageContainer>
     );
 }
