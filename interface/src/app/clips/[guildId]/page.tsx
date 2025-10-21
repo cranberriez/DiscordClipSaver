@@ -7,7 +7,11 @@ import { BackButton } from "@/components/ui/back-button";
 import { Card, CardContent } from "@/components/ui/card";
 import { ClipGrid, ClipModal } from "@/features/clips";
 import { ClipFilters } from "@/features/clips/components/ClipFilters";
-import { useClipsInfinite, useChannelStats, useGuild } from "@/lib/hooks";
+import {
+    useChannelClipsInfinite,
+    useChannelStats,
+    useGuild,
+} from "@/lib/hooks";
 import type { FullClip } from "@/lib/api/clip";
 import { PageContainer } from "@/components/layout";
 
@@ -31,7 +35,9 @@ export default function GuildClipsPage() {
     const guildId = params.guildId as string;
 
     const [selectedClip, setSelectedClip] = useState<FullClip | null>(null);
-    const [selectedChannelId, setSelectedChannelId] = useState<string | null>(null);
+    const [selectedChannelId, setSelectedChannelId] = useState<string | null>(
+        null
+    );
     const [searchQuery, setSearchQuery] = useState("");
 
     // Fetch guild info
@@ -45,10 +51,10 @@ export default function GuildClipsPage() {
         isFetchingNextPage,
         isLoading,
         error,
-    } = useClipsInfinite({ 
-        guildId, 
-        channelId: selectedChannelId || undefined,
-        limit: 50 
+    } = useChannelClipsInfinite({
+        guildId,
+        channelIds: selectedChannelId ? [selectedChannelId] : undefined,
+        limit: 50,
     });
 
     // Fetch channels for filter dropdown (only show channels with clips)
@@ -75,7 +81,11 @@ export default function GuildClipsPage() {
         <PageContainer maxWidth="7xl">
             {/* Header */}
             <div className="mb-8">
-                <BackButton text="Back to Servers" url="/clips" className="mb-4" />
+                <BackButton
+                    text="Back to Servers"
+                    url="/clips"
+                    className="mb-4"
+                />
                 <h1 className="text-3xl font-bold">
                     {guild?.name || "Loading..."}
                 </h1>
@@ -102,9 +112,14 @@ export default function GuildClipsPage() {
                     <div className="lg:col-span-1">
                         <ClipFilters
                             channels={channels}
-                            filters={{ channelId: selectedChannelId, searchQuery }}
-                            onFiltersChange={(newFilters) => {
-                                setSelectedChannelId(newFilters.channelId);
+                            filters={{
+                                channelId: selectedChannelId,
+                                searchQuery,
+                            }}
+                            onFiltersChange={newFilters => {
+                                setSelectedChannelId(
+                                    newFilters.channelId || null
+                                );
                                 setSearchQuery(newFilters.searchQuery);
                             }}
                             totalClips={totalClips}
@@ -140,7 +155,8 @@ export default function GuildClipsPage() {
                                                     No clips match your search.
                                                 </p>
                                                 <p className="text-sm mt-2">
-                                                    Try adjusting your search query.
+                                                    Try adjusting your search
+                                                    query.
                                                 </p>
                                             </>
                                         )}
