@@ -7,7 +7,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { ClipGrid, ClipModal } from "@/features/clips";
 import { ClipFilters } from "@/features/clips/components/ClipFilters";
 import { useClipFilters } from "@/features/clips";
-import { useClipsInfinite, useChannels, useGuild } from "@/lib/hooks";
+import { useClipsInfinite, useChannelStats, useGuild } from "@/lib/hooks";
 import type { FullClip } from "@/lib/api/clip";
 
 /**
@@ -44,8 +44,9 @@ export default function GuildClipsPage() {
         error,
     } = useClipsInfinite({ guildId, limit: 50 });
 
-    // Fetch channels for filter dropdown
-    const { data: channels = [] } = useChannels(guildId);
+    // Fetch channels for filter dropdown (only show channels with clips)
+    const { data: channelsData = [] } = useChannelStats(guildId);
+    const channels = channelsData.filter(channel => channel.clip_count > 0);
 
     // Flatten paginated clips
     const allClips = data?.pages.flatMap(page => page.clips) ?? [];

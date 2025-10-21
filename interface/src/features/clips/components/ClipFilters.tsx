@@ -12,7 +12,7 @@ import {
 } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import type { Channel } from "@/lib/api/channel";
+import type { ChannelWithStats } from "@/lib/api/channel";
 
 export interface ClipFiltersState {
     channelId: string | null;
@@ -25,7 +25,7 @@ export interface ClipFiltersState {
 }
 
 interface ClipFiltersProps {
-    channels: Channel[];
+    channels: ChannelWithStats[];
     filters: ClipFiltersState;
     onFiltersChange: (filters: ClipFiltersState) => void;
     totalClips: number;
@@ -96,7 +96,7 @@ export function ClipFilters({
                             <SelectItem value="all">All channels</SelectItem>
                             {channels.map(channel => (
                                 <SelectItem key={channel.id} value={channel.id}>
-                                    #{channel.name}
+                                    #{channel.name} ({channel.clip_count})
                                 </SelectItem>
                             ))}
                         </SelectContent>
