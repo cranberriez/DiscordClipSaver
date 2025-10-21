@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { ClipGrid, ClipModal } from "@/features/clips";
 import { ClipFilters } from "@/features/clips/components/ClipFilters";
-import { useClipFilters } from "@/features/clips/hooks/useClipFilters";
+import { useClipFilters } from "@/features/clips";
 import { useClipsInfinite, useChannels, useGuild } from "@/lib/hooks";
 import type { FullClip } from "@/lib/api/clip";
 
@@ -110,18 +110,23 @@ export default function GuildClipsPage() {
                                     <div className="text-center py-12 text-muted-foreground">
                                         {totalClips === 0 ? (
                                             <>
-                                                <p>No clips found in this server.</p>
+                                                <p>
+                                                    No clips found in this
+                                                    server.
+                                                </p>
                                                 <p className="text-sm mt-2">
-                                                    Clips will appear here after the bot
-                                                    scans your channels.
+                                                    Clips will appear here after
+                                                    the bot scans your channels.
                                                 </p>
                                             </>
                                         ) : (
                                             <>
-                                                <p>No clips match your filters.</p>
+                                                <p>
+                                                    No clips match your filters.
+                                                </p>
                                                 <p className="text-sm mt-2">
-                                                    Try adjusting your search or channel
-                                                    filter.
+                                                    Try adjusting your search or
+                                                    channel filter.
                                                 </p>
                                             </>
                                         )}
@@ -137,8 +142,12 @@ export default function GuildClipsPage() {
                                         {hasNextPage && (
                                             <div className="mt-6 text-center">
                                                 <Button
-                                                    onClick={() => fetchNextPage()}
-                                                    disabled={isFetchingNextPage}
+                                                    onClick={() =>
+                                                        fetchNextPage()
+                                                    }
+                                                    disabled={
+                                                        isFetchingNextPage
+                                                    }
                                                     variant="outline"
                                                     size="lg"
                                                 >
