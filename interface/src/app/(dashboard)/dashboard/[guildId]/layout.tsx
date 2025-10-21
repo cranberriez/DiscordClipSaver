@@ -88,12 +88,7 @@ export default async function GuildLayout({ children, params }: LayoutProps) {
             )}
 
             {/* Guild Header */}
-            <GuildHeader
-                guildId={guild.id}
-                guildName={guild.name}
-                ownerId={guild.owner_id}
-                iconUrl={guild.icon_url}
-            />
+            <GuildHeader guild={guild} />
 
             {/* Tab Navigation */}
             <GuildTabNav guildId={guild.id} />

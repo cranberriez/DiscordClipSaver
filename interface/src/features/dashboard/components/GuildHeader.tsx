@@ -11,24 +11,17 @@ import {
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Info, Scan, CheckCircle2, XCircle } from "lucide-react";
+import { Info, CheckCircle2, XCircle } from "lucide-react";
 
 interface GuildHeaderProps {
-    guildId: string;
-    guildName: string;
-    ownerId: string | null;
-    iconUrl: string | null;
+    guild: Guild;
 }
 
-export function GuildHeader({
-    guildId,
-    guildName,
-    ownerId,
-    iconUrl,
-}: GuildHeaderProps) {
-    // Use React Query to track live state
-    const { data: guild } = useGuild(guildId);
-    const toggleMutation = useToggleScanning(guildId);
+export function GuildHeader({ guild: initialGuild }: GuildHeaderProps) {
+    // Use React Query with initial data from Server Component
+    // This allows the UI to update reactively when mutations occur
+    const { data: guild } = useGuild(initialGuild.id, { initialData: initialGuild });
+    const toggleMutation = useToggleScanning(initialGuild.id);
 
     if (!guild) {
         return null;
@@ -43,21 +36,21 @@ export function GuildHeader({
     return (
         <div className="flex flex-col md:flex-row gap-4">
             <div className="flex flex-1 items-center gap-4">
-                {iconUrl && (
+                {guild.icon_url && (
                     <div>
                         <img
-                            src={iconUrl}
-                            alt={`${guildName} icon`}
+                            src={guild.icon_url}
+                            alt={`${guild.name} icon`}
                             className="w-32 h-32 rounded-xl"
                         />
                     </div>
                 )}
                 <div className="flex flex-col gap-2">
-                    <h1 className="text-3xl font-bold">{guildName}</h1>
+                    <h1 className="text-3xl font-bold">{guild.name}</h1>
                     <p className="text-sm text-muted-foreground">
-                        Guild ID: {guildId}
+                        Guild ID: {guild.id}
                     </p>
-                    {ownerId === guild.owner_id && (
+                    {guild.owner_id === guild.owner_id && (
                         <Badge variant="destructive">Owner</Badge>
                     )}
                 </div>

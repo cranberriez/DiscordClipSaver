@@ -94,16 +94,10 @@ export const api = {
 
         /**
          * Get a single guild by ID from the database
-         * Note: This uses the DB query directly, not an API route
-         * For API route version, you'd need to create one
+         * GET /api/guilds/[guildId]
          */
-        get: async (guildId: string): Promise<Guild> => {
-            // This would need a dedicated API route
-            // For now, we'll use the existing pattern from your code
-            throw new Error(
-                "Not implemented - use direct DB query in Server Component"
-            );
-        },
+        get: (guildId: string) =>
+            apiRequest<Guild>(`/api/guilds/${guildId}`),
 
         /**
          * Toggle message scanning for a guild

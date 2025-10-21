@@ -67,15 +67,22 @@ export function useGuildsDiscord(includeDB?: boolean) {
 /**
  * Fetch a single guild by ID.
  *
- * Note: This currently doesn't have an API route.
- * You'll need to either:
- * 1. Pass guild data from Server Component as initial data
- * 2. Create a GET /api/guilds/[guildId] route
+ * Supports initialData from Server Components for seamless SSR + client-side updates.
  *
  * @param guildId - The guild ID
+ * @param options - Query options including initialData
+ *
+ * @example
+ * ```tsx
+ * // In Client Component receiving server data
+ * function GuildHeader({ guild: serverGuild }: { guild: Guild }) {
+ *   const { data: guild } = useGuild(serverGuild.id, { initialData: serverGuild });
+ *   // guild will update reactively when mutations occur
+ * }
+ * ```
  */
-export function useGuild(guildId: string) {
-    return useQuery(guildQuery(guildId));
+export function useGuild(guildId: string, options?: { initialData?: Guild }) {
+    return useQuery(guildQuery(guildId, options));
 }
 
 // ============================================================================

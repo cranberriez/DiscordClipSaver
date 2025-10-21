@@ -1,4 +1,4 @@
-import { queryOptions } from "@tanstack/react-query";
+import { queryOptions, type UseQueryOptions } from "@tanstack/react-query";
 import { getGuildSettings, type GuildSettingsResponse } from "../api/settings";
 import {
     getGuilds,
@@ -56,20 +56,16 @@ export const guildsDiscordQuery = (includeDB?: boolean) =>
         staleTime: 60_000,
     });
 
-export const guildQuery = (guildId: string) =>
+export const guildQuery = (
+    guildId: string,
+    options?: Omit<UseQueryOptions<Guild>, "queryKey" | "queryFn">
+) =>
     queryOptions<Guild>({
         queryKey: guildKeys.detail(guildId),
         queryFn: () => getGuild(guildId),
         enabled: !!guildId,
         staleTime: 60_000,
-    });
-
-export const guildSettingsQuery = (guildId: string) =>
-    queryOptions<GuildSettingsResponse>({
-        queryKey: guildKeys.settings(guildId),
-        queryFn: () => getGuildSettings(guildId),
-        enabled: !!guildId,
-        staleTime: 60_000,
+        ...options,
     });
 
 export const toggleGuildScanning = async (guildId: string, enabled: boolean) =>
