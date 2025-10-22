@@ -184,8 +184,8 @@ function NoAuthorsFound({ searchQuery }: { searchQuery: string }) {
     if (searchQuery) {
         return (
             <div className="text-center py-12 text-muted-foreground">
-                No authors match your search for "
-                <span className="font-medium">{searchQuery}</span>"
+                No authors match your search for &quot;
+                <span className="font-medium">{searchQuery}</span>&quot;
             </div>
         );
     }
