@@ -5,6 +5,30 @@ import type { DiscordProfile } from "next-auth/providers/discord";
 
 import { upsertUser } from "@/server/db";
 
+/**
+ * Get the base URL for NextAuth callbacks.
+ * In development, this allows dynamic URLs (localhost, local IP, etc.)
+ * In production, uses NEXTAUTH_URL environment variable.
+ */
+function getAuthUrl(req?: Request): string {
+    // Production: Always use NEXTAUTH_URL
+    if (process.env.NODE_ENV === "production") {
+        return process.env.NEXTAUTH_URL ?? "";
+    }
+
+    // Development: Use request headers if available for dynamic URLs
+    if (req) {
+        const host = req.headers.get("host");
+        const protocol = req.headers.get("x-forwarded-proto") ?? "http";
+        if (host) {
+            return `${protocol}://${host}`;
+        }
+    }
+
+    // Fallback to NEXTAUTH_URL
+    return process.env.NEXTAUTH_URL ?? "http://localhost:3000";
+}
+
 export const authOptions: NextAuthOptions = {
     providers: [
         DiscordProvider({
@@ -94,6 +118,27 @@ export const authOptions: NextAuthOptions = {
     },
 };
 
-const handler = NextAuth(authOptions);
+// Create dynamic handlers that inject the request URL into authOptions
+async function GET(req: Request, context: { params: { nextauth: string[] } }) {
+    // In development, override NEXTAUTH_URL with the current request URL
+    if (process.env.NODE_ENV === "development") {
+        const url = getAuthUrl(req);
+        process.env.NEXTAUTH_URL = url;
+    }
 
-export { handler as GET, handler as POST };
+    const handler = NextAuth(authOptions);
+    return handler(req, context);
+}
+
+async function POST(req: Request, context: { params: { nextauth: string[] } }) {
+    // In development, override NEXTAUTH_URL with the current request URL
+    if (process.env.NODE_ENV === "development") {
+        const url = getAuthUrl(req);
+        process.env.NEXTAUTH_URL = url;
+    }
+
+    const handler = NextAuth(authOptions);
+    return handler(req, context);
+}
+
+export { GET, POST };
