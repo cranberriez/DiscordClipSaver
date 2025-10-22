@@ -34,6 +34,10 @@ export function ClipCard({ clip, onClick, authorMap }: ClipCardProps) {
     const { clip: clipData, message } = clip;
     const author = authorMap?.get(message.author_id);
 
+    const vidTitle = message?.content
+        ? message.content
+        : formatClipName(clipData.filename);
+
     return (
         <div
             className="group relative cursor-pointer rounded-lg overflow-hidden hover:shadow-lg hover:bg-muted/20 transition-all"
@@ -76,7 +80,7 @@ export function ClipCard({ clip, onClick, authorMap }: ClipCardProps) {
                     className="text-sm font-semibold line-clamp-1 overflow-hidden"
                     title={clipData.filename}
                 >
-                    {formatClipName(clipData.filename)}
+                    {vidTitle}
                 </p>
 
                 {/* Author & Time posted */}

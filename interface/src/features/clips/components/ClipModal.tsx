@@ -58,6 +58,10 @@ export function ClipModal({
     const [hasPlaybackError, setHasPlaybackError] = useState(false);
     const [showDetailsModal, setShowDetailsModal] = useState(false);
 
+    const vidTitle = message?.content
+        ? message.content
+        : formatClipName(clip.filename);
+
     // Update video URL when clip changes (for navigation)
     useEffect(() => {
         setVideoUrl(clip.cdn_url);
@@ -185,7 +189,7 @@ export function ClipModal({
                 >
                     {/* Visually hidden title for accessibility */}
                     <DialogPrimitive.Title className="sr-only">
-                        {formatClipName(clip.filename)}
+                        {vidTitle}
                     </DialogPrimitive.Title>
 
                     {/* Close Button - Fixed top right */}
@@ -247,7 +251,7 @@ export function ClipModal({
                                     {/* Left: Clip Info */}
                                     <div className="flex-1 min-w-0">
                                         <h2 className="text-xl font-semibold truncate mb-2">
-                                            {formatClipName(clip.filename)}
+                                            {vidTitle}
                                         </h2>
                                         <div className="flex items-center gap-3 text-base">
                                             <UserAvatar
