@@ -10,7 +10,6 @@ import {
 } from "@/lib/hooks";
 import { Button } from "@/components/ui/button";
 import { FilterBar } from "@/features/clips/components/FilterBar";
-import { ClipCard } from "@/features/clips/components/ClipCard";
 import { ClipGrid, ClipModal } from "@/features/clips";
 import {
     GuildSelectModal,
