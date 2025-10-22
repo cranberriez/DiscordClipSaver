@@ -141,9 +141,19 @@ class ThumbnailGenerator:
             video_metadata = await self._probe_video(temp_video)
             logger.info(f"  Video metadata: {video_metadata}")
             
+            # Calculate safe timestamp based on video duration
+            # For videos shorter than 1 second, use first frame to avoid seeking beyond video length
+            safe_timestamp = timestamp
+            if video_metadata.get('duration'):
+                duration = video_metadata['duration']
+                if duration < 1.0:
+                    # Very short video: use first frame
+                    safe_timestamp = 0.0
+                    logger.info(f"  Video duration ({duration:.2f}s) < 1s, using first frame")
+            
             # Extract frame
-            logger.info(f"  Extracting frame at {timestamp}s...")
-            temp_frame = await self._extract_frame(temp_video, timestamp)
+            logger.info(f"  Extracting frame at {safe_timestamp}s...")
+            temp_frame = await self._extract_frame(temp_video, safe_timestamp)
             logger.info(f"  Frame extracted successfully")
             
             # Generate small thumbnail
