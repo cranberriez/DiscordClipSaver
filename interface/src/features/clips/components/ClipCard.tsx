@@ -6,6 +6,7 @@ import { formatClipName } from "../lib/formatClipName";
 import { formatDuration, formatRelativeTime } from "@/lib/utils/time-helpers";
 import { UserAvatar } from "@/components/user/UserAvatar";
 import { Play } from "lucide-react";
+import { messageTitleOrFilename } from "@/features/clips/lib/discordText";
 
 interface ClipCardProps {
     clip: FullClip;
@@ -34,9 +35,10 @@ export function ClipCard({ clip, onClick, authorMap }: ClipCardProps) {
     const { clip: clipData, message } = clip;
     const author = authorMap?.get(message.author_id);
 
-    const vidTitle = message?.content
-        ? message.content
-        : formatClipName(clipData.filename);
+    const vidTitle = messageTitleOrFilename(
+        message?.content,
+        formatClipName(clipData.filename)
+    );
 
     return (
         <div

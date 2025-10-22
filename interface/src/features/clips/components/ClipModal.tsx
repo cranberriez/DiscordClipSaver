@@ -11,6 +11,7 @@ import type { FullClip } from "@/lib/api/clip";
 import type { AuthorWithStats } from "@/lib/api/author";
 import { formatRelativeTime, formatDuration } from "@/lib/utils/time-helpers";
 import { formatClipName } from "../lib/formatClipName";
+import { messageTitleOrFilename } from "@/features/clips/lib/discordText";
 import { ChevronLeft, ChevronRight, Info, X } from "lucide-react";
 
 interface ClipModalProps {
@@ -58,9 +59,10 @@ export function ClipModal({
     const [hasPlaybackError, setHasPlaybackError] = useState(false);
     const [showDetailsModal, setShowDetailsModal] = useState(false);
 
-    const vidTitle = message?.content
-        ? message.content
-        : formatClipName(clip.filename);
+    const vidTitle = messageTitleOrFilename(
+        message?.content,
+        formatClipName(clip.filename)
+    );
 
     // Update video URL when clip changes (for navigation)
     useEffect(() => {
