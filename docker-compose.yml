@@ -133,7 +133,7 @@ services:
             - traefik.http.middlewares.interface-ratelimit.ratelimit.burst=100
 
             # Middleware: IP Whitelist (replace with your public IP)
-            - traefik.http.middlewares.ip-whitelist.ipwhitelist.sourcerange=127.0.0.1/32, ${PUBLIC_IP}/32
+            - traefik.http.middlewares.ip-whitelist.ipwhitelist.sourcerange=127.0.0.1/32, ${PUBLIC_DOMAIN}/32
 
     dcs-postgres:
         image: postgres:16-alpine
