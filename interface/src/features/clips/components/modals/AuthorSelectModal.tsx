@@ -110,11 +110,7 @@ export function AuthorSelectModal({
                             Loading authors...
                         </div>
                     ) : filteredAuthors.length === 0 ? (
-                        <div className="text-center py-12 text-muted-foreground">
-                            {searchQuery
-                                ? "No authors match your search"
-                                : "No authors found"}
-                        </div>
+                        <NoAuthorsFound searchQuery={searchQuery} />
                     ) : (
                         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
                             {filteredAuthors.map(author => {
@@ -181,5 +177,31 @@ export function AuthorSelectModal({
                 </div>
             </DialogContent>
         </Dialog>
+    );
+}
+
+function NoAuthorsFound({ searchQuery }: { searchQuery: string }) {
+    if (searchQuery) {
+        return (
+            <div className="text-center py-12 text-muted-foreground">
+                No authors match your search for "
+                <span className="font-medium">{searchQuery}</span>"
+            </div>
+        );
+    }
+
+    return (
+        <div className="text-center py-12 text-muted-foreground">
+            <p>No authors found</p>
+            <p>
+                If you expect authors to be here, there may be an issue with the
+                API.
+            </p>
+            <p>
+                <Button variant="link" onClick={() => window.location.reload()}>
+                    Try again
+                </Button>
+            </p>
+        </div>
     );
 }

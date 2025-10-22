@@ -20,7 +20,7 @@ interface VideoPlayerProps {
 export function VideoPlayer({ src, poster, title, onError }: VideoPlayerProps) {
     const playerRef = useRef<any>(null);
     const { volume, setVolume } = useVideoPlayerStore();
-    
+
     // Subscribe to Vidstack's volume state
     const currentVolume = useMediaStore(playerRef)?.volume;
 
@@ -30,7 +30,6 @@ export function VideoPlayer({ src, poster, title, onError }: VideoPlayerProps) {
     // Sync Vidstack volume changes to our store
     useEffect(() => {
         if (currentVolume !== undefined && currentVolume !== volume) {
-            console.log("Volume changed via Vidstack:", currentVolume);
             setVolume(currentVolume);
         }
     }, [currentVolume, volume, setVolume]);
