@@ -41,3 +41,4 @@ export type { Message as DbMessage } from "./schemas/message.kysely";
 export type { Clip as DbClip } from "./schemas/clip.kysely";
 export type { ClipWithMetadata as DbClipWithMetadata } from "./queries/clips";
 export type { Thumbnail as DbThumbnail } from "./schemas/thumbnail.kysely";
+export type { AuthorWithStats as DbAuthorWithStats } from "./queries/authors";

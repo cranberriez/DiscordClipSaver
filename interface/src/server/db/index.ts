@@ -1,9 +1,4 @@
-export {
-    getUserByDiscordId,
-    upsertUser,
-    updateUser,
-    getAuthorStatsByGuildId,
-} from "./queries/users";
+export { getUserByDiscordId, upsertUser, updateUser } from "./queries/users";
 export { db, getDb } from "./db";
 export {
     consumeInstallIntent,
@@ -41,3 +36,9 @@ export {
     getChannelScanStatus,
     getGuildScanStatuses,
 } from "./queries/scan_status";
+export {
+    getAuthorStatsByGuildId,
+    getAuthorStatsById,
+    getAuthorsByGuildId,
+    getAuthorById,
+} from "./queries/authors";

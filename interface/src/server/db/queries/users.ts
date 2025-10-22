@@ -52,6 +52,7 @@ export async function getUserByDiscordId(
 }
 
 /**
+ * @deprecated Use `getAuthorStatsByGuildId` from `queries/authors` instead.
  * Get all authors with clip statistics for a specific guild
  * Returns authors with total clip count and per-channel breakdown
  */
