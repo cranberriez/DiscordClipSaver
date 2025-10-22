@@ -25,16 +25,33 @@ class ChannelType(str, Enum):
 
 
 class User(Model):
-    """Discord user who owns/manages the bot setup"""
+    """Discord user model, represents the discord.User object mainly used for login/authentication"""
     id = fields.CharField(max_length=64, indexable=True, pk=True, unique=True)  # Discord user snowflake
-    username = fields.CharField(max_length=32)
-    discriminator = fields.CharField(max_length=4)
-    avatar_url = fields.TextField(null=True)
+    username = fields.CharField(max_length=32) # Discord NAME field
+    discriminator = fields.CharField(max_length=4) # Discord DISCRIMINATOR field
+    avatar_url = fields.TextField(null=True) # Discord AVATAR field
     created_at = fields.DatetimeField(auto_now_add=True)
     updated_at = fields.DatetimeField(auto_now=True)
 
     class Meta:
         table="user"
+
+class Author(Model):
+    """Represents a user's state within a specific guild (a Discord Member)."""
+    user_id = fields.CharField(max_length=64, indexable=True) # Discord user snowflake
+    guild = fields.ForeignKeyField("models.Guild", related_name="authors", on_delete=fields.CASCADE)
+    username = fields.CharField(max_length=32) # The user's global username
+    discriminator = fields.CharField(max_length=4) # Discord DISCRIMINATOR field
+    avatar_url = fields.TextField(null=True) # The user's global avatar
+    nickname = fields.CharField(max_length=32, null=True)  # Guild-specific nickname
+    display_name = fields.CharField(max_length=32, null=True) # Guild-specific display name
+    guild_avatar_url = fields.TextField(null=True) # Guild-specific avatar
+    created_at = fields.DatetimeField(auto_now_add=True)
+    updated_at = fields.DatetimeField(auto_now=True)
+
+    class Meta:
+        table = "author"
+        unique_together = ("user_id", "guild")
 
 
 class Guild(Model):
@@ -144,7 +161,7 @@ class Message(Model):
     id = fields.CharField(max_length=64, indexable=True, pk=True)  # Discord message snowflake
     guild = fields.ForeignKeyField("models.Guild", related_name="messages", indexable=True)
     channel = fields.ForeignKeyField("models.Channel", related_name="messages", indexable=True)
-    author = fields.ForeignKeyField("models.User", related_name="messages", indexable=True)  # Message author
+    author_id = fields.CharField(max_length=64, indexable=True) # Message author's user snowflake
     content = fields.TextField(null=True)
     timestamp = fields.DatetimeField()  # Discord message timestamp
     deleted_at = fields.DatetimeField(null=True)  # Soft delete when message removed from Discord

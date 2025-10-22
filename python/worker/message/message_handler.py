@@ -4,7 +4,7 @@ Message handler for processing Discord messages and extracting clips
 import logging
 from typing import Optional
 import discord
-from shared.db.models import Message, Clip, User
+from shared.db.models import Message, Clip, Author
 from shared.settings_resolver import get_channel_settings
 from worker.thumbnail.thumbnail_handler import ThumbnailHandler
 from worker.message.utils import compute_settings_hash
@@ -45,8 +45,8 @@ class MessageHandler:
         if not should_process_message(discord_message, settings):
             return 0
         
-        # Upsert user and message
-        await self._upsert_user(discord_message.author)
+        # Upsert author and message
+        await self._upsert_author(discord_message.author, guild_id)
         await self._upsert_message(discord_message, channel_id, guild_id, settings)
         
         # Process video attachments
@@ -70,14 +70,18 @@ class MessageHandler:
         
         return clips_processed
     
-    async def _upsert_user(self, author: discord.User) -> None:
-        """Create or update user record"""
-        await User.update_or_create(
-            id=str(author.id),
+    async def _upsert_author(self, author: discord.Member, guild_id: str) -> None:
+        """Create or update an author record for a specific guild."""
+        await Author.update_or_create(
+            user_id=str(author.id),
+            guild_id=guild_id,
             defaults={
                 "username": author.name,
                 "discriminator": author.discriminator or "0",
-                "avatar_url": str(author.display_avatar.url) if author.display_avatar else None
+                "avatar_url": str(author.avatar.url) if author.avatar else None,
+                "nickname": author.nick,
+                "display_name": author.display_name,
+                "guild_avatar_url": str(author.display_avatar.url) if author.display_avatar else None,
             }
         )
     
