@@ -36,11 +36,11 @@ export function ClipCard({ clip, onClick, authorMap }: ClipCardProps) {
 
     return (
         <div
-            className="group relative cursor-pointer rounded-lg overflow-hidden border bg-card hover:shadow-lg transition-all"
+            className="group relative cursor-pointer rounded-lg overflow-hidden hover:shadow-lg hover:bg-muted/20 transition-all"
             onClick={() => onClick(clip)}
         >
             {/* Thumbnail - 16:9 aspect ratio */}
-            <div className="aspect-video bg-muted relative overflow-hidden">
+            <div className="aspect-video bg-muted relative overflow-hidden rounded-lg">
                 {thumbnailUrl ? (
                     <>
                         <img
@@ -70,34 +70,27 @@ export function ClipCard({ clip, onClick, authorMap }: ClipCardProps) {
             </div>
 
             {/* Metadata */}
-            <div className="p-4 space-y-3">
+            <div className="flex flex-col p-2 gap-2">
                 {/* Filename */}
                 <p
-                    className="text-sm font-semibold line-clamp-2 min-h-[2.5rem]"
+                    className="text-sm font-semibold line-clamp-1 overflow-hidden"
                     title={clipData.filename}
                 >
                     {formatClipName(clipData.filename)}
                 </p>
 
-                {/* Author */}
-                <div className="flex items-center gap-2">
+                {/* Author & Time posted */}
+                <div className="flex items-center justify-between gap-2 text-xs text-muted-foreground">
                     <UserAvatar
                         userId={message.author_id}
                         username={author?.display_name}
                         avatarUrl={author?.avatar_url ?? undefined}
-                        size="sm"
+                        size="md"
                         showName={true}
                     />
-                </div>
-
-                {/* Time posted */}
-                <div className="flex items-center justify-between text-xs text-muted-foreground">
-                    <span>{formatRelativeTime(message.timestamp)}</span>
-                    {clipData.resolution && (
-                        <span className="font-medium">
-                            {clipData.resolution}
-                        </span>
-                    )}
+                    <p className="text-xs text-muted-foreground">
+                        {formatRelativeTime(message.timestamp)}
+                    </p>
                 </div>
             </div>
         </div>

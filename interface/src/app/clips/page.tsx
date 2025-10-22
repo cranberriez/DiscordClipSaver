@@ -11,7 +11,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { FilterBar } from "@/features/clips/components/FilterBar";
 import { ClipCard } from "@/features/clips/components/ClipCard";
-import { ClipModal } from "@/features/clips";
+import { ClipGrid, ClipModal } from "@/features/clips";
 import {
     GuildSelectModal,
     ChannelSelectModal,
@@ -168,21 +168,12 @@ export default function ClipsPage() {
                 ) : (
                     <>
                         {/* Clips Grid */}
-                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                            {filteredClips.map(
-                                (clip: FullClip, index: number) => (
-                                    <ClipCard
-                                        key={clip.clip.id}
-                                        clip={clip}
-                                        onClick={clickedClip => {
-                                            setClipIndex(index);
-                                            setSelectedClip(clickedClip);
-                                        }}
-                                        authorMap={authorMap}
-                                    />
-                                )
-                            )}
-                        </div>
+                        <ClipGrid
+                            clips={filteredClips}
+                            authorMap={authorMap}
+                            setClipIndex={setClipIndex}
+                            setSelectedClip={setSelectedClip}
+                        />
 
                         {/* Load More Button */}
                         {hasNextPage && (

@@ -23,7 +23,7 @@ const textSizeClasses = {
 
 /**
  * UserAvatar component displays a Discord user's avatar with optional username
- * 
+ *
  * @param userId - Discord user ID
  * @param username - Discord username (optional, for fallback)
  * @param avatarUrl - Full Discord CDN avatar URL (optional)
@@ -61,7 +61,9 @@ export function UserAvatar({
         return (
             <div className="flex items-center gap-2">
                 {avatarContent}
-                <span className={`${textSizeClasses[size]} font-medium truncate`}>
+                <span
+                    className={`${textSizeClasses[size]} font-medium group-hover:text-primary duration-200 truncate`}
+                >
                     {username || `User ${userId.slice(0, 8)}`}
                 </span>
             </div>
