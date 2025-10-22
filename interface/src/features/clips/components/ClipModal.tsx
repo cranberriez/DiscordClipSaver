@@ -3,8 +3,8 @@
 import { useState, useCallback, useEffect } from "react";
 import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { VideoPlayer } from "./VideoPlayer";
+import { InfoModal } from "./InfoModal";
 import { UserAvatar } from "@/components/user/UserAvatar";
 import { useClip } from "@/lib/hooks";
 import type { FullClip } from "@/lib/api/clip";
@@ -81,6 +81,9 @@ export function ClipModal({
                     target.getAttribute("contenteditable") === "true");
             if (isTypingTarget || e.ctrlKey || e.metaKey || e.altKey) return;
 
+            // If details modal is open, ignore global shortcuts and let it handle Esc
+            if (showDetailsModal) return;
+
             if ((e.key === "ArrowLeft" || key === "a") && onPrevious) {
                 e.preventDefault();
                 onPrevious();
@@ -118,7 +121,7 @@ export function ClipModal({
 
         window.addEventListener("keydown", handleKeyDown);
         return () => window.removeEventListener("keydown", handleKeyDown);
-    }, [onPrevious, onNext, onClose, playerInstance]);
+    }, [onPrevious, onNext, onClose, playerInstance, showDetailsModal]);
 
     // Update video URL when clip is refreshed
     useEffect(() => {
@@ -162,7 +165,20 @@ export function ClipModal({
                 {/* Content */}
                 <DialogPrimitive.Content
                     className="fixed inset-0 z-50 flex flex-col data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0"
+                    onInteractOutside={e => {
+                        // If child/details modal is open, ignore outside interactions for the parent
+                        if (showDetailsModal) e.preventDefault();
+                    }}
+                    onPointerDownOutside={e => {
+                        // If child/details modal is open, ignore outside pointer down for the parent
+                        if (showDetailsModal) e.preventDefault();
+                    }}
                     onEscapeKeyDown={e => {
+                        // When details modal is open, don't close the parent on Esc
+                        if (showDetailsModal) {
+                            e.preventDefault();
+                            return;
+                        }
                         e.preventDefault();
                         onClose();
                     }}
@@ -312,182 +328,16 @@ export function ClipModal({
                 </DialogPrimitive.Content>
             </DialogPrimitive.Portal>
 
-            {/* Details Modal - Separate dialog for metadata */}
+            {/* Details Modal */}
             {showDetailsModal && (
-                <DialogPrimitive.Portal>
-                    <DialogPrimitive.Overlay className="fixed inset-0 z-[60] bg-black/80 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0" />
-                    <DialogPrimitive.Content className="fixed left-[50%] top-[50%] z-[60] translate-x-[-50%] translate-y-[-50%] w-full max-w-3xl max-h-[85vh] bg-background rounded-lg border shadow-lg data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95">
-                        <div className="flex flex-col h-full max-h-[85vh]">
-                            {/* Header */}
-                            <div className="flex items-center justify-between p-6 border-b">
-                                <DialogPrimitive.Title className="text-lg font-semibold">
-                                    Clip Information
-                                </DialogPrimitive.Title>
-                                <button
-                                    onClick={() => setShowDetailsModal(false)}
-                                    className="rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
-                                >
-                                    <X className="h-4 w-4" />
-                                    <span className="sr-only">Close</span>
-                                </button>
-                            </div>
-
-                            {/* Scrollable Content */}
-                            <div className="flex-1 overflow-y-auto p-6">
-                                <div className="space-y-6">
-                                    {/* Clip Information */}
-                                    <div>
-                                        <h3 className="font-semibold mb-3 text-sm uppercase tracking-wide text-muted-foreground">
-                                            Clip Information
-                                        </h3>
-                                        <div className="space-y-2 text-sm">
-                                            <div className="flex justify-between">
-                                                <span className="text-muted-foreground">
-                                                    File Size:
-                                                </span>
-                                                <span className="font-medium">
-                                                    {formatFileSize(
-                                                        clip.file_size
-                                                    )}
-                                                </span>
-                                            </div>
-                                            <div className="flex justify-between">
-                                                <span className="text-muted-foreground">
-                                                    Resolution:
-                                                </span>
-                                                <span className="font-medium">
-                                                    {clip.resolution ||
-                                                        "Unknown"}
-                                                </span>
-                                            </div>
-                                            <div className="flex justify-between">
-                                                <span className="text-muted-foreground">
-                                                    Duration:
-                                                </span>
-                                                <span className="font-medium">
-                                                    {clip.duration
-                                                        ? formatDuration(
-                                                              clip.duration
-                                                          )
-                                                        : "Unknown"}
-                                                </span>
-                                            </div>
-                                            <div className="flex justify-between">
-                                                <span className="text-muted-foreground">
-                                                    MIME Type:
-                                                </span>
-                                                <span className="font-medium">
-                                                    {clip.mime_type}
-                                                </span>
-                                            </div>
-                                            <div className="flex justify-between">
-                                                <span className="text-muted-foreground">
-                                                    Created:
-                                                </span>
-                                                <span className="font-medium">
-                                                    {formatDate(
-                                                        clip.created_at
-                                                    )}
-                                                </span>
-                                            </div>
-                                            <div className="flex justify-between">
-                                                <span className="text-muted-foreground">
-                                                    Expires:
-                                                </span>
-                                                <span className="font-medium">
-                                                    {formatDate(
-                                                        clip.expires_at
-                                                    )}
-                                                </span>
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    {/* Message Information */}
-                                    <div>
-                                        <h3 className="font-semibold mb-3 text-sm uppercase tracking-wide text-muted-foreground">
-                                            Message Information
-                                        </h3>
-                                        <div className="space-y-2 text-sm">
-                                            <div>
-                                                <span className="text-muted-foreground block mb-1">
-                                                    Message ID:
-                                                </span>
-                                                <code className="bg-muted px-2 py-1 rounded text-xs block">
-                                                    {message.id}
-                                                </code>
-                                            </div>
-                                            <div>
-                                                <span className="text-muted-foreground block mb-1">
-                                                    Author ID:
-                                                </span>
-                                                <code className="bg-muted px-2 py-1 rounded text-xs block">
-                                                    {message.author_id}
-                                                </code>
-                                            </div>
-                                            <div>
-                                                <span className="text-muted-foreground block mb-1">
-                                                    Timestamp:
-                                                </span>
-                                                <span className="font-medium">
-                                                    {formatDate(
-                                                        message.created_at
-                                                    )}
-                                                </span>
-                                            </div>
-                                            {message.content && (
-                                                <div>
-                                                    <span className="text-muted-foreground block mb-1">
-                                                        Content:
-                                                    </span>
-                                                    <p className="bg-muted p-2 rounded text-xs whitespace-pre-wrap">
-                                                        {message.content}
-                                                    </p>
-                                                </div>
-                                            )}
-                                        </div>
-                                    </div>
-
-                                    {/* Thumbnail Info */}
-                                    <div>
-                                        <h3 className="font-semibold mb-3 text-sm uppercase tracking-wide text-muted-foreground">
-                                            Thumbnail
-                                        </h3>
-                                        <div className="flex gap-2">
-                                            {thumbnail ? (
-                                                <Badge variant="secondary">
-                                                    {thumbnail.size} (
-                                                    {thumbnail.width}x
-                                                    {thumbnail.height})
-                                                </Badge>
-                                            ) : (
-                                                <span className="text-sm text-muted-foreground">
-                                                    No thumbnail available
-                                                </span>
-                                            )}
-                                        </div>
-                                    </div>
-
-                                    {/* Raw Metadata */}
-                                    <div>
-                                        <details className="text-sm">
-                                            <summary className="font-semibold cursor-pointer text-sm uppercase tracking-wide text-muted-foreground mb-2">
-                                                Raw Metadata (JSON)
-                                            </summary>
-                                            <pre className="mt-2 bg-muted p-4 rounded overflow-x-auto text-xs">
-                                                {JSON.stringify(
-                                                    initialClip,
-                                                    null,
-                                                    2
-                                                )}
-                                            </pre>
-                                        </details>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </DialogPrimitive.Content>
-                </DialogPrimitive.Portal>
+                <InfoModal
+                    open={showDetailsModal}
+                    onOpenChange={setShowDetailsModal}
+                    clip={clip}
+                    message={message}
+                    thumbnail={thumbnail}
+                    initialClip={initialClip}
+                />
             )}
         </DialogPrimitive.Root>
     );
