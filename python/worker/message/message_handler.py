@@ -45,16 +45,20 @@ class MessageHandler:
         if not should_process_message(discord_message, settings):
             return 0
         
-        # Upsert author and message
-        await self._upsert_author(discord_message.author, guild_id)
-        await self._upsert_message(discord_message, channel_id, guild_id, settings)
-        
         # Process video attachments
         settings_hash = compute_settings_hash(settings)
         video_attachments = filter_video_attachments(
             discord_message.attachments,
             settings.allowed_mime_types
         )
+        
+        # Only process author and message if there are video attachments
+        if not video_attachments:
+            return 0
+        
+        # Upsert author and message (only for messages with clips)
+        await self._upsert_author(discord_message.author, guild_id)
+        await self._upsert_message(discord_message, channel_id, guild_id, settings)
         
         clips_processed = 0
         for attachment in video_attachments:

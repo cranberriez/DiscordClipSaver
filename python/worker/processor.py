@@ -17,6 +17,7 @@ from shared.db.repositories.channel_scan_status import (
     update_scan_status,
     increment_scan_counts
 )
+from shared.db.repositories.authors import get_author_ids_by_guild_id
 from shared.redis.redis_client import RedisStreamClient
 from shared.redis.redis import BatchScanJob
 
@@ -35,7 +36,7 @@ class JobProcessor:
         
         # Inject shared handler into message processors
         self.message_handler = MessageHandler(thumbnail_handler=self.thumbnail_handler)
-        self.batch_processor = BatchMessageProcessor(thumbnail_handler=self.thumbnail_handler)
+        self.batch_processor = BatchMessageProcessor(bot=bot, thumbnail_handler=self.thumbnail_handler)
         self.purge_handler = PurgeHandler(bot=bot)
         self.redis_client = redis_client
     
@@ -249,6 +250,14 @@ class JobProcessor:
             # Handle existing messages based on rescan mode
             messages_to_process = messages
             stopped_on_duplicate = False
+
+            # For update rescans, fetch existing authors to ensure they are updated
+            existing_author_ids = set()
+            if rescan == "update":
+                logger.info(f"[UPDATE MODE] Fetching existing authors for guild {guild_id}")
+                existing_author_ids = await get_author_ids_by_guild_id(guild_id)
+                logger.info(f"Found {len(existing_author_ids)} existing authors")
+
             
             if messages:
                 from shared.db.models import Message as MessageModel
@@ -296,7 +305,9 @@ class JobProcessor:
             total_clips, thumbnails_generated = await self.batch_processor.process_messages_batch(
                 messages=messages_to_process,
                 channel_id=channel_id,
-                guild_id=guild_id
+                guild_id=guild_id,
+                existing_author_ids=existing_author_ids,
+                is_update_scan=(rescan == "update")
             )
             
             # Update scan counts

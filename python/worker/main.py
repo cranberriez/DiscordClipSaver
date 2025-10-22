@@ -43,64 +43,30 @@ class Worker:
         logger.info(f"🔧 Worker #{worker_id} initialized (consumer: {consumer_name})")
     
     async def initialize(self):
-        """Initialize all worker components"""
-        logger.info("Initializing worker...")
-        
-        # Initialize database connection
-        await init_db(generate_schemas=False)
-        
-        # Start Discord bot (non-blocking)
-        bot_task = asyncio.create_task(self.bot.start())
-        
-        # Wait for bot to be ready
-        await self.bot.wait_until_ready()
-        
-        # Connect to Redis
+        """Initialize database and Redis."""
+        await init_db()
         await self.redis.connect()
-        
-        # Initialize processor with redis client for job continuation
-        self.processor = JobProcessor(
-            bot=self.bot,
-            redis_client=self.redis
-        )
-        
+        self.processor = JobProcessor(bot=self.bot, redis_client=self.redis)
+        logger.info("Worker components initialized successfully")
+
         # Start database health check loop
         health_check_interval = int(os.getenv("DB_HEALTH_CHECK_INTERVAL", "60"))
         self.health_check_task = asyncio.create_task(
             start_health_check_loop(interval_seconds=health_check_interval)
         )
-        
-        logger.info("Worker initialized successfully")
-        
-        return bot_task
     
     async def shutdown(self):
-        """Gracefully shutdown all components"""
+        """Shutdown the worker gracefully"""
         logger.info("Shutting down worker...")
-        
-        self.running = False
-        
-        # Cancel health check task
-        if self.health_check_task and not self.health_check_task.done():
+        if self.health_check_task:
             self.health_check_task.cancel()
-            try:
-                await self.health_check_task
-            except asyncio.CancelledError:
-                pass
-        
-        # Close processor and its handlers (releases aiohttp sessions)
-        if self.processor:
-            await self.processor.close()
-        
-        # Stop Discord bot
-        await self.bot.stop()
-        
-        # Disconnect Redis
-        await self.redis.disconnect()
-        
-        # Close database connections
+
+        # The bot is stopped via the cancelled bot_task in run()
+
+        if self.redis:
+            await self.redis.disconnect()
+
         await close_db()
-        
         logger.info("Worker shutdown complete")
     
     async def process_jobs(self):
@@ -158,27 +124,42 @@ class Worker:
     
     async def run(self):
         """Run the worker"""
+        bot_task = None
         try:
-            # Initialize components
-            bot_task = await self.initialize()
-            
-            # Start job processing
-            await self.process_jobs()
-            
-            # Cancel bot task on shutdown
-            bot_task.cancel()
+            # Initialize components first
+            await self.initialize()
+
+            # Now start the bot
+            logger.info("Starting Discord bot...")
+            bot_task = asyncio.create_task(self.bot.start_bot())
+
+            logger.info("Waiting for bot to come online...")
+            # Wait for bot with timeout to detect connection issues
             try:
-                await bot_task
-            except asyncio.CancelledError:
-                pass
-            
+                await asyncio.wait_for(self.bot.ready_event.wait(), timeout=30.0)
+                logger.info("Bot is online, starting job processing.")
+            except asyncio.TimeoutError:
+                logger.error("Bot failed to come online within 30 seconds!")
+                raise
+
+            # Start job processing loop
+            await self.process_jobs()
+
+        except asyncio.CancelledError:
+            logger.info("Main worker task cancelled.")
         except Exception as e:
             logger.error(f"Worker error: {e}", exc_info=True)
             raise
         finally:
+            logger.info("Initiating final shutdown sequence...")
+            if not bot_task.done():
+                bot_task.cancel()
+                try:
+                    await bot_task
+                except asyncio.CancelledError:
+                    pass  # Expected
             await self.shutdown()
-
-
+            
 async def main():
     """Main entry point"""
     worker = Worker()

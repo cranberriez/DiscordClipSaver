@@ -18,6 +18,19 @@ class ClipMetadata:
 
 
 @dataclass
+class AuthorData:
+    """Author data to be upserted"""
+    user_id: str
+    guild_id: str
+    username: str
+    discriminator: str
+    avatar_url: Optional[str]
+    nickname: Optional[str]
+    display_name: str
+    guild_avatar_url: Optional[str]
+
+
+@dataclass
 class UserData:
     """User data to be upserted"""
     id: str
@@ -64,17 +77,22 @@ class BatchContext:
         guild_id: str,
         channel_id: str,
         settings: ResolvedSettings,
-        settings_hash: str
+        settings_hash: str,
+        existing_author_ids: Set[str] = None,
+        is_update_scan: bool = False
     ):
         self.guild_id = guild_id
         self.channel_id = channel_id
         self.settings = settings
         self.settings_hash = settings_hash
+        self.is_update_scan = is_update_scan
         
         # Existing data from database (loaded once)
         self.existing_clips: Dict[str, ClipMetadata] = {}
+        self.existing_author_ids: Set[str] = existing_author_ids or set()
         
         # Data to be upserted (collected during processing)
+        self.authors_to_upsert: Dict[str, AuthorData] = {}
         self.users_to_upsert: Dict[str, UserData] = {}
         self.messages_to_upsert: Dict[str, MessageData] = {}
         self.clips_to_upsert: Dict[str, ClipData] = {}
@@ -87,6 +105,25 @@ class BatchContext:
         self.thumbnails_skipped = 0
         self.thumbnails_generated = 0
     
+    def add_author(self, author: discord.Member) -> None:
+        """Add author data for batch upsert"""
+        user_id = str(author.id)
+
+        # If it's an update scan, always add/update the author.
+        # If it's a normal scan, only add if they are new.
+        if self.is_update_scan or user_id not in self.existing_author_ids:
+            if user_id not in self.authors_to_upsert:
+                self.authors_to_upsert[user_id] = AuthorData(
+                    user_id=user_id,
+                    guild_id=self.guild_id,
+                    username=author.name,
+                    discriminator=author.discriminator or "0",
+                    avatar_url=str(author.avatar.url) if author.avatar else None,
+                    nickname=author.nick,
+                    display_name=author.display_name,
+                    guild_avatar_url=str(author.display_avatar.url) if author.display_avatar else None,
+                )
+
     def add_user(self, user: discord.User) -> None:
         """Add user data for batch upsert"""
         user_id = str(user.id)

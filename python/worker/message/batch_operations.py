@@ -51,6 +51,41 @@ class BatchDatabaseOperations:
         return result
     
     @staticmethod
+    async def bulk_upsert_authors(context: BatchContext) -> int:
+        """
+        Bulk upsert authors via shared repository.
+
+        Args:
+            context: BatchContext with authors to upsert
+
+        Returns:
+            Number of authors successfully upserted
+        """
+        if not context.authors_to_upsert:
+            return 0
+
+        authors_data = [
+            {
+                'user_id': author.user_id,
+                'guild_id': author.guild_id,
+                'username': author.username,
+                'discriminator': author.discriminator,
+                'avatar_url': author.avatar_url,
+                'nickname': author.nickname,
+                'display_name': author.display_name,
+                'guild_avatar_url': author.guild_avatar_url,
+            }
+            for author in context.authors_to_upsert.values()
+        ]
+
+        success_count, failure_count = await bulk_operations.bulk_upsert_authors(authors_data)
+
+        if failure_count > 0:
+            logger.warning(f"Bulk upsert authors: {success_count} succeeded, {failure_count} failed")
+
+        return success_count
+
+    @staticmethod
     async def bulk_upsert_users(context: BatchContext) -> int:
         """
         Bulk upsert users via shared repository.

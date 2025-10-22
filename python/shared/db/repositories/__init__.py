@@ -4,7 +4,9 @@ Repository package for shared database query helpers
 Provides reusable database query functions organized by domain.
 
 Modules:
-    - bulk_operations: Efficient bulk upsert operations using PostgreSQL INSERT ... ON CONFLICT
+    - bulk_upsert_messages,
+    - bulk_upsert_clips,
+    - bulk_upsert_authors: Efficient bulk upsert operations using PostgreSQL INSERT ... ON CONFLICT
     - channel_scan_status: Channel scanning status management
     - channels: Channel-related queries
     - guild_settings: Guild settings management
@@ -19,6 +21,7 @@ from . import (
     guild_settings,
     guilds,
     install_intents,
+    authors,
 )
 
 __all__ = [
@@ -28,4 +31,5 @@ __all__ = [
     'guild_settings',
     'guilds',
     'install_intents',
+    'authors',
 ]

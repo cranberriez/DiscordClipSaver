@@ -7,6 +7,7 @@ import discord
 from shared.settings_resolver import get_channel_settings
 from worker.message.batch_context import BatchContext
 from worker.message.batch_operations import BatchDatabaseOperations
+from worker.discord.bot import WorkerBot
 from worker.thumbnail.thumbnail_handler import ThumbnailHandler
 from worker.message.utils import compute_settings_hash
 from worker.message.validators import should_process_message, filter_video_attachments
@@ -27,7 +28,8 @@ class BatchMessageProcessor:
     - Thumbnail existence checked in bulk
     """
     
-    def __init__(self, thumbnail_handler: Optional[ThumbnailHandler] = None):
+    def __init__(self, bot: WorkerBot, thumbnail_handler: Optional[ThumbnailHandler] = None):
+        self.bot = bot
         self.db_ops = BatchDatabaseOperations()
         self.thumbnail_handler = thumbnail_handler or ThumbnailHandler()
     
@@ -35,7 +37,9 @@ class BatchMessageProcessor:
         self,
         messages: List[discord.Message],
         channel_id: str,
-        guild_id: str
+        guild_id: str,
+        existing_author_ids: set = None,
+        is_update_scan: bool = False
     ) -> tuple[int, int]:
         """
         Process a batch of messages efficiently.
@@ -55,7 +59,9 @@ class BatchMessageProcessor:
         
         # Fetch settings and initialize context
         settings = await get_channel_settings(guild_id, channel_id)
-        context = self._initialize_context(guild_id, channel_id, settings)
+        context = self._initialize_context(
+            guild_id, channel_id, settings, existing_author_ids, is_update_scan
+        )
         
         # Pre-filter and extract clip metadata
         clip_map = build_clip_id_map(messages, channel_id, settings)
@@ -72,8 +78,12 @@ class BatchMessageProcessor:
             f"{len(clip_ids)} potential clips"
         )
         
+        # Fetch full member objects for authors who posted clips
+        await self._fetch_and_process_authors(messages, clip_map, context)
+
+
         # Process messages and collect data
-        await self._collect_message_data(messages, clip_map, context)
+        self._collect_message_data(messages, clip_map, context)
         
         # Bulk upsert all collected data
         await self._bulk_upsert_data(context)
@@ -89,7 +99,9 @@ class BatchMessageProcessor:
         self,
         guild_id: str,
         channel_id: str,
-        settings
+        settings,
+        existing_author_ids: set,
+        is_update_scan: bool
     ) -> BatchContext:
         """Initialize batch context with settings"""
         settings_hash = compute_settings_hash(settings)
@@ -97,27 +109,55 @@ class BatchMessageProcessor:
             guild_id=guild_id,
             channel_id=channel_id,
             settings=settings,
-            settings_hash=settings_hash
+            settings_hash=settings_hash,
+            existing_author_ids=existing_author_ids,
+            is_update_scan=is_update_scan
         )
     
-    async def _collect_message_data(
+    async def _fetch_and_process_authors(self, messages: List[discord.Message], clip_map: dict, context: BatchContext) -> None:
+        """Fetch full member objects for authors who posted clips."""
+        # Only get author IDs for messages that have clips
+        author_ids = {msg.author.id for msg in messages if str(msg.id) in clip_map}
+        if not author_ids:
+            return
+
+        try:
+            guild = self.bot.get_guild(int(context.guild_id))
+            if not guild:
+                logger.warning(f"Could not find guild {context.guild_id} in cache to get member data.")
+                return
+
+            # Get members from cache
+            member_map = {author_id: guild.get_member(author_id) for author_id in author_ids}
+
+            for author_id in author_ids:
+                member = member_map.get(author_id)
+                if member:
+                    context.add_author(member)
+                else:
+                    # Find a message from this author to get the user object as a fallback
+                    author_message = next((msg for msg in messages if msg.author.id == author_id and str(msg.id) in clip_map), None)
+                    if author_message:
+                        context.add_user(author_message.author)
+
+        except discord.Forbidden:
+            logger.error(f"Bot does not have permission to fetch members in guild {context.guild_id}.")
+        except discord.HTTPException as e:
+            logger.error(f"Failed to fetch members for guild {context.guild_id}: {e}")
+
+    def _collect_message_data(
         self,
         messages: List[discord.Message],
         clip_map: dict,
         context: BatchContext
     ) -> None:
-        """Collect user, message, and clip data from messages"""
+        """Collect message and clip data. Author data is pre-fetched."""
         for message in messages:
             message_id = str(message.id)
-            
-            # Skip messages without clips
+
             if message_id not in clip_map:
                 continue
-            
-            # Add user data
-            context.add_user(message.author)
-            
-            # Add message data
+
             context.add_message(
                 message_id=message_id,
                 author_id=str(message.author.id),
@@ -139,8 +179,8 @@ class BatchMessageProcessor:
                 )
     
     async def _bulk_upsert_data(self, context: BatchContext) -> None:
-        """Bulk upsert users, messages, and clips"""
-        await self.db_ops.bulk_upsert_users(context)
+        """Bulk upsert authors, messages, and clips"""
+        await self.db_ops.bulk_upsert_authors(context)
         await self.db_ops.bulk_upsert_messages(context)
         await self.db_ops.bulk_upsert_clips(context)
     

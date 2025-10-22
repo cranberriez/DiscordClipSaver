@@ -15,6 +15,62 @@ from tortoise import Tortoise
 logger = logging.getLogger(__name__)
 
 
+async def bulk_upsert_authors(authors_data: List[dict]) -> Tuple[int, int]:
+    """
+    Bulk upsert authors using PostgreSQL INSERT ... ON CONFLICT.
+
+    Args:
+        authors_data: List of dicts with author data.
+
+    Returns:
+        Tuple of (success_count, failure_count)
+    """
+    if not authors_data:
+        return 0, 0
+
+    try:
+        conn = Tortoise.get_connection("default")
+
+        sql = """
+            INSERT INTO author (user_id, guild_id, username, discriminator, avatar_url, nickname, display_name, guild_avatar_url, created_at, updated_at)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+            ON CONFLICT (user_id, guild_id) DO UPDATE SET
+                username = EXCLUDED.username,
+                discriminator = EXCLUDED.discriminator,
+                avatar_url = EXCLUDED.avatar_url,
+                nickname = EXCLUDED.nickname,
+                display_name = EXCLUDED.display_name,
+                guild_avatar_url = EXCLUDED.guild_avatar_url,
+                updated_at = EXCLUDED.updated_at
+        """
+
+        now = datetime.now(timezone.utc)
+        values = [
+            (
+                author['user_id'],
+                author['guild_id'],
+                author['username'],
+                author['discriminator'],
+                author['avatar_url'],
+                author['nickname'],
+                author['display_name'],
+                author['guild_avatar_url'],
+                now,
+                now
+            )
+            for author in authors_data
+        ]
+
+        await conn.execute_many(sql, values)
+
+        logger.debug(f"Bulk upserted {len(authors_data)} authors")
+        return len(authors_data), 0
+
+    except Exception as e:
+        logger.error(f"Bulk upsert authors failed: {e}", exc_info=True)
+        return 0, len(authors_data)
+
+
 async def bulk_upsert_users(users_data: List[dict]) -> Tuple[int, int]:
     """
     Bulk upsert users using PostgreSQL INSERT ... ON CONFLICT.
