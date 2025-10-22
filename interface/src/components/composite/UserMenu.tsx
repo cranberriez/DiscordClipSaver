@@ -35,9 +35,6 @@ export function UserMenu({ user }: { user: User }) {
                         <p className="text-sm font-medium leading-none">
                             {user.name ?? "Unknown"}
                         </p>
-                        <p className="text-xs leading-none text-muted-foreground">
-                            {user.email ?? "No email"}
-                        </p>
                     </div>
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator />
