@@ -32,6 +32,11 @@ export type {
     ChannelScanStatus as DbChannelScanStatus,
     ChannelScanStatusUpdate as DbChannelScanStatusUpdate,
 } from "./schemas/channel_scan_status.kysely";
+export type {
+    SelectableAuthor as DbAuthor,
+    NewAuthor as DbNewAuthor,
+    AuthorUpdate as DbAuthorUpdate,
+} from "./schemas/author.kysely";
 export type { Message as DbMessage } from "./schemas/message.kysely";
 export type { Clip as DbClip } from "./schemas/clip.kysely";
 export type { ClipWithMetadata as DbClipWithMetadata } from "./queries/clips";

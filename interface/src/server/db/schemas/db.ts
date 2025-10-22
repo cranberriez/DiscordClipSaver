@@ -1,3 +1,4 @@
+import type { AuthorTable } from "./author.kysely";
 import type { UserTable } from "./user.kysely";
 import type { GuildTable } from "./guild.kysely";
 import type { GuildSettingsTable } from "./guild_settings.kysely";
@@ -10,6 +11,7 @@ import type { ClipTable } from "./clip.kysely";
 import type { ThumbnailTable } from "./thumbnail.kysely";
 
 export interface DB {
+    author: AuthorTable;
     user: UserTable;
     guild: GuildTable;
     guild_settings: GuildSettingsTable;
