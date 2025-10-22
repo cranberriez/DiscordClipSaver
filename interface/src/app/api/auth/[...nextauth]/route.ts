@@ -29,116 +29,124 @@ function getAuthUrl(req?: Request): string {
     return process.env.NEXTAUTH_URL ?? "http://localhost:3000";
 }
 
-export const authOptions: NextAuthOptions = {
-    providers: [
-        DiscordProvider({
-            clientId: process.env.DISCORD_CLIENT_ID ?? "",
-            clientSecret: process.env.DISCORD_CLIENT_SECRET ?? "",
-            authorization: {
-                params: { scope: "identify guilds" },
-            },
-        }),
-    ],
-    callbacks: {
-        async signIn({ user, account, profile }) {
-            const discordProfile = profile as DiscordProfile | undefined;
-            const discordUserId =
-                (typeof discordProfile?.id === "string" && discordProfile.id) ??
-                account?.providerAccountId ??
-                (typeof user.id === "string" ? user.id : undefined);
-
-            if (!discordUserId) {
-                return true;
-            }
-
-            try {
-                await upsertUser({
-                    id: discordUserId,
-                    username: discordProfile?.username ?? user.name ?? "",
-                    discriminator: discordProfile?.discriminator ?? "",
-                    avatar_url: discordProfile?.avatar ?? user.image ?? "",
-                });
-            } catch (error) {
-                console.error("Failed to upsert Discord user login", error);
-            }
-
-            return true;
-        },
-        async jwt({ token, account, profile }) {
-            // Persist Discord user id in the JWT for stable server-side identity
-            const discordProfile = profile as DiscordProfile | undefined;
-            const discordUserId =
-                (typeof discordProfile?.id === "string" && discordProfile.id) ??
-                account?.providerAccountId ??
-                (typeof token.sub === "string" ? token.sub : undefined);
-
-            if (discordUserId) {
-                (
-                    token as typeof token & { discordUserId?: string }
-                ).discordUserId = discordUserId;
-            }
-
-            // Keep the provider access token server-only on the JWT
-            if (account?.access_token) {
-                (token as typeof token & { accessToken?: string }).accessToken =
-                    account.access_token;
-            }
-            return token;
-        },
-        async session({ session, token }) {
-            if (session.user) {
+function createAuthOptions(baseUrl?: string): NextAuthOptions {
+    return {
+        providers: [
+            DiscordProvider({
+                clientId: process.env.DISCORD_CLIENT_ID ?? "",
+                clientSecret: process.env.DISCORD_CLIENT_SECRET ?? "",
+                authorization: {
+                    params: { scope: "identify guilds" },
+                },
+            }),
+        ],
+        ...(baseUrl && { url: baseUrl }),
+        callbacks: {
+            async signIn({ user, account, profile }) {
+                const discordProfile = profile as DiscordProfile | undefined;
                 const discordUserId =
-                    (token as typeof token & { discordUserId?: string })
-                        .discordUserId ?? token.sub;
+                    (typeof discordProfile?.id === "string" && discordProfile.id) ??
+                    account?.providerAccountId ??
+                    (typeof user.id === "string" ? user.id : undefined);
+
+                if (!discordUserId) {
+                    return true;
+                }
+
+                try {
+                    await upsertUser({
+                        id: discordUserId,
+                        username: discordProfile?.username ?? user.name ?? "",
+                        discriminator: discordProfile?.discriminator ?? "",
+                        avatar_url: discordProfile?.avatar ?? user.image ?? "",
+                    });
+                } catch (error) {
+                    console.error("Failed to upsert Discord user login", error);
+                }
+
+                return true;
+            },
+            async jwt({ token, account, profile }) {
+                // Persist Discord user id in the JWT for stable server-side identity
+                const discordProfile = profile as DiscordProfile | undefined;
+                const discordUserId =
+                    (typeof discordProfile?.id === "string" && discordProfile.id) ??
+                    account?.providerAccountId ??
+                    (typeof token.sub === "string" ? token.sub : undefined);
+
                 if (discordUserId) {
-                    (session.user as typeof session.user & { id?: string }).id =
-                        discordUserId as string;
+                    (
+                        token as typeof token & { discordUserId?: string }
+                    ).discordUserId = discordUserId;
                 }
-            }
-            return session;
-        },
-        async redirect({ url, baseUrl }) {
-            try {
-                const target = new URL(url, baseUrl);
-                const isSameOrigin = target.origin === baseUrl;
-                if (isSameOrigin) {
-                    if (
-                        target.pathname === "/login" ||
-                        target.pathname === "/"
-                    ) {
-                        return `${baseUrl}/clips`;
+
+                // Keep the provider access token server-only on the JWT
+                if (account?.access_token) {
+                    (token as typeof token & { accessToken?: string }).accessToken =
+                        account.access_token;
+                }
+                return token;
+            },
+            async session({ session, token }) {
+                if (session.user) {
+                    const discordUserId =
+                        (token as typeof token & { discordUserId?: string })
+                            .discordUserId ?? token.sub;
+                    if (discordUserId) {
+                        (session.user as typeof session.user & { id?: string }).id =
+                            discordUserId as string;
                     }
-                    return target.toString();
                 }
-                return baseUrl;
-            } catch {
-                return baseUrl;
-            }
+                return session;
+            },
+            async redirect({ url, baseUrl }) {
+                try {
+                    const target = new URL(url, baseUrl);
+                    const isSameOrigin = target.origin === baseUrl;
+                    if (isSameOrigin) {
+                        if (
+                            target.pathname === "/login" ||
+                            target.pathname === "/"
+                        ) {
+                            return `${baseUrl}/clips`;
+                        }
+                        return target.toString();
+                    }
+                    return baseUrl;
+                } catch {
+                    return baseUrl;
+                }
+            },
         },
-    },
-};
-
-// Create dynamic handlers that inject the request URL into authOptions
-async function GET(req: Request, context: { params: { nextauth: string[] } }) {
-    // In development, override NEXTAUTH_URL with the current request URL
-    if (process.env.NODE_ENV === "development") {
-        const url = getAuthUrl(req);
-        process.env.NEXTAUTH_URL = url;
-    }
-
-    const handler = NextAuth(authOptions);
-    return handler(req, context);
+    };
 }
 
-async function POST(req: Request, context: { params: { nextauth: string[] } }) {
-    // In development, override NEXTAUTH_URL with the current request URL
-    if (process.env.NODE_ENV === "development") {
-        const url = getAuthUrl(req);
-        process.env.NEXTAUTH_URL = url;
-    }
+// Export static authOptions for getServerSession
+export const authOptions = createAuthOptions();
 
-    const handler = NextAuth(authOptions);
-    return handler(req, context);
+// Create dynamic handlers that use request-specific authOptions
+async function GET(req: Request, context: { params: Promise<{ nextauth: string[] }> }) {
+    // In development, create authOptions with dynamic URL
+    const options = process.env.NODE_ENV === "development" 
+        ? createAuthOptions(getAuthUrl(req))
+        : authOptions;
+
+    const handler = NextAuth(options);
+    // Await params for Next.js 15+ compatibility
+    const params = await context.params;
+    return handler(req, { params });
+}
+
+async function POST(req: Request, context: { params: Promise<{ nextauth: string[] }> }) {
+    // In development, create authOptions with dynamic URL
+    const options = process.env.NODE_ENV === "development" 
+        ? createAuthOptions(getAuthUrl(req))
+        : authOptions;
+
+    const handler = NextAuth(options);
+    // Await params for Next.js 15+ compatibility
+    const params = await context.params;
+    return handler(req, { params });
 }
 
 export { GET, POST };
