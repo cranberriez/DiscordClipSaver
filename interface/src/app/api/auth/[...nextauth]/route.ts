@@ -11,7 +11,7 @@ export const authOptions: NextAuthOptions = {
             clientId: process.env.DISCORD_CLIENT_ID ?? "",
             clientSecret: process.env.DISCORD_CLIENT_SECRET ?? "",
             authorization: {
-                params: { scope: "identify email guilds" },
+                params: { scope: "identify guilds" },
             },
         }),
     ],
