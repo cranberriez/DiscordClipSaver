@@ -63,6 +63,10 @@ class Worker:
 
         # The bot is stopped via the cancelled bot_task in run()
 
+        # Close processor and cleanup resources (aiohttp sessions, etc.)
+        if self.processor:
+            await self.processor.close()
+
         if self.redis:
             await self.redis.disconnect()
 
