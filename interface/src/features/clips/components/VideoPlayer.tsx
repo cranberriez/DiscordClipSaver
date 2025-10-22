@@ -15,9 +15,10 @@ interface VideoPlayerProps {
     poster?: string;
     title?: string;
     onError?: () => void;
+    onPlayerReady?: (player: any) => void;
 }
 
-export function VideoPlayer({ src, poster, title, onError }: VideoPlayerProps) {
+export function VideoPlayer({ src, poster, title, onError, onPlayerReady }: VideoPlayerProps) {
     const playerRef = useRef<any>(null);
     const { volume, setVolume } = useVideoPlayerStore();
 
@@ -62,11 +63,13 @@ export function VideoPlayer({ src, poster, title, onError }: VideoPlayerProps) {
         };
 
         player.addEventListener("error", handleError);
+        // Expose player instance to parent when ready
+        onPlayerReady?.(player);
 
         return () => {
             player.removeEventListener("error", handleError);
         };
-    }, [onError]);
+    }, [onError, onPlayerReady]);
 
     return (
         <MediaPlayer
@@ -86,3 +89,4 @@ export function VideoPlayer({ src, poster, title, onError }: VideoPlayerProps) {
         </MediaPlayer>
     );
 }
+

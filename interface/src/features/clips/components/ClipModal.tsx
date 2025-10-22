@@ -64,24 +64,61 @@ export function ClipModal({
         setHasPlaybackError(false);
     }, [clip.cdn_url, clip.id]);
 
-    // Keyboard navigation
+    // Keep a reference to the Vidstack player instance
+    const [playerInstance, setPlayerInstance] = useState<any>(null);
+
+    // Keyboard navigation + spacebar play/pause when modal has focus
     useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
-            if (e.key === "ArrowLeft" && onPrevious) {
+            const key = e.key.toLowerCase();
+
+            // Ignore if user is typing in an input/textarea or using modifier keys
+            const target = e.target as HTMLElement | null;
+            const isTypingTarget =
+                !!target &&
+                (target.tagName === "INPUT" ||
+                    target.tagName === "TEXTAREA" ||
+                    target.getAttribute("contenteditable") === "true");
+            if (isTypingTarget || e.ctrlKey || e.metaKey || e.altKey) return;
+
+            if ((e.key === "ArrowLeft" || key === "a") && onPrevious) {
                 e.preventDefault();
                 onPrevious();
-            } else if (e.key === "ArrowRight" && onNext) {
+                return;
+            }
+            if ((e.key === "ArrowRight" || key === "d") && onNext) {
                 e.preventDefault();
                 onNext();
-            } else if (e.key === "Escape") {
+                return;
+            }
+            if (e.key === "Escape") {
                 e.preventDefault();
                 onClose();
+                return;
+            }
+            // Spacebar toggles play/pause on the player even if it's not focused
+            if (e.code === "Space" || e.key === " ") {
+                const p: any = playerInstance;
+                if (
+                    p &&
+                    typeof p.play === "function" &&
+                    typeof p.pause === "function"
+                ) {
+                    e.preventDefault();
+                    const isPaused =
+                        (p.state?.paused ?? p.paused ?? true) === true;
+                    if (isPaused) {
+                        p.play?.();
+                    } else {
+                        p.pause?.();
+                    }
+                }
             }
         };
 
         window.addEventListener("keydown", handleKeyDown);
         return () => window.removeEventListener("keydown", handleKeyDown);
-    }, [onPrevious, onNext, onClose]);
+    }, [onPrevious, onNext, onClose, playerInstance]);
 
     // Update video URL when clip is refreshed
     useEffect(() => {
@@ -181,6 +218,7 @@ export function ClipModal({
                                         poster={getThumbnailUrl() || undefined}
                                         title={clip.filename}
                                         onError={handleVideoError}
+                                        onPlayerReady={setPlayerInstance}
                                     />
                                 )}
                             </div>
