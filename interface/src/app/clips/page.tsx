@@ -43,7 +43,7 @@ export default function ClipsPage() {
     } = useClipFiltersStore();
 
     const [selectedClip, setSelectedClip] = useState<FullClip | null>(null);
-    const [selectedClipIndex, setSelectedClipIndex] = useState<number>(-1);
+    const [clipIndex, setClipIndex] = useState<number>(-1);
 
     // Fetch guilds with clip counts
     const { data: guilds = [], isLoading: guildsLoading } =
@@ -174,9 +174,9 @@ export default function ClipsPage() {
                                     <ClipCard
                                         key={clip.clip.id}
                                         clip={clip}
-                                        onClick={clip => {
-                                            setSelectedClipIndex(index);
-                                            setSelectedClip(clip);
+                                        onClick={clickedClip => {
+                                            setClipIndex(index);
+                                            setSelectedClip(clickedClip);
                                         }}
                                         authorMap={authorMap}
                                     />
@@ -217,22 +217,22 @@ export default function ClipsPage() {
                     clip={selectedClip}
                     onClose={() => {
                         setSelectedClip(null);
-                        setSelectedClipIndex(-1);
+                        setClipIndex(-1);
                     }}
                     onPrevious={
-                        selectedClipIndex > 0
+                        clipIndex > 0
                             ? () => {
-                                  const newIndex = selectedClipIndex - 1;
-                                  setSelectedClipIndex(newIndex);
+                                  const newIndex = clipIndex - 1;
+                                  setClipIndex(newIndex);
                                   setSelectedClip(filteredClips[newIndex]);
                               }
                             : undefined
                     }
                     onNext={
-                        selectedClipIndex < filteredClips.length - 1
+                        clipIndex < filteredClips.length - 1
                             ? () => {
-                                  const newIndex = selectedClipIndex + 1;
-                                  setSelectedClipIndex(newIndex);
+                                  const newIndex = clipIndex + 1;
+                                  setClipIndex(newIndex);
                                   setSelectedClip(filteredClips[newIndex]);
                               }
                             : undefined

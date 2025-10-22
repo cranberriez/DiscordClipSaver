@@ -11,12 +11,7 @@ import type { FullClip } from "@/lib/api/clip";
 import type { AuthorWithStats } from "@/lib/api/author";
 import { formatRelativeTime, formatDuration } from "@/lib/utils/time-helpers";
 import { formatClipName } from "../lib/formatClipName";
-import {
-    ChevronLeft,
-    ChevronRight,
-    Info,
-    X,
-} from "lucide-react";
+import { ChevronLeft, ChevronRight, Info, X } from "lucide-react";
 
 interface ClipModalProps {
     clip: FullClip;
@@ -243,11 +238,15 @@ export function ClipModal({
                                         <Button
                                             variant="ghost"
                                             size="sm"
-                                            onClick={() => setShowDetailsModal(true)}
+                                            onClick={() =>
+                                                setShowDetailsModal(true)
+                                            }
                                             className="gap-1 text-muted-foreground hover:text-foreground"
                                         >
                                             <Info className="w-4 h-4" />
-                                            <span className="text-xs">Info</span>
+                                            <span className="text-xs">
+                                                Info
+                                            </span>
                                         </Button>
                                         <Button
                                             variant="outline"
@@ -270,7 +269,6 @@ export function ClipModal({
                                     </div>
                                 </div>
                             </div>
-
                         </div>
                     </div>
                 </DialogPrimitive.Content>
@@ -306,30 +304,63 @@ export function ClipModal({
                                         </h3>
                                         <div className="space-y-2 text-sm">
                                             <div className="flex justify-between">
-                                                <span className="text-muted-foreground">File Size:</span>
-                                                <span className="font-medium">{formatFileSize(clip.file_size)}</span>
-                                            </div>
-                                            <div className="flex justify-between">
-                                                <span className="text-muted-foreground">Resolution:</span>
-                                                <span className="font-medium">{clip.resolution || "Unknown"}</span>
-                                            </div>
-                                            <div className="flex justify-between">
-                                                <span className="text-muted-foreground">Duration:</span>
+                                                <span className="text-muted-foreground">
+                                                    File Size:
+                                                </span>
                                                 <span className="font-medium">
-                                                    {clip.duration ? formatDuration(clip.duration) : "Unknown"}
+                                                    {formatFileSize(
+                                                        clip.file_size
+                                                    )}
                                                 </span>
                                             </div>
                                             <div className="flex justify-between">
-                                                <span className="text-muted-foreground">MIME Type:</span>
-                                                <span className="font-medium">{clip.mime_type}</span>
+                                                <span className="text-muted-foreground">
+                                                    Resolution:
+                                                </span>
+                                                <span className="font-medium">
+                                                    {clip.resolution ||
+                                                        "Unknown"}
+                                                </span>
                                             </div>
                                             <div className="flex justify-between">
-                                                <span className="text-muted-foreground">Created:</span>
-                                                <span className="font-medium">{formatDate(clip.created_at)}</span>
+                                                <span className="text-muted-foreground">
+                                                    Duration:
+                                                </span>
+                                                <span className="font-medium">
+                                                    {clip.duration
+                                                        ? formatDuration(
+                                                              clip.duration
+                                                          )
+                                                        : "Unknown"}
+                                                </span>
                                             </div>
                                             <div className="flex justify-between">
-                                                <span className="text-muted-foreground">Expires:</span>
-                                                <span className="font-medium">{formatDate(clip.expires_at)}</span>
+                                                <span className="text-muted-foreground">
+                                                    MIME Type:
+                                                </span>
+                                                <span className="font-medium">
+                                                    {clip.mime_type}
+                                                </span>
+                                            </div>
+                                            <div className="flex justify-between">
+                                                <span className="text-muted-foreground">
+                                                    Created:
+                                                </span>
+                                                <span className="font-medium">
+                                                    {formatDate(
+                                                        clip.created_at
+                                                    )}
+                                                </span>
+                                            </div>
+                                            <div className="flex justify-between">
+                                                <span className="text-muted-foreground">
+                                                    Expires:
+                                                </span>
+                                                <span className="font-medium">
+                                                    {formatDate(
+                                                        clip.expires_at
+                                                    )}
+                                                </span>
                                             </div>
                                         </div>
                                     </div>
@@ -341,24 +372,36 @@ export function ClipModal({
                                         </h3>
                                         <div className="space-y-2 text-sm">
                                             <div>
-                                                <span className="text-muted-foreground block mb-1">Message ID:</span>
+                                                <span className="text-muted-foreground block mb-1">
+                                                    Message ID:
+                                                </span>
                                                 <code className="bg-muted px-2 py-1 rounded text-xs block">
                                                     {message.id}
                                                 </code>
                                             </div>
                                             <div>
-                                                <span className="text-muted-foreground block mb-1">Author ID:</span>
+                                                <span className="text-muted-foreground block mb-1">
+                                                    Author ID:
+                                                </span>
                                                 <code className="bg-muted px-2 py-1 rounded text-xs block">
                                                     {message.author_id}
                                                 </code>
                                             </div>
                                             <div>
-                                                <span className="text-muted-foreground block mb-1">Timestamp:</span>
-                                                <span className="font-medium">{formatDate(message.created_at)}</span>
+                                                <span className="text-muted-foreground block mb-1">
+                                                    Timestamp:
+                                                </span>
+                                                <span className="font-medium">
+                                                    {formatDate(
+                                                        message.created_at
+                                                    )}
+                                                </span>
                                             </div>
                                             {message.content && (
                                                 <div>
-                                                    <span className="text-muted-foreground block mb-1">Content:</span>
+                                                    <span className="text-muted-foreground block mb-1">
+                                                        Content:
+                                                    </span>
                                                     <p className="bg-muted p-2 rounded text-xs whitespace-pre-wrap">
                                                         {message.content}
                                                     </p>
@@ -375,7 +418,9 @@ export function ClipModal({
                                         <div className="flex gap-2">
                                             {thumbnail ? (
                                                 <Badge variant="secondary">
-                                                    {thumbnail.size} ({thumbnail.width}x{thumbnail.height})
+                                                    {thumbnail.size} (
+                                                    {thumbnail.width}x
+                                                    {thumbnail.height})
                                                 </Badge>
                                             ) : (
                                                 <span className="text-sm text-muted-foreground">
@@ -392,7 +437,11 @@ export function ClipModal({
                                                 Raw Metadata (JSON)
                                             </summary>
                                             <pre className="mt-2 bg-muted p-4 rounded overflow-x-auto text-xs">
-                                                {JSON.stringify(initialClip, null, 2)}
+                                                {JSON.stringify(
+                                                    initialClip,
+                                                    null,
+                                                    2
+                                                )}
                                             </pre>
                                         </details>
                                     </div>

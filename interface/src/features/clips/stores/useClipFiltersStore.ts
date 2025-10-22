@@ -37,7 +37,7 @@ interface ClipFiltersState {
 
 export const useClipFiltersStore = create<ClipFiltersState>()(
     persist(
-        (set) => ({
+        set => ({
             // Initial state
             selectedGuildId: null,
             selectedChannelIds: [],
@@ -50,7 +50,7 @@ export const useClipFiltersStore = create<ClipFiltersState>()(
             isAuthorModalOpen: false,
 
             // Filter actions
-            setGuildId: (guildId) =>
+            setGuildId: guildId =>
                 set({
                     selectedGuildId: guildId,
                     // Reset channel and author filters when guild changes
@@ -58,14 +58,14 @@ export const useClipFiltersStore = create<ClipFiltersState>()(
                     selectedAuthorIds: [],
                 }),
 
-            setChannelIds: (channelIds) =>
+            setChannelIds: channelIds =>
                 set({ selectedChannelIds: channelIds }),
 
-            setAuthorIds: (authorIds) => set({ selectedAuthorIds: authorIds }),
+            setAuthorIds: authorIds => set({ selectedAuthorIds: authorIds }),
 
-            setSearchQuery: (query) => set({ searchQuery: query }),
+            setSearchQuery: query => set({ searchQuery: query }),
 
-            setSortOrder: (order) => set({ sortOrder: order }),
+            setSortOrder: order => set({ sortOrder: order }),
 
             // Modal actions
             openGuildModal: () => set({ isGuildModalOpen: true }),
@@ -88,7 +88,7 @@ export const useClipFiltersStore = create<ClipFiltersState>()(
         {
             name: "clip-filters-storage",
             // Only persist the filter values, not modal states
-            partialize: (state) => ({
+            partialize: state => ({
                 selectedGuildId: state.selectedGuildId,
                 selectedChannelIds: state.selectedChannelIds,
                 selectedAuthorIds: state.selectedAuthorIds,
