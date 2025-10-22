@@ -198,7 +198,7 @@ export function ClipModal({
                                         <div className="flex items-center gap-3 text-base">
                                             <UserAvatar
                                                 userId={message.author_id}
-                                                username={author?.username}
+                                                username={author?.display_name}
                                                 avatarUrl={
                                                     author?.avatar_url ??
                                                     undefined

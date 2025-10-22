@@ -222,6 +222,17 @@ export class DataService {
         return authors.map(author => AuthorMapper.toAuthorWithStats(author));
     }
 
+    static async getAuthorStatsByUserId(guildId: string, userId: string) {
+        const author = await db.getAuthorStatsById(guildId, userId);
+
+        if (!author) {
+            console.error("Author not found, guildId: " + guildId);
+            return undefined;
+        }
+
+        return AuthorMapper.toAuthorWithStats(author);
+    }
+
     // Settings
     static async getGuildSettings(guildId: string) {
         const settings = await db.getGuildSettings(guildId);

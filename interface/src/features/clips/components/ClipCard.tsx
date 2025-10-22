@@ -83,7 +83,7 @@ export function ClipCard({ clip, onClick, authorMap }: ClipCardProps) {
                 <div className="flex items-center gap-2">
                     <UserAvatar
                         userId={message.author_id}
-                        username={author?.username}
+                        username={author?.display_name}
                         avatarUrl={author?.avatar_url ?? undefined}
                         size="sm"
                         showName={true}

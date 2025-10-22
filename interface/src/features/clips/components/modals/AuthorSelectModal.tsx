@@ -38,8 +38,8 @@ export function AuthorSelectModal({
         const query = searchQuery.toLowerCase();
         return authors.filter(
             author =>
-                author.username?.toLowerCase().includes(query) ||
-                author.id.includes(query)
+                author.display_name.toLowerCase().includes(query) ||
+                author.user_id.toLowerCase().includes(query)
         );
     }, [authors, searchQuery]);
 
@@ -52,7 +52,7 @@ export function AuthorSelectModal({
     };
 
     const handleSelectAll = () => {
-        setAuthorIds(authors.map(a => a.id));
+        setAuthorIds(authors.map(a => a.user_id));
     };
 
     const handleClearAll = () => {
@@ -119,25 +119,27 @@ export function AuthorSelectModal({
                         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
                             {filteredAuthors.map(author => {
                                 const isSelected = selectedAuthorIds.includes(
-                                    author.id
+                                    author.user_id
                                 );
 
                                 return (
                                     <div
-                                        key={author.id}
+                                        key={author.user_id}
                                         className={`flex items-center gap-3 p-4 rounded-lg border cursor-pointer transition-colors ${
                                             isSelected
                                                 ? "bg-primary/10 border-primary"
                                                 : "hover:bg-muted"
                                         }`}
                                         onClick={() =>
-                                            handleToggleAuthor(author.id)
+                                            handleToggleAuthor(author.user_id)
                                         }
                                     >
                                         <Checkbox
                                             checked={isSelected}
                                             onCheckedChange={() =>
-                                                handleToggleAuthor(author.id)
+                                                handleToggleAuthor(
+                                                    author.user_id
+                                                )
                                             }
                                             onClick={(e: React.MouseEvent) =>
                                                 e.stopPropagation()
@@ -146,8 +148,8 @@ export function AuthorSelectModal({
 
                                         <div className="flex items-center gap-2 flex-1 min-w-0">
                                             <UserAvatar
-                                                userId={author.id}
-                                                username={author.username}
+                                                userId={author.user_id}
+                                                username={author.display_name}
                                                 avatarUrl={
                                                     author.avatar_url ??
                                                     undefined
@@ -156,7 +158,7 @@ export function AuthorSelectModal({
                                             />
                                             <div className="flex-1 min-w-0">
                                                 <p className="font-medium truncate">
-                                                    {author.username}
+                                                    {author.display_name}
                                                 </p>
                                                 <p className="text-xs text-muted-foreground">
                                                     {author.clip_count}{" "}

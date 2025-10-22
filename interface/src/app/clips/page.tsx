@@ -59,7 +59,7 @@ export default function ClipsPage() {
 
     // Create author lookup map for O(1) access
     const authorMap = useMemo(
-        () => new Map(authors.map(a => [a.id, a])),
+        () => new Map(authors.map(a => [a.user_id, a])),
         [authors]
     );
 
@@ -112,7 +112,7 @@ export default function ClipsPage() {
             const messageContent = clip.message.content?.toLowerCase() || "";
             const filename = clip.clip.filename.toLowerCase();
             const author = authorMap.get(clip.message.author_id);
-            const authorName = author?.username.toLowerCase() || "";
+            const authorName = author?.display_name.toLowerCase() || "";
             return (
                 messageContent.includes(query) ||
                 filename.includes(query) ||
