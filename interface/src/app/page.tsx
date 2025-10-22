@@ -31,8 +31,8 @@ export default async function HomePage() {
                         Discord servers. Never lose a great moment again.
                     </p>
                     <Button asChild size="lg">
-                        <Link href={session ? "/dashboard" : "/login"}>
-                            {session ? "Go to Dashboard" : "Get Started"}
+                        <Link href={session ? "/clips" : "/login"}>
+                            {session ? "Go to Clips" : "Get Started"}
                         </Link>
                     </Button>
                 </div>
