@@ -12,7 +12,7 @@ import asyncio
 import logging
 import sys
 from pathlib import Path
-from datetime import datetime
+from datetime import datetime, timezone
 
 # Add project root to path
 project_root = Path(__file__).parent.parent.parent.parent
@@ -42,7 +42,7 @@ MOCK_CLIP_DATA = {
     "file_size": 1024000,
     "mime_type": "video/mp4",
     "cdn_url": TEST_VIDEO_URL,
-    "expires_at": datetime.now(),
+    "expires_at": datetime.now(timezone.utc),
     "thumbnail_status": "pending"
 }
 
