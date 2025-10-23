@@ -8,7 +8,7 @@ import type { GuildRelation } from "@/server/discord/types";
 import { GuildItemComponent } from "./GuildItemComponent";
 import type { EnrichedDiscordGuild } from "@/lib/api/guild";
 
-export default function GuildList() {
+export function GuildList() {
     const { data: session } = useSession();
     const { isLoading, error, data: guilds } = useGuildsDiscord(true);
 
