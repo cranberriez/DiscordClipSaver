@@ -32,8 +32,8 @@ async def on_guild_join(guild: discord.Guild):
 
 
 @bot.event
-async def on_guild_update(guild: discord.Guild):
-    await guild_service.on_guild_update(guild)
+async def on_guild_update(before: discord.Guild, after: discord.Guild):
+    await guild_service.on_guild_update(after)
 
 
 @bot.event
