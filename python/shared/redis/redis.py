@@ -7,6 +7,7 @@ Settings are fetched from the database at processing time.
 from pydantic import BaseModel, Field
 from typing import Optional, Literal, List
 from datetime import datetime, timezone
+from shared.time import utcnow
 import uuid
 
 
@@ -16,7 +17,7 @@ class BaseJob(BaseModel):
     type: Literal["batch", "message", "rescan", "thumbnail_retry", "message_deletion", "purge_channel", "purge_guild"]
     guild_id: str
     channel_id: str
-    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    created_at: datetime = Field(default_factory=utcnow)
 
 
 class BatchScanJob(BaseJob):

@@ -5,7 +5,7 @@ from typing import Iterable, Any, List
 from tortoise.expressions import Q
 
 from shared.db.models import Channel, Guild, ChannelType
-from datetime import datetime, timezone
+from shared.time import utcnow
 
 
 def _to_channel_type(value: str) -> ChannelType:
@@ -68,14 +68,14 @@ async def delete_channels(guild_id: str, channel_ids: Iterable[str]) -> int:
         return 0
     """Delete channels by IDs. Returns number of rows deleted."""
     ids = [str(cid) for cid in channel_ids]
-    return await Channel.filter(guild_id=str(guild_id), id__in=ids).update(deleted_at=datetime.now(timezone.utc))
+    return await Channel.filter(guild_id=str(guild_id), id__in=ids).update(deleted_at=utcnow())
 
 
 async def delete_single_channel(guild_id: str, channel_id: str) -> int:
     if channel_id is None:
         return 0
 
-    return await Channel.filter(guild_id=str(guild_id), id=str(channel_id)).update(deleted_at=datetime.now(timezone.utc))
+    return await Channel.filter(guild_id=str(guild_id), id=str(channel_id)).update(deleted_at=utcnow())
 
 
 async def get_channels_by_guild(guild_id: str) -> List[Channel]:

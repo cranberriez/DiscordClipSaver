@@ -5,7 +5,7 @@ from typing import Iterable, Any
 from tortoise.expressions import Q
 
 from shared.db.models import Guild
-from datetime import datetime, timezone
+from shared.time import utcnow
 
 
 async def upsert_guilds(snapshots: Iterable[Any]) -> None:
@@ -46,10 +46,10 @@ async def upsert_guilds(snapshots: Iterable[Any]) -> None:
 async def delete_guilds(guild_ids: Iterable[str]) -> int:
     """Delete guilds by id. Returns number of rows deleted."""
     ids = [str(gid) for gid in guild_ids]
-    return await Guild.filter(id__in=ids).update(deleted_at=datetime.now(timezone.utc))
+    return await Guild.filter(id__in=ids).update(deleted_at=utcnow())
 
 async def delete_single_guild(guild_id: str) -> int:
-    return await Guild.filter(id=str(guild_id)).update(deleted_at=datetime.now(timezone.utc))
+    return await Guild.filter(id=str(guild_id)).update(deleted_at=utcnow())
 
 async def get_guilds() -> List[Guild]:
     return await Guild.filter().order_by("name", "id")
