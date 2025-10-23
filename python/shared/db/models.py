@@ -24,6 +24,13 @@ class ChannelType(str, Enum):
     FORUM = "forum"
 
 
+class Visibility(str, Enum):
+    """Visibility of a clip"""
+    PUBLIC = "PUBLIC"
+    UNLISTED = "UNLISTED"
+    PRIVATE = "PRIVATE"
+
+
 class User(Model):
     """Discord user model, represents the discord.User object mainly used for login/authentication"""
     id = fields.CharField(max_length=64, indexable=True, pk=True, unique=True)  # Discord user snowflake
@@ -182,6 +189,9 @@ class Clip(Model):
     message = fields.ForeignKeyField("models.Message", related_name="clips", indexable=True)
     guild = fields.ForeignKeyField("models.Guild", related_name="clips", indexable=True)
     channel = fields.ForeignKeyField("models.Channel", related_name="clips", indexable=True)
+    author_id = fields.CharField(max_length=64, indexable=True) # Message author's user snowflake
+    title = fields.CharField(max_length=255)
+    visibility = fields.CharEnumField(Visibility, default=Visibility.PUBLIC)
     filename = fields.CharField(max_length=255)
     file_size = fields.BigIntField()  # Bytes
     mime_type = fields.CharField(max_length=50)
