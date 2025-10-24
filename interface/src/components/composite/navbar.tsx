@@ -5,13 +5,14 @@ import { useSession } from "next-auth/react";
 import { UserMenu } from "./UserMenu";
 import { User } from "next-auth";
 import { Button } from "@/components/ui/button";
+import { PageContainer } from "@/components/layout";
 
 export function Navbar() {
     const { data: session } = useSession();
 
     return (
         <nav className="border-b border-white/10 bg-black/20 backdrop-blur-sm">
-            <div className="container mx-auto px-4 py-3">
+            <PageContainer>
                 <div className="flex items-center justify-between">
                     {/* Logo/Brand */}
                     <Link
@@ -50,7 +51,7 @@ export function Navbar() {
                         )}
                     </div>
                 </div>
-            </div>
+            </PageContainer>
         </nav>
     );
 }

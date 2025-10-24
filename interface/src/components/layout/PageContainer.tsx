@@ -4,6 +4,7 @@ type PageContainerProps = {
     children: React.ReactNode;
     className?: string;
     maxWidth?: "6xl" | "7xl" | "full";
+    noLines?: boolean;
 };
 
 /**
@@ -14,6 +15,7 @@ export function PageContainer({
     children,
     className,
     maxWidth = "6xl",
+    noLines = false,
 }: PageContainerProps) {
     const maxWidthClass = {
         "6xl": "max-w-6xl",
@@ -22,7 +24,14 @@ export function PageContainer({
     }[maxWidth];
 
     return (
-        <div className={cn("container mx-auto p-8", maxWidthClass, className)}>
+        <div
+            className={cn(
+                "container mx-auto p-8",
+                maxWidthClass,
+                className,
+                noLines ? "" : "border-x border-white/10 border-dashed"
+            )}
+        >
             {children}
         </div>
     );
