@@ -10,15 +10,11 @@ import { buildInviteUrl } from "@/server/discord/generateBotInvite";
  * Generate a Discord bot invite URL with state tracking.
  * Creates an install intent that expires in 10 minutes.
  *
- * Query params:
- * - guildId: The Discord guild ID to invite the bot to
+ * If no guildId is provided, Discord will prompt the user to select a guild.
  */
 export async function GET(req: NextRequest) {
     const url = new URL(req.url);
-    const guildId = url.searchParams.get("guildId");
-    if (!guildId) {
-        return NextResponse.json({ error: "Missing guildId" }, { status: 400 });
-    }
+    const guildId = url.searchParams.get("guildId") || undefined;
 
     // Verify authentication
     const auth = await requireAuth(req);
@@ -31,7 +27,7 @@ export async function GET(req: NextRequest) {
     await createInstallIntent({
         state,
         user_id: auth.discordUserId,
-        guild: guildId,
+        guild: guildId ?? null,
         expires_at: expiresAt,
     });
 

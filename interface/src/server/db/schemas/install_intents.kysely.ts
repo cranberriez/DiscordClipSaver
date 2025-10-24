@@ -9,7 +9,7 @@ import type {
 export interface InstallIntentTable {
     id: Generated<number>;
     user_id: string;
-    guild: string;
+    guild: string | null;
     state: string;
     expires_at: Date;
     created_at: ColumnType<Date, Date | undefined, Date | undefined>;
