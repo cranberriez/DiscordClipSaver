@@ -62,7 +62,11 @@ export default async function GuildLayout({ children, params }: LayoutProps) {
     return (
         <PageContainer>
             {/* Back Link */}
-            <BackButton text="Back to Dashboard" url="/dashboard" className="mb-6" />
+            <BackButton
+                text="Back to Dashboard"
+                url="/dashboard"
+                className="mb-6"
+            />
 
             {/* Deleted Guild Banner */}
             {guild.deleted_at && (

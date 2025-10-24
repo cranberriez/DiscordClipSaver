@@ -1,4 +1,5 @@
-import { Navbar } from "@/components/composite/navbar";
+import { PageContainer } from "@/components/layout/PageContainer";
+import { RootLayout } from "@/components/layout/RootLayout";
 
 type ClipsLayoutProps = {
     children: React.ReactNode;
@@ -6,9 +7,8 @@ type ClipsLayoutProps = {
 
 export default function ClipsLayout({ children }: ClipsLayoutProps) {
     return (
-        <>
-            <Navbar />
-            {children}
-        </>
+        <RootLayout>
+            <PageContainer>{children}</PageContainer>
+        </RootLayout>
     );
 }

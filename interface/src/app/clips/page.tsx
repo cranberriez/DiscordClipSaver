@@ -123,7 +123,7 @@ export default function ClipsPage() {
     // hasNextPage is provided by infinite query
 
     return (
-        <div className="min-h-screen bg-background">
+        <div className="bg-background">
             {/* Sticky Filter Bar */}
             <FilterBar
                 guildName={selectedGuild?.name}
