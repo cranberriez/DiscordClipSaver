@@ -1,12 +1,11 @@
-// interface/src/app/dashboard/GuildList.tsx
 "use client";
 
 import { useSession } from "next-auth/react";
 import { useGuildsDiscord } from "@/lib/hooks";
-import { canInviteBotPerms } from "@/lib/discord/visibility";
 import type { GuildRelation } from "@/server/discord/types";
 import { GuildItemComponent } from "./GuildItemComponent";
 import type { EnrichedDiscordGuild } from "@/lib/api/guild";
+import { categorizeGuilds } from "../lib";
 
 export function GuildList() {
     const { data: session } = useSession();
@@ -43,48 +42,34 @@ export function GuildList() {
     }
 
     // Categorize
-    const installedOwnedByYou: EnrichedDiscordGuild[] = guilds.filter(
-        i => i.db?.owner_id === currentUserId
-    );
-    const installedNoOwner: EnrichedDiscordGuild[] = guilds.filter(
-        i => i.db != null && i.db.owner_id == null
-    );
-    const invitable: EnrichedDiscordGuild[] = guilds.filter(
-        i => !i.db && canInviteBotPerms(BigInt(i.permissions))
-    );
-    const installedOthers: EnrichedDiscordGuild[] = guilds.filter(
-        i => i.db?.owner_id != null && i.db?.owner_id !== currentUserId
-    );
-    const notInstalled: EnrichedDiscordGuild[] = guilds.filter(
-        i => !i.db && !canInviteBotPerms(BigInt(i.permissions))
-    );
+    const categorizedGuilds = categorizeGuilds(guilds, currentUserId);
 
     return (
         <div className="space-y-6">
             <Section
                 title="Installed (owned by you)"
                 relation="owned"
-                items={installedOwnedByYou}
+                items={categorizedGuilds.installedOwnedByYou}
             />
             <Section
                 title="Installed (no owner yet)"
                 relation="unowned"
-                items={installedNoOwner}
+                items={categorizedGuilds.installedNoOwner}
             />
             <Section
                 title="Invitable (you can add the bot)"
                 relation="invitable"
-                items={invitable}
+                items={categorizedGuilds.invitable}
             />
             <Section
                 title="Installed (owned by others)"
                 relation="other"
-                items={installedOthers}
+                items={categorizedGuilds.installedOthers}
             />
             <Section
                 title="Not installed"
                 relation="other"
-                items={notInstalled}
+                items={categorizedGuilds.notInstalled}
             />
         </div>
     );
