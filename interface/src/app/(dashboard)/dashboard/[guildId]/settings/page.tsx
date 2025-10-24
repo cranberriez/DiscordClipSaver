@@ -1,5 +1,5 @@
-import DynamicSettingsForm from "@/features/dashboard/settings/components/DynamicSettingsForm";
-import { DangerZone } from "@/features/dashboard/settings/components/DangerZone";
+import DynamicSettingsForm from "@/features/dashboard/admin/settings/components/DynamicSettingsForm";
+import { DangerZone } from "@/features/dashboard/admin/settings/components/DangerZone";
 import { DataService } from "@/server/services/data-service";
 import { redirect } from "next/navigation";
 

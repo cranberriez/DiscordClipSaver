@@ -1,4 +1,4 @@
-import { ChannelsList } from "@/features/dashboard/channels";
+import { ChannelsList } from "@/features/dashboard/admin/channels";
 
 type PageProps = {
     params: Promise<{ guildId: string }>;

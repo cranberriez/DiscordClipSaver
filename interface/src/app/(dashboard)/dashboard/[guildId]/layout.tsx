@@ -5,7 +5,7 @@ import {
     GuildHeader,
     GuildTabNav,
     DeletedGuildBanner,
-} from "@/features/dashboard/";
+} from "@/features/dashboard/admin";
 import { PageContainer } from "@/components/layout";
 import { BackButton } from "@/components/ui/back-button";
 

@@ -1,5 +1,5 @@
 import { DataService } from "@/server/services/data-service";
-import { ScansPanel } from "@/features/dashboard/scans";
+import { ScansPanel } from "@/features/dashboard/admin/scans";
 
 type PageProps = {
     params: Promise<{ guildId: string }>;
