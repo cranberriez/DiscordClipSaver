@@ -94,7 +94,7 @@ function DiscordIcon({
 
     return (
         <div className="w-16 h-16 rounded-xl overflow-hidden">
-            <img src={realUrl} />
+            <img src={realUrl} width={64} height={64} alt="Guild icon" />
         </div>
     );
 }
