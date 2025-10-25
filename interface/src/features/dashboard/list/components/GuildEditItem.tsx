@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type { GuildWithStats } from "@/lib/api/guild";
+import { shorthandCount } from "@/lib/utils/count-helpers";
 
 export function GuildEditItem({ guild }: { guild: GuildWithStats }) {
     const isEnabled = guild.message_scan_enabled;
@@ -74,11 +75,11 @@ function GuildEditItemBadges({
             )}
             <div className="flex items-center gap-1">
                 <FilmIcon className="size-4" />
-                <p>{clipCount > 999 ? "999+" : clipCount}</p>
+                <p>{shorthandCount(clipCount)}</p>
             </div>
             <div className="flex items-center gap-1">
                 <UserIcon className="size-4" />
-                <p>{authorCount > 999 ? "999+" : authorCount}</p>
+                <p>{shorthandCount(authorCount)}</p>
             </div>
         </div>
     );
