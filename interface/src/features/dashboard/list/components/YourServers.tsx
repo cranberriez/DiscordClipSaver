@@ -8,7 +8,13 @@ export function YourServers({ guilds }: { guilds: DiscordGuild[] }) {
         data: guildStats,
         isLoading,
         error,
-    } = useGuildStats(guilds.map(g => g.id));
+    } = useGuildStats(
+        guilds.map(g => g.id),
+        {
+            withClipCount: true,
+            withAuthorCount: true,
+        }
+    );
 
     if (isLoading) {
         return <div>Loading...</div>;
