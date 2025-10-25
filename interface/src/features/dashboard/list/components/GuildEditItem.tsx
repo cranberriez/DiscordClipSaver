@@ -21,7 +21,7 @@ export function GuildEditItem({ guild }: { guild: GuildWithStats }) {
     const authorCount = guild.author_count || 0;
 
     return (
-        <Item variant="outline">
+        <Item variant="outline" className="p-2 rounded-2xl">
             <DiscordIcon
                 guildId={guild.id}
                 iconUrl={guild.icon_url || ""}
