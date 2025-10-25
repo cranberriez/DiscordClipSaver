@@ -10,14 +10,15 @@ import {
 } from "@/lib/hooks";
 import { Button } from "@/components/ui/button";
 import { FilterBar } from "@/features/clips/components/FilterBar";
-import { ClipGrid, ClipModal } from "@/features/clips";
+import { ClipGrid } from "@/features/clips";
 import {
     GuildSelectModal,
     ChannelSelectModal,
     AuthorSelectModal,
+    ClipModal,
 } from "@/features/clips/components/modals";
 import { useClipFiltersStore } from "@/features/clips/stores/useClipFiltersStore";
-import type { FullClip } from "@/lib/api/clip";
+import type { FullClip } from "@/lib/api/types";
 
 /**
  * Centralized Clips Viewer

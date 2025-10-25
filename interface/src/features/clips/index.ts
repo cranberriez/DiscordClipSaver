@@ -1,4 +1,4 @@
-export * from "./components/ClipModal";
+export * from "./components/modals/clip-modal/ClipModal";
 export * from "./components/ClipGrid";
 export * from "./components/ClipCard";
 export * from "./components/FilterBar";
