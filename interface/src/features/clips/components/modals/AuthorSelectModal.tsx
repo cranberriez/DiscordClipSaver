@@ -11,7 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Search } from "lucide-react";
-import { UserAvatar } from "@/components/user/UserAvatar";
+import { UserAvatar } from "@/components/core/UserAvatar";
 import { useClipFiltersStore } from "../../stores/useClipFiltersStore";
 import type { AuthorWithStats } from "@/lib/api/author";
 

@@ -4,7 +4,7 @@ import type { FullClip } from "@/lib/api/clip";
 import type { AuthorWithStats } from "@/lib/api/author";
 import { formatClipName } from "../lib/formatClipName";
 import { formatDuration, formatRelativeTime } from "@/lib/utils/time-helpers";
-import { UserAvatar } from "@/components/user/UserAvatar";
+import { UserAvatar } from "@/components/core/UserAvatar";
 import { Play } from "lucide-react";
 import { messageTitleOrFilename } from "@/features/clips/lib/discordText";
 

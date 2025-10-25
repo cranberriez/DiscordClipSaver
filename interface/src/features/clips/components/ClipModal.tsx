@@ -5,7 +5,7 @@ import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { Button } from "@/components/ui/button";
 import { VideoPlayer } from "./VideoPlayer";
 import { InfoModal } from "./InfoModal";
-import { UserAvatar } from "@/components/user/UserAvatar";
+import { UserAvatar } from "@/components/core/UserAvatar";
 import { useClip } from "@/lib/hooks";
 import type { FullClip } from "@/lib/api/clip";
 import type { AuthorWithStats } from "@/lib/api/author";
