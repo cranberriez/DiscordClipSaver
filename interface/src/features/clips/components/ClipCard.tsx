@@ -6,7 +6,9 @@ import { formatClipName } from "../lib/formatClipName";
 import { formatDuration, formatRelativeTime } from "@/lib/utils/time-helpers";
 import { UserAvatar } from "@/components/core/UserAvatar";
 import { Play } from "lucide-react";
+import Image from "next/image";
 import { messageTitleOrFilename } from "@/features/clips/lib/discordText";
+import { useImageErrorStore } from "../stores/useImageErrorStore";
 
 interface ClipCardProps {
     clip: FullClip;
@@ -23,6 +25,8 @@ interface ClipCardProps {
  * - Time posted (relative)
  */
 export function ClipCard({ clip, onClick, authorMap }: ClipCardProps) {
+    const { hasTooManyErrors, reportError } = useImageErrorStore();
+
     const getThumbnailUrl = (): string | null => {
         const thumbnail = clip.thumbnail;
         if (thumbnail && thumbnail.url) {
@@ -40,6 +44,8 @@ export function ClipCard({ clip, onClick, authorMap }: ClipCardProps) {
         formatClipName(clipData.filename)
     );
 
+    const showThumbnail = thumbnailUrl && !hasTooManyErrors;
+
     return (
         <div
             className="group relative cursor-pointer rounded-lg overflow-hidden hover:shadow-lg hover:bg-muted/20 transition-all"
@@ -47,12 +53,17 @@ export function ClipCard({ clip, onClick, authorMap }: ClipCardProps) {
         >
             {/* Thumbnail - 16:9 aspect ratio */}
             <div className="aspect-video bg-muted relative overflow-hidden rounded-lg">
-                {thumbnailUrl ? (
+                {showThumbnail ? (
                     <>
-                        <img
+                        <Image
                             src={thumbnailUrl}
                             alt={clipData.filename}
                             className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
+                            width={320}
+                            height={180}
+                            onError={() => {
+                                reportError();
+                            }}
                         />
                         {/* Play button overlay on hover */}
                         <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
