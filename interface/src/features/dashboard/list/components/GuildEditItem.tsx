@@ -1,28 +1,41 @@
-import { DiscordGuild } from "@/server/discord/types";
 import { DiscordIcon } from "./DiscordGuildIcon";
 import {
     Item,
     ItemContent,
-    ItemDescription,
     ItemActions,
     ItemTitle,
-    ItemMedia,
 } from "@/components/ui/item";
-import { SettingsIcon } from "lucide-react";
+import {
+    SettingsIcon,
+    FilmIcon,
+    UserIcon,
+    XIcon,
+    CheckIcon,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
+import type { GuildWithStats } from "@/lib/api/guild";
 
-export function GuildEditItem({ guild }: { guild: DiscordGuild }) {
+export function GuildEditItem({ guild }: { guild: GuildWithStats }) {
+    const isEnabled = guild.message_scan_enabled;
+    const clipCount = guild.clip_count || 0;
+    const authorCount = guild.author_count || 0;
+
     return (
         <Item variant="outline">
             <DiscordIcon
                 guildId={guild.id}
-                iconUrl={guild.icon || ""}
+                iconUrl={guild.icon_url || ""}
                 size="md"
             />
 
             <ItemContent>
-                <ItemTitle>{guild.name}</ItemTitle>
-                {/* <ItemDescription></ItemDescription> */}
+                <ItemTitle className="line-clamp-2">{guild.name}</ItemTitle>
+
+                <GuildEditItemBadges
+                    enabled={isEnabled}
+                    clipCount={clipCount}
+                    authorCount={authorCount}
+                />
             </ItemContent>
             <ItemActions>
                 <Button variant="outline" aria-label="Edit" asChild>
@@ -36,5 +49,37 @@ export function GuildEditItem({ guild }: { guild: DiscordGuild }) {
                 </Button>
             </ItemActions>
         </Item>
+    );
+}
+
+function GuildEditItemBadges({
+    enabled,
+    clipCount,
+    authorCount,
+}: {
+    enabled: boolean;
+    clipCount: number;
+    authorCount: number;
+}) {
+    return (
+        <div className="flex items-center gap-2">
+            {enabled ? (
+                <div className="bg-green-500/20 text-green-400 p-[2px] rounded">
+                    <CheckIcon className="size-4" />
+                </div>
+            ) : (
+                <div className="bg-red-500/20 text-red-400 p-[2px] rounded">
+                    <XIcon className="size-4" />
+                </div>
+            )}
+            <div className="flex items-center gap-1">
+                <FilmIcon className="size-4" />
+                <p>{clipCount > 999 ? "999+" : clipCount}</p>
+            </div>
+            <div className="flex items-center gap-1">
+                <UserIcon className="size-4" />
+                <p>{authorCount > 999 ? "999+" : authorCount}</p>
+            </div>
+        </div>
     );
 }
