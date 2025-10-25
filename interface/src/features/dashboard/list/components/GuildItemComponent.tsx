@@ -1,5 +1,6 @@
 import type { EnrichedDiscordGuild } from "@/lib/api/guild";
 import Link from "next/link";
+import { DiscordIcon } from "./DiscordGuildIcon";
 
 export function GuildItemComponent({
     guild,
@@ -78,23 +79,5 @@ function RelationButton({
                 {rel.text}
             </button>
         </Link>
-    );
-}
-
-function DiscordIcon({
-    guildId,
-    iconUrl,
-}: {
-    guildId: string;
-    iconUrl: string;
-}) {
-    const realUrl = iconUrl
-        ? `https://cdn.discordapp.com/icons/${guildId}/${iconUrl}.png?size=64`
-        : "https://cdn.discordapp.com/embed/avatars/0.png?size=64";
-
-    return (
-        <div className="w-16 h-16 rounded-xl overflow-hidden">
-            <img src={realUrl} width={64} height={64} alt="Guild icon" />
-        </div>
     );
 }
