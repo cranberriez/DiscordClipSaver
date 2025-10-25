@@ -12,6 +12,8 @@ import {
 } from "../index";
 import { ChannelWithStatus } from "../types";
 import { mergeChannelsWithStatuses } from "../lib/mergeChannelsWithStatuses";
+import { toast } from "sonner";
+import { useScanStatusNotifications } from "../lib/useScanStatusNotifications";
 
 interface ScansPanelProps {
     guildId: string;
@@ -29,12 +31,56 @@ export function ScansPanel({
         refetch,
     } = useScanStatuses(guildId);
     const startBulkScanMutation = useStartBulkScan(guildId);
-
     // Merge all channels with their scan statuses (channels without statuses will have scanStatus: null)
     const channels: ChannelWithStatus[] = mergeChannelsWithStatuses(
         serverChannels,
         scanStatuses
     );
+
+    const getChannelName = (channelId: string) => {
+        const channel = serverChannels.find(ch => ch.id === channelId);
+        return channel?.name || "Unknown";
+    };
+
+    // Show toast notifications when scans complete
+    useScanStatusNotifications(scanStatuses, {
+        onSuccess: scans => {
+            if (scans.length === 1) {
+                toast.success(
+                    `Scan for channel ${getChannelName(
+                        scans[0].channel_id
+                    )} completed successfully`
+                );
+            } else {
+                toast.success(`${scans.length} scans completed successfully`);
+            }
+        },
+        onFailure: scans => {
+            if (scans.length === 1) {
+                const scan = scans[0];
+                toast.error(
+                    `Scan for channel ${getChannelName(
+                        scan.channel_id
+                    )} failed${
+                        scan.error_message ? `: ${scan.error_message}` : ""
+                    }`
+                );
+            } else {
+                toast.error(`${scans.length} scans failed`);
+            }
+        },
+        onCancelled: scans => {
+            if (scans.length === 1) {
+                toast.info(
+                    `Scan for channel ${getChannelName(
+                        scans[0].channel_id
+                    )} was cancelled`
+                );
+            } else {
+                toast.info(`${scans.length} scans were cancelled`);
+            }
+        },
+    });
 
     const unscannedOrFailedCount = channels.filter(
         ch =>
