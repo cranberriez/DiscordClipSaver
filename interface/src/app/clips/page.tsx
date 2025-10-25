@@ -132,7 +132,7 @@ export default function ClipsPage() {
             />
 
             {/* Main Content */}
-            <div className="container mx-auto px-4 py-8">
+            <div className="mx-auto py-8 xl:max-w-9/10">
                 {!selectedGuildId ? (
                     <div className="text-center py-24">
                         <h2 className="text-2xl font-bold mb-4">

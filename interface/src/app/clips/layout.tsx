@@ -7,8 +7,10 @@ type ClipsLayoutProps = {
 
 export default function ClipsLayout({ children }: ClipsLayoutProps) {
     return (
-        <RootLayout>
-            <PageContainer>{children}</PageContainer>
+        <RootLayout noLines>
+            <PageContainer noLines maxWidth="full">
+                {children}
+            </PageContainer>
         </RootLayout>
     );
 }

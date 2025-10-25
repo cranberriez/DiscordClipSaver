@@ -26,10 +26,12 @@ export function PageContainer({
     return (
         <div
             className={cn(
-                "container mx-auto p-8",
+                "container mx-auto p-4 sm:p-8",
                 maxWidthClass,
                 className,
-                noLines ? "" : "border-x border-white/10 border-dashed"
+                noLines
+                    ? "border-x border-transparent"
+                    : "border-x border-white/10 border-dashed"
             )}
         >
             {children}
