@@ -11,20 +11,14 @@ import {
     getSortedChannelTypes,
     ChannelTypeHeader,
 } from "@/components/composite/ChannelOrganizer";
+import { ChannelScanButton } from "./ChannelScanButton";
 
 interface ScanStatusTableProps {
     channels: ChannelWithStatus[];
-    isPending: boolean;
     onRefresh: () => void;
-    onStartScan: (channelId: string) => void;
 }
 
-export function ScanStatusTable({
-    channels,
-    isPending,
-    onRefresh,
-    onStartScan,
-}: ScanStatusTableProps) {
+export function ScanStatusTable({ channels, onRefresh }: ScanStatusTableProps) {
     // Group channels by type and sort alphabetically by name within each group
     const groupedChannels = useMemo(
         () => groupChannelsByType(channels, "name"),
@@ -145,40 +139,9 @@ export function ScanStatusTable({
                                                 )}
                                             </td>
                                             <td className="p-3 text-right">
-                                                <Button
-                                                    onClick={() =>
-                                                        onStartScan(channel.id)
-                                                    }
-                                                    disabled={
-                                                        !channel.message_scan_enabled ||
-                                                        isPending ||
-                                                        channel.scanStatus
-                                                            ?.status ===
-                                                            "RUNNING" ||
-                                                        channel.scanStatus
-                                                            ?.status ===
-                                                            "QUEUED"
-                                                    }
-                                                    variant="outline"
-                                                    size="sm"
-                                                    title={
-                                                        !channel.message_scan_enabled
-                                                            ? "Enable scanning in Overview tab first"
-                                                            : ""
-                                                    }
-                                                >
-                                                    {!channel.message_scan_enabled
-                                                        ? "Disabled"
-                                                        : channel.scanStatus
-                                                              ?.status ===
-                                                          "RUNNING"
-                                                        ? "Running..."
-                                                        : channel.scanStatus
-                                                              ?.status ===
-                                                          "QUEUED"
-                                                        ? "Queued..."
-                                                        : "Scan"}
-                                                </Button>
+                                                <ChannelScanButton
+                                                    channel={channel}
+                                                />
                                             </td>
                                         </tr>
                                     ))}

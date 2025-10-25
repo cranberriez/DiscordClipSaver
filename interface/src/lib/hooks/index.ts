@@ -28,6 +28,7 @@ export {
     useChannelScanStatus,
     useStartScan,
     useStartBulkScan,
+    useStartCustomScan,
 } from "./useScans";
 
 // Settings hooks

@@ -12,6 +12,8 @@ import {
     startSingleScan,
     startBulkScan,
     type StartScanOptions,
+    MultiScanResult,
+    ScanResult,
 } from "../api/scan";
 
 // ============================================================================
@@ -217,4 +219,37 @@ export function useStartBulkScan(guildId: string) {
             });
         },
     });
+}
+
+export function useStartCustomScan(guildId: string) {
+    const startScanMutation = useStartScan(guildId);
+
+    const DEFAULTS: StartScanOptions = {
+        isUpdate: true,
+        limit: 100,
+        autoContinue: true,
+        rescan: "stop",
+    };
+
+    function start(
+        channelId: string,
+        options?: Partial<StartScanOptions>,
+        callbacks?: {
+            onSuccess?: (result: ScanResult) => void;
+            onError?: (err: unknown) => void;
+            onSettled?: () => void;
+        }
+    ) {
+        const merged = { ...DEFAULTS, ...(options ?? {}) };
+
+        startScanMutation.mutate(
+            {
+                channelId,
+                options: merged,
+            },
+            callbacks
+        );
+    }
+
+    return { start, isPending: startScanMutation.isPending };
 }

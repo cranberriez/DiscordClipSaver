@@ -1,6 +1,6 @@
 "use client";
 
-import { useScanStatuses, useStartScan, useStartBulkScan } from "@/lib/hooks";
+import { useScanStatuses, useStartBulkScan } from "@/lib/hooks";
 import { Channel } from "@/lib/api/channel";
 import type { MultiScanResult } from "@/lib/api/scan";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -28,7 +28,6 @@ export function ScansPanel({
         error,
         refetch,
     } = useScanStatuses(guildId);
-    const startScanMutation = useStartScan(guildId);
     const startBulkScanMutation = useStartBulkScan(guildId);
 
     // Merge all channels with their scan statuses (channels without statuses will have scanStatus: null)
@@ -53,18 +52,6 @@ export function ScansPanel({
     const enabledChannelsCount = channels.filter(
         ch => ch.message_scan_enabled
     ).length;
-
-    const handleStartScan = (channelId: string) => {
-        startScanMutation.mutate({
-            channelId,
-            options: {
-                isUpdate: false,
-                limit: 100,
-                autoContinue: true,
-                rescan: "stop",
-            },
-        });
-    };
 
     const handleScanUnscannedOrFailed = () => {
         // Scan channels that are unscanned or failed
@@ -280,12 +267,7 @@ export function ScansPanel({
                 onHistoricalScan={handleHistoricalScan}
             />
 
-            <ScanStatusTable
-                channels={channels}
-                isPending={startScanMutation.isPending}
-                onRefresh={refetch}
-                onStartScan={handleStartScan}
-            />
+            <ScanStatusTable channels={channels} onRefresh={refetch} />
         </div>
     );
 }
