@@ -11,9 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Search, Server } from "lucide-react";
 import { useClipFiltersStore } from "../../stores/useClipFiltersStore";
-import type { GuildWithClipCount } from "@/lib/api/guild";
-
-type GuildWithStats = GuildWithClipCount;
+import type { GuildWithStats } from "@/lib/api/guild";
 
 interface GuildSelectModalProps {
     guilds: GuildWithStats[];
