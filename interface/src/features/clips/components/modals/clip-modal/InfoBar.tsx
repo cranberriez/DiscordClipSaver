@@ -5,14 +5,10 @@ import { FullClip } from "@/lib/api/clip";
 import { UserAvatar } from "@/components/core/UserAvatar";
 import { formatRelativeTime } from "@/lib/utils/time-helpers";
 import { Button } from "@/components/ui/button";
-import { Info, Share2 } from "lucide-react";
+import { Info } from "lucide-react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { ButtonGroup } from "@/components/ui/button-group";
-import {
-    Popover,
-    PopoverContent,
-    PopoverTrigger,
-} from "@/components/ui/popover";
+import { SharePopover } from "./SharePopover";
 
 interface InfoBarProps {
     vidTitle: string;
@@ -68,18 +64,12 @@ export function InfoBar({
                                 <span className="text-xs">Info</span>
                             </Button>
 
-                            <Popover>
-                                <PopoverTrigger asChild>
-                                    <Button
-                                        variant="outline"
-                                        size="icon-lg"
-                                        className="gap-1 text-muted-foreground hover:text-foreground"
-                                    >
-                                        <Share2 className="w-4 h-4" />
-                                    </Button>
-                                </PopoverTrigger>
-                                <PopoverContent>Share!</PopoverContent>
-                            </Popover>
+                            <SharePopover
+                                guildId={clip.guild_id}
+                                channelId={clip.channel_id}
+                                messageId={clip.message_id}
+                                clipId={clip.id}
+                            />
 
                             <ButtonGroup>
                                 <Button
