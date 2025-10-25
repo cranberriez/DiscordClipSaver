@@ -18,7 +18,13 @@ interface VideoPlayerProps {
     onPlayerReady?: (player: any) => void;
 }
 
-export function VideoPlayer({ src, poster, title, onError, onPlayerReady }: VideoPlayerProps) {
+export function VideoPlayer({
+    src,
+    poster,
+    title,
+    onError,
+    onPlayerReady,
+}: VideoPlayerProps) {
     const playerRef = useRef<any>(null);
     const { volume, setVolume } = useVideoPlayerStore();
 
@@ -73,6 +79,7 @@ export function VideoPlayer({ src, poster, title, onError, onPlayerReady }: Vide
 
     return (
         <MediaPlayer
+            key={videoSrc}
             ref={playerRef}
             title={title || "Video"}
             src={{
@@ -89,4 +96,3 @@ export function VideoPlayer({ src, poster, title, onError, onPlayerReady }: Vide
         </MediaPlayer>
     );
 }
-
