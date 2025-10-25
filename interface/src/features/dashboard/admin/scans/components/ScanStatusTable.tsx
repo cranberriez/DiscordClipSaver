@@ -135,7 +135,8 @@ export function ScanStatusTable({ channels, onRefresh }: ScanStatusTableProps) {
                                             </td>
                                             <td className="p-3 text-right text-muted-foreground text-sm">
                                                 {formatRelativeTime(
-                                                    channel.updated_at
+                                                    channel.scanStatus
+                                                        ?.updated_at || ""
                                                 )}
                                             </td>
                                             <td className="p-3 text-right">
