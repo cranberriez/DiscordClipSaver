@@ -52,6 +52,26 @@ class ThumbnailHandler:
         logger.info(f"Processing thumbnails for clip: {clip.id}")
         
         try:
+            # Check if thumbnails already exist in storage (even if DB says completed)
+            small_path = f"thumbnails/guild_{clip.guild_id}/{clip.id}_small.webp"
+            large_path = f"thumbnails/guild_{clip.guild_id}/{clip.id}_large.webp"
+            
+            small_exists = await self.storage.exists(small_path)
+            large_exists = await self.storage.exists(large_path)
+            
+            # If both files exist and status is completed, skip regeneration
+            if small_exists and large_exists and clip.thumbnail_status == "completed":
+                logger.info(f"Thumbnails already exist for clip {clip.id}, skipping generation")
+                return True
+            
+            # Log if files are missing but DB says completed (data inconsistency)
+            if clip.thumbnail_status == "completed" and (not small_exists or not large_exists):
+                logger.warning(
+                    f"Thumbnail files missing for clip {clip.id} "
+                    f"(small: {small_exists}, large: {large_exists}) but DB status is 'completed'. "
+                    f"Regenerating thumbnails..."
+                )
+            
             # Update status to processing
             await clip.update_from_dict({"thumbnail_status": "processing"}).save()
             
