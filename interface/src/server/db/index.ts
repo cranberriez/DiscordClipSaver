@@ -7,11 +7,16 @@ export {
 export {
     getGuildsByIds,
     getGuildsByIdsWithClipCount,
+    getGuildsByIdsWithStats,
     getSingleGuildById,
     setGuildOwnerIfUnclaimed,
     updateGuildMessageScanEnabled,
 } from "./queries/guilds";
-export type { GuildWithClipCount } from "./queries/guilds";
+export type {
+    GuildWithClipCount,
+    GuildWithStats as DbGuildWithStats,
+    GuildStatsOptions,
+} from "./queries/guilds";
 export {
     getGuildSettings,
     upsertGuildSettings,

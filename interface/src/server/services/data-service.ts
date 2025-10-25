@@ -47,6 +47,20 @@ export class DataService {
         }));
     }
 
+    static async getGuildsByIdsWithStats(
+        ids: string[],
+        options: { withClipCount?: boolean; withAuthorCount?: boolean } = {}
+    ) {
+        const guilds = await db.getGuildsByIdsWithStats(ids, options);
+
+        if (!guilds) {
+            console.error("Guilds not found, ids: " + ids.join(", "));
+            return undefined;
+        }
+
+        return guilds.map(guild => GuildMapper.toGuildWithStats(guild));
+    }
+
     // Channels
     static async getChannelsByGuildId(guildId: string) {
         const channels = await db.getChannelsByGuildId(guildId);

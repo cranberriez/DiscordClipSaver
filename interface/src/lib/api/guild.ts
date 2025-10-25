@@ -45,8 +45,17 @@ export interface GuildResponse extends Guild {
 }
 
 /**
- * Guild with clip count
- * Response from GET /api/guilds/?withClipCount=1
+ * Guild with optional stats
+ * Response from GET /api/guilds/stats
+ */
+export interface GuildWithStats extends Guild {
+    clip_count?: number;
+    author_count?: number;
+}
+
+/**
+ * @deprecated Use GuildWithStats instead
+ * Guild with clip count - kept for backward compatibility
  */
 export interface GuildWithClipCount extends Guild {
     clip_count: number;
@@ -89,4 +98,20 @@ export function getGuild(guildId: string) {
 
 export function toggleScanning(guildId: string, enabled: boolean) {
     return api.guilds.toggleScanning(guildId, enabled); // POST /api/guilds/[guildId]/toggle
+}
+
+/**
+ * Options for fetching guild stats
+ */
+export interface GuildStatsOptions {
+    withClipCount?: boolean;
+    withAuthorCount?: boolean;
+}
+
+/**
+ * Fetch stats for multiple guilds
+ * GET /api/guilds/stats?guildIds=xxx,yyy&withClipCount=1&withAuthorCount=1
+ */
+export function getGuildStats(guildIds: string[], options?: GuildStatsOptions) {
+    return api.guilds.stats(guildIds, options);
 }

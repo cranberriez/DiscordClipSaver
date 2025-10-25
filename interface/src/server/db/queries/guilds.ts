@@ -5,6 +5,16 @@ export interface GuildWithClipCount extends DbGuild {
     clip_count: number;
 }
 
+export interface GuildWithStats extends DbGuild {
+    clip_count?: number;
+    author_count?: number;
+}
+
+export interface GuildStatsOptions {
+    withClipCount?: boolean;
+    withAuthorCount?: boolean;
+}
+
 export async function getGuildsByIds(guildIds: string[]): Promise<DbGuild[]> {
     if (guildIds.length === 0) return [];
 
@@ -91,4 +101,55 @@ export async function getGuildsByIdsWithClipCount(
         .execute();
 
     return guilds as GuildWithClipCount[];
+}
+
+/**
+ * Get guilds by IDs with optional stats (clip count, author count)
+ * Efficiently fetches only requested stats in a single query
+ */
+export async function getGuildsByIdsWithStats(
+    guildIds: string[],
+    options: GuildStatsOptions = {}
+): Promise<GuildWithStats[]> {
+    if (guildIds.length === 0) return [];
+
+    const { withClipCount = false, withAuthorCount = false } = options;
+
+    // If no stats requested, just return basic guild data
+    if (!withClipCount && !withAuthorCount) {
+        return getGuildsByIds(guildIds);
+    }
+
+    const db = getDb();
+    let query = db.selectFrom("guild").selectAll("guild");
+
+    // Add clip count if requested
+    if (withClipCount) {
+        query = query.select(eb =>
+            eb
+                .selectFrom("clip")
+                .select(eb2 => eb2.fn.countAll<string>().as("count"))
+                .whereRef("clip.guild_id", "=", "guild.id")
+                .where("clip.deleted_at", "is", null)
+                .as("clip_count")
+        );
+    }
+
+    // Add author count if requested
+    if (withAuthorCount) {
+        query = query.select(eb =>
+            eb
+                .selectFrom("author")
+                .select(eb2 => eb2.fn.countAll<string>().as("count"))
+                .whereRef("author.guild_id", "=", "guild.id")
+                .as("author_count")
+        );
+    }
+
+    const guilds = await query
+        .where("guild.id", "in", guildIds)
+        .where("guild.deleted_at", "is", null)
+        .execute();
+
+    return guilds as GuildWithStats[];
 }

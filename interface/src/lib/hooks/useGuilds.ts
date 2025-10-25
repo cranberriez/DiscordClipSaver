@@ -8,8 +8,9 @@ import {
     guildsQuery,
     guildsDiscordQuery,
     guildsWithClipCountQuery,
+    guildStatsQuery,
 } from "@/lib/queries";
-import { Guild } from "../api/guild";
+import { Guild, type GuildStatsOptions } from "../api/guild";
 
 // ============================================================================
 // Queries
@@ -113,6 +114,44 @@ export function useGuildsWithClipCount() {
  */
 export function useGuild(guildId: string, options?: { initialData?: Guild }) {
     return useQuery(guildQuery(guildId, options));
+}
+
+/**
+ * Fetch stats for multiple guilds.
+ *
+ * Allows flexible fetching of guild statistics (clip count, author count).
+ * Only returns stats for guilds the user has access to via Discord.
+ *
+ * @param guildIds - Array of guild IDs to fetch stats for
+ * @param options - Options for which stats to include
+ *
+ * @example
+ * ```tsx
+ * function GuildStatsDisplay({ guildIds }: { guildIds: string[] }) {
+ *   const { data: guilds, isLoading } = useGuildStats(guildIds, {
+ *     withClipCount: true,
+ *     withAuthorCount: true,
+ *   });
+ *
+ *   if (isLoading) return <div>Loading...</div>;
+ *
+ *   return (
+ *     <div>
+ *       {guilds?.map(guild => (
+ *         <div key={guild.id}>
+ *           {guild.name}: {guild.clip_count} clips, {guild.author_count} authors
+ *         </div>
+ *       ))}
+ *     </div>
+ *   );
+ * }
+ * ```
+ */
+export function useGuildStats(
+    guildIds: string[],
+    options?: GuildStatsOptions
+) {
+    return useQuery(guildStatsQuery(guildIds, options));
 }
 
 // ============================================================================

@@ -11,6 +11,8 @@ import type { EnrichedDiscordGuild, Guild } from "@/lib/api/guild";
 import {
     GuildResponse,
     GuildWithClipCount,
+    GuildWithStats,
+    GuildStatsOptions,
     ToggleScanningResponse,
 } from "./guild";
 import { UpdateGuildSettingsPayload } from "../schema/guild-settings.schema";
@@ -123,6 +125,23 @@ export const api = {
                     body: JSON.stringify({ enabled }),
                 }
             ),
+
+        /**
+         * Get stats for multiple guilds
+         * GET /api/guilds/stats?guildIds=xxx,yyy&withClipCount=1&withAuthorCount=1
+         */
+        stats: (guildIds: string[], options?: GuildStatsOptions) => {
+            const searchParams = new URLSearchParams();
+            searchParams.set("guildIds", guildIds.join(","));
+            if (options?.withClipCount)
+                searchParams.set("withClipCount", "1");
+            if (options?.withAuthorCount)
+                searchParams.set("withAuthorCount", "1");
+
+            return apiRequest<GuildWithStats[]>(
+                `/api/guilds/stats?${searchParams.toString()}`
+            );
+        },
     },
 
     // ========================================================================

@@ -4,12 +4,14 @@ import {
     getGuild,
     toggleScanning,
     getGuildsDiscord,
+    getGuildStats,
+    type GuildStatsOptions,
 } from "../api/guild";
 import type {
     EnrichedDiscordGuild,
     Guild,
     GuildResponse,
-    GuildWithClipCount,
+    GuildWithStats,
 } from "../api/guild";
 import { api } from "../api/client";
 
@@ -32,6 +34,19 @@ export const guildKeys = {
             { includePerms: !!params.includePerms },
         ] as const,
     listWithClipCount: () => [...guildKeys.all, "with-clip-count"] as const,
+    stats: (
+        guildIds: string[],
+        options: { withClipCount?: boolean; withAuthorCount?: boolean } = {}
+    ) =>
+        [
+            ...guildKeys.all,
+            "stats",
+            guildIds.sort(),
+            {
+                withClipCount: !!options.withClipCount,
+                withAuthorCount: !!options.withAuthorCount,
+            },
+        ] as const,
     discordList: (params: { includeDB?: boolean } = {}) =>
         [
             ...guildKeys.all,
@@ -75,9 +90,35 @@ export const guildQuery = (
     });
 
 export const guildsWithClipCountQuery = () =>
-    queryOptions<GuildWithClipCount[]>({
+    queryOptions<GuildWithStats[]>({
         queryKey: guildKeys.listWithClipCount(),
         queryFn: () => api.guilds.listWithClipCount(),
+        staleTime: 60_000,
+    });
+
+/**
+ * Query options for fetching guild stats
+ *
+ * @param guildIds - Array of guild IDs to fetch stats for
+ * @param options - Options for which stats to include
+ * @returns Query options for TanStack Query
+ *
+ * @example
+ * ```typescript
+ * const query = guildStatsQuery(['123', '456'], {
+ *   withClipCount: true,
+ *   withAuthorCount: true
+ * });
+ * ```
+ */
+export const guildStatsQuery = (
+    guildIds: string[],
+    options?: GuildStatsOptions
+) =>
+    queryOptions<GuildWithStats[]>({
+        queryKey: guildKeys.stats(guildIds, options || {}),
+        queryFn: () => getGuildStats(guildIds, options),
+        enabled: guildIds.length > 0,
         staleTime: 60_000,
     });
 

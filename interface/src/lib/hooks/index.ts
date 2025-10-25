@@ -8,6 +8,7 @@
 export {
     useGuilds,
     useGuild,
+    useGuildStats,
     useToggleScanning,
     useGuildsDiscord,
     useGuildsWithClipCount,
