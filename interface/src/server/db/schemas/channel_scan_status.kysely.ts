@@ -4,7 +4,7 @@
 import type { ColumnType, Selectable, Insertable, Updateable } from "kysely";
 
 export type ScanStatus =
-    | "PENDING"
+    | "QUEUED"
     | "RUNNING"
     | "SUCCEEDED"
     | "FAILED"

@@ -17,7 +17,12 @@ import {
 } from "./guild";
 import { UpdateGuildSettingsPayload } from "../schema/guild-settings.schema";
 import { Channel, ChannelStatsResponse } from "./channel";
-import { ScanStatus } from "./scan";
+import {
+    MultiScanResult,
+    ScanResult,
+    ScanStatus,
+    StartScanOptions,
+} from "./scan";
 import { ClipListResponse, FullClip } from "./clip";
 import type { AuthorStatsResponse } from "./author";
 
@@ -133,8 +138,7 @@ export const api = {
         stats: (guildIds: string[], options?: GuildStatsOptions) => {
             const searchParams = new URLSearchParams();
             searchParams.set("guildIds", guildIds.join(","));
-            if (options?.withClipCount)
-                searchParams.set("withClipCount", "1");
+            if (options?.withClipCount) searchParams.set("withClipCount", "1");
             if (options?.withAuthorCount)
                 searchParams.set("withAuthorCount", "1");
 
@@ -217,7 +221,36 @@ export const api = {
          * Start a scan for a channel (using server action)
          * This is handled by the server action, not an API route
          */
-        // start: Use the server action directly: startChannelScan()
+        start: (
+            guildId: string,
+            channelId: string,
+            options?: StartScanOptions
+        ) =>
+            apiRequest<ScanResult>(`/api/guilds/${guildId}/scans/start`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    channelIds: [channelId],
+                    ...options,
+                }),
+            }),
+
+        /**
+         * Start scans for multiple channels
+         */
+        startBulk: (
+            guildId: string,
+            channelIds: string[],
+            options?: StartScanOptions
+        ) =>
+            apiRequest<MultiScanResult>(`/api/guilds/${guildId}/scans/start`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    channelIds,
+                    ...options,
+                }),
+            }),
     },
 
     // ========================================================================

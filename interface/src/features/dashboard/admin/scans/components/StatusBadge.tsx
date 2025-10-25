@@ -13,7 +13,7 @@ export function StatusBadge({ status }: StatusBadgeProps) {
         string,
         "default" | "secondary" | "destructive" | "outline"
     > = {
-        PENDING: "secondary",
+        QUEUED: "secondary",
         RUNNING: "default",
         SUCCEEDED: "outline",
         FAILED: "destructive",
@@ -21,8 +21,7 @@ export function StatusBadge({ status }: StatusBadgeProps) {
     };
 
     const colorMap: Record<string, string> = {
-        PENDING:
-            "bg-yellow-500/20 text-yellow-600 dark:text-yellow-400 border-yellow-500/50",
+        QUEUED: "bg-yellow-500/20 text-yellow-600 dark:text-yellow-400 border-yellow-500/50",
         RUNNING:
             "bg-blue-500/20 text-blue-600 dark:text-blue-400 border-blue-500/50",
         SUCCEEDED:

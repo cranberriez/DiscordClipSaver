@@ -3,10 +3,9 @@
 // ============================================================================
 
 import { api } from "./client";
-import { startChannelScan, startMultipleChannelScans } from "@/lib/actions/scan";
 
 export type StatusEnum =
-    | "PENDING"
+    | "QUEUED"
     | "RUNNING"
     | "SUCCEEDED"
     | "FAILED"
@@ -48,12 +47,18 @@ export type ScanResult =
     | { success: false; error: string };
 
 /**
- * Response from startMultipleChannelScans server action
+ * Response from start scans API endpoint
  */
 export interface MultiScanResult {
     success: number;
     failed: number;
-    results: Array<{ channelId: string; result: ScanResult }>;
+    results: Array<{
+        channelId: string;
+        success: boolean;
+        jobId?: string;
+        messageId?: string;
+        error?: string;
+    }>;
 }
 
 // ========================================================================
@@ -79,13 +84,13 @@ export async function startSingleScan(
     channelId: string,
     options?: StartScanOptions
 ): Promise<ScanResult> {
-    const result = await startChannelScan(guildId, channelId, options);
+    const response = await api.scans.start(guildId, channelId, options);
 
-    if (!result.success) {
-        throw new Error(result.error);
+    if (!response.success) {
+        throw new Error(response.error);
     }
 
-    return result;
+    return response;
 }
 
 /**
@@ -96,5 +101,11 @@ export async function startBulkScan(
     channelIds: string[],
     options?: StartScanOptions
 ): Promise<MultiScanResult> {
-    return startMultipleChannelScans(guildId, channelIds, options);
+    const response = await api.scans.startBulk(guildId, channelIds, options);
+
+    if (response.failed > 0) {
+        throw new Error(`Failed to start ${response.failed} scans`);
+    }
+
+    return response;
 }

@@ -45,7 +45,7 @@ export function ScansPanel({
     const activeScans = channels.filter(
         ch =>
             ch.scanStatus?.status === "RUNNING" ||
-            ch.scanStatus?.status === "PENDING"
+            ch.scanStatus?.status === "QUEUED"
     ).length;
     const successfulScans = channels.filter(
         ch => ch.scanStatus?.status === "SUCCEEDED" && ch.message_scan_enabled

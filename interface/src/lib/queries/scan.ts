@@ -27,10 +27,10 @@ export const scanStatusesQuery = (guildId: string) =>
 
         refetchInterval: query => {
             const data = query.state.data as ScanStatus[] | undefined;
-            // Check if any scans are running or pending
+            // Check if any scans are running or queued
             const hasActiveScans = data?.some(
                 status =>
-                    status.status === "RUNNING" || status.status === "PENDING"
+                    status.status === "RUNNING" || status.status === "QUEUED"
             );
             // Poll every 6 seconds if any scans are active, otherwise don't poll
             return hasActiveScans ? 6000 : false;
@@ -47,8 +47,7 @@ export const scanStatusQuery = (guildId: string, channelId: string) =>
         refetchInterval: query => {
             const data = query.state.data as ScanStatus | null;
             const status = data?.status;
-            const hasRunningScans =
-                status === "RUNNING" || status === "PENDING";
+            const hasRunningScans = status === "RUNNING" || status === "QUEUED";
             // Poll every 6 seconds if scans are running, otherwise don't poll
             return hasRunningScans ? 6000 : false;
         },
@@ -59,7 +58,7 @@ export const scanStatusQuery = (guildId: string, channelId: string) =>
 // ============================================================================
 
 /**
- * Optimistically update scan status to PENDING when starting a scan.
+ * Optimistically update scan status to QUEUED when starting a scan.
  * Returns snapshot for rollback on error.
  */
 export function optimisticStartScan(
@@ -77,7 +76,7 @@ export function optimisticStartScan(
     const optimisticStatus: ScanStatus = {
         channel_id: channelId,
         guild_id: guildId,
-        status: "PENDING",
+        status: "QUEUED",
         message_count:
             existingIndex >= 0 ? statuses[existingIndex].message_count : 0,
         total_messages_scanned:
@@ -116,7 +115,7 @@ export function optimisticStartScan(
 }
 
 /**
- * Optimistically update scan statuses to PENDING when starting bulk scans.
+ * Optimistically update scan statuses to QUEUED when starting bulk scans.
  * Returns snapshot for rollback on error.
  */
 export function optimisticStartBulkScan(
@@ -130,7 +129,7 @@ export function optimisticStartBulkScan(
 
     const optimistic = [...prev];
 
-    // Update or add PENDING status for each channel
+    // Update or add QUEUED status for each channel
     channelIds.forEach(channelId => {
         const existingIndex = optimistic.findIndex(
             s => s.channel_id === channelId
@@ -139,7 +138,7 @@ export function optimisticStartBulkScan(
         const optimisticStatus: ScanStatus = {
             channel_id: channelId,
             guild_id: guildId,
-            status: "PENDING",
+            status: "QUEUED",
             message_count:
                 existingIndex >= 0
                     ? optimistic[existingIndex].message_count

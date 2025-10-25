@@ -45,7 +45,7 @@ export type Job =
  * Scan status from database
  */
 export type ScanStatus =
-    | "PENDING"
+    | "QUEUED"
     | "RUNNING"
     | "SUCCEEDED"
     | "FAILED"

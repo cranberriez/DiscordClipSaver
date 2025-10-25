@@ -22,7 +22,7 @@ import {
  * Fetch scan statuses for all channels in a guild.
  *
  * Features:
- * - Automatic polling every 3 seconds when any scans are RUNNING or PENDING
+ * - Automatic polling every 3 seconds when any scans are RUNNING or QUEUED
  * - Stops polling when all scans are completed/failed/cancelled
  * - Real-time status updates without manual refresh
  *
@@ -81,7 +81,7 @@ export function useChannelScanStatus(guildId: string, channelId: string) {
  * Start a scan for a single channel.
  *
  * Features:
- * - Optimistic update: immediately shows PENDING status
+ * - Optimistic update: immediately shows QUEUED status
  * - Automatic rollback on error
  * - Invalidates cache on success to fetch real server state
  *
@@ -125,7 +125,7 @@ export function useStartScan(guildId: string) {
                 queryKey: scanKeys.statuses(guildId),
             });
 
-            // Optimistically update to PENDING status
+            // Optimistically update to QUEUED status
             const snapshot = optimisticStartScan(qc, guildId, channelId);
 
             return { snapshot };
@@ -196,7 +196,7 @@ export function useStartBulkScan(guildId: string) {
                 queryKey: scanKeys.statuses(guildId),
             });
 
-            // Optimistically update all channels to PENDING status
+            // Optimistically update all channels to QUEUED status
             const snapshot = optimisticStartBulkScan(qc, guildId, channelIds);
 
             return { snapshot };

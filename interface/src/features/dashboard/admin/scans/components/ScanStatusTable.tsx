@@ -157,7 +157,7 @@ export function ScanStatusTable({
                                                             "RUNNING" ||
                                                         channel.scanStatus
                                                             ?.status ===
-                                                            "PENDING"
+                                                            "QUEUED"
                                                     }
                                                     variant="outline"
                                                     size="sm"
@@ -175,7 +175,7 @@ export function ScanStatusTable({
                                                         ? "Running..."
                                                         : channel.scanStatus
                                                               ?.status ===
-                                                          "PENDING"
+                                                          "QUEUED"
                                                         ? "Queued..."
                                                         : "Scan"}
                                                 </Button>

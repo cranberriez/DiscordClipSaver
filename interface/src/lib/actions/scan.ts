@@ -4,9 +4,16 @@
 "use server";
 
 import { startBatchScan } from "../redis/jobs";
-import { getChannelScanStatus } from "@/server/db/queries/scan_status";
-import { getChannelsByGuildId } from "@/server/db/queries/channels";
+import {
+    getChannelScanStatus,
+    upsertChannelScanStatus,
+} from "@/server/db/queries/scan_status";
+import { getChannelById } from "@/server/db/queries/channels";
 import { getSingleGuildById } from "@/server/db/queries/guilds";
+import { getAuthInfo } from "@/server/auth";
+import { cacheUserScopedGraceful } from "@/server/cache";
+import { discordFetch } from "@/server/discord/discordClient";
+import type { DiscordGuild } from "@/server/discord/types";
 
 export type ScanResult =
     | { success: true; jobId: string; messageId: string }
@@ -26,18 +33,63 @@ export async function startChannelScan(
         rescan?: "stop" | "continue" | "update"; // How to handle already-processed messages
     }
 ): Promise<ScanResult> {
+    // Authenticate user
+    let authInfo;
     try {
-        // Validate guild exists
+        authInfo = await getAuthInfo();
+    } catch {
+        return { success: false, error: "Unauthorized" };
+    }
+
+    const { discordUserId, accessToken } = authInfo;
+    if (!accessToken) {
+        return { success: false, error: "Missing Discord token" };
+    }
+
+    // Check if user has access to this guild (with caching)
+    const freshTtlMs = 60 * 60 * 1000; // 1 hour
+    const staleTtlMs = 24 * 60 * 60 * 1000; // 24 hours
+
+    let userGuilds: DiscordGuild[];
+    try {
+        userGuilds = await cacheUserScopedGraceful<DiscordGuild[]>(
+            discordUserId,
+            "discord:guilds",
+            freshTtlMs,
+            staleTtlMs,
+            () => discordFetch<DiscordGuild[]>("/users/@me/guilds", accessToken)
+        );
+    } catch (err) {
+        console.error("Failed to fetch user guilds:", err);
+        return { success: false, error: "Failed to verify guild access" };
+    }
+
+    const hasAccess = userGuilds.some(g => g.id === guildId);
+    if (!hasAccess) {
+        return {
+            success: false,
+            error: "You do not have access to this guild",
+        };
+    }
+
+    try {
+        // Validate guild exists and check ownership
         const guild = await getSingleGuildById(guildId);
         if (!guild) {
             return { success: false, error: "Guild not found" };
         }
 
-        // Get all channels for this guild
-        const channels = await getChannelsByGuildId(guildId);
+        // Require guild ownership for scan operations
+        const isOwner = guild.owner_id === discordUserId;
+        if (!isOwner) {
+            return {
+                success: false,
+                error: "You must be the guild owner to perform this action",
+            };
+        }
 
-        // Find the specific channel
-        const channel = channels.find(c => c.id === channelId);
+        // Get all channels for this guild
+        const channel = await getChannelById(guildId, channelId);
 
         if (!channel) {
             return { success: false, error: "Channel not found" };
@@ -55,7 +107,7 @@ export async function startChannelScan(
 
         if (
             existingStatus?.status === "RUNNING" ||
-            existingStatus?.status === "PENDING"
+            existingStatus?.status === "QUEUED"
         ) {
             return {
                 success: false,
@@ -98,6 +150,12 @@ export async function startChannelScan(
             }
         }
 
+        // Upsert channel scan status to QUEUED (creates row if it doesn't exist)
+        // This prevents the "unscanned" flash when the UI refetches before worker picks up job
+        await upsertChannelScanStatus(guildId, channelId, {
+            status: "QUEUED",
+        });
+
         // Start the scan
         const { jobId, messageId } = await startBatchScan({
             guildId,
@@ -138,6 +196,7 @@ export async function startMultipleChannelScans(
     failed: number;
     results: Array<{ channelId: string; result: ScanResult }>;
 }> {
+    // Auth check is done in startChannelScan for each channel
     const results = await Promise.all(
         channelIds.map(async channelId => ({
             channelId,
