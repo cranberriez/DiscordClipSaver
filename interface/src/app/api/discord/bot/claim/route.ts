@@ -58,7 +58,8 @@ export async function GET(req: NextRequest) {
             { status: 400 }
         );
     }
-    let { guild, user_id: intendedAppUserId } = intent;
+    let guild: string | null = intent.guild;
+    const intendedAppUserId = intent.user_id;
     // If guild wasn't preselected during invite, Discord includes it in the callback as `guild_id`
     if (!guild) {
         const cbGuild = url.searchParams.get("guild_id");
