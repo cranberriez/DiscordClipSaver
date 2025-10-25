@@ -2,7 +2,7 @@ import React, { useMemo } from "react";
 import { Card, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { RefreshCw, AlertCircle } from "lucide-react";
+import { RefreshCw, AlertCircle, Eye, EyeOff } from "lucide-react";
 import { StatusBadge } from "./StatusBadge";
 import type { ChannelWithStatus } from "../types";
 import { formatRelativeTime } from "@/lib/utils/time-helpers";
@@ -12,6 +12,7 @@ import {
     ChannelTypeHeader,
 } from "@/components/composite/ChannelOrganizer";
 import { ChannelScanButton } from "./ChannelScanButton";
+import { useScanVisibilityStore } from "../stores/useScanVisibilityStore";
 
 interface ScanStatusTableProps {
     channels: ChannelWithStatus[];
@@ -19,10 +20,22 @@ interface ScanStatusTableProps {
 }
 
 export function ScanStatusTable({ channels, onRefresh }: ScanStatusTableProps) {
+    const { showDisabledChannels, toggleShowDisabledChannels } =
+        useScanVisibilityStore();
+
+    // Filter channels based on visibility setting
+    const filteredChannels = useMemo(
+        () =>
+            showDisabledChannels
+                ? channels
+                : channels.filter(ch => ch.message_scan_enabled),
+        [channels, showDisabledChannels]
+    );
+
     // Group channels by type and sort alphabetically by name within each group
     const groupedChannels = useMemo(
-        () => groupChannelsByType(channels, "name"),
-        [channels]
+        () => groupChannelsByType(filteredChannels, "name"),
+        [filteredChannels]
     );
 
     // Get sorted channel types based on configured display order
@@ -33,10 +46,29 @@ export function ScanStatusTable({ channels, onRefresh }: ScanStatusTableProps) {
             <CardHeader className="border-b">
                 <div className="flex items-center justify-between">
                     <CardTitle>Scan Status</CardTitle>
-                    <Button onClick={onRefresh} variant="outline" size="sm">
-                        <RefreshCw className="h-4 w-4" />
-                        Refresh
-                    </Button>
+                    <div className="flex items-center gap-2">
+                        <Button
+                            onClick={toggleShowDisabledChannels}
+                            variant="outline"
+                            size="sm"
+                        >
+                            {showDisabledChannels ? (
+                                <>
+                                    <EyeOff className="h-4 w-4" />
+                                    Hide Disabled
+                                </>
+                            ) : (
+                                <>
+                                    <Eye className="h-4 w-4" />
+                                    Show Disabled
+                                </>
+                            )}
+                        </Button>
+                        <Button onClick={onRefresh} variant="outline" size="sm">
+                            <RefreshCw className="h-4 w-4" />
+                            Refresh
+                        </Button>
+                    </div>
                 </div>
             </CardHeader>
 
@@ -152,6 +184,12 @@ export function ScanStatusTable({ channels, onRefresh }: ScanStatusTableProps) {
                     </tbody>
                 </table>
 
+                {filteredChannels.length === 0 && channels.length > 0 && (
+                    <div className="p-6 text-center text-muted-foreground">
+                        All channels are disabled. Click "Show Disabled" to view
+                        them.
+                    </div>
+                )}
                 {channels.length === 0 && (
                     <div className="p-6 text-center text-muted-foreground">
                         No channels found
