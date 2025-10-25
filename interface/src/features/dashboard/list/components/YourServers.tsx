@@ -1,7 +1,8 @@
 import { DiscordGuild } from "@/server/discord/types";
 import { ItemGrid } from "@/components/layout";
-import { GuildEditItem } from "./GuildEditItem";
+import { GuildEditItem, GuildEditItemSkeleton } from "./GuildEditItem";
 import { useGuildStats } from "@/lib/hooks";
+import { Loader2 } from "lucide-react";
 
 export function YourServers({ guilds }: { guilds: DiscordGuild[] }) {
     const {
@@ -17,7 +18,19 @@ export function YourServers({ guilds }: { guilds: DiscordGuild[] }) {
     );
 
     if (isLoading) {
-        return <div>Loading...</div>;
+        return (
+            <div>
+                <h2 className="text-3xl">Your Servers</h2>
+                <p className="text-gray-400">
+                    Select a server to manage clip scanning and settings
+                </p>
+                <ItemGrid className="pt-4">
+                    {Array.from({ length: 3 }).map((_, index) => (
+                        <GuildEditItemSkeleton key={index} />
+                    ))}
+                </ItemGrid>
+            </div>
+        );
     }
 
     if (error) {

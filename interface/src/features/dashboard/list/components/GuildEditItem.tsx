@@ -13,6 +13,7 @@ import {
     CheckIcon,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
 import type { GuildWithStats } from "@/lib/api/guild";
 import { shorthandCount } from "@/lib/utils/count-helpers";
 
@@ -82,5 +83,31 @@ function GuildEditItemBadges({
                 <p>{shorthandCount(authorCount)}</p>
             </div>
         </div>
+    );
+}
+
+export function GuildEditItemSkeleton() {
+    return (
+        <Item variant="outline" className="p-2 rounded-2xl">
+            <Skeleton className="size-16 rounded-md" />
+
+            <ItemContent>
+                <div className="space-y-2">
+                    <Skeleton className="h-5 w-2/3" />
+                    <div className="flex items-center gap-2">
+                        <Skeleton className="h-5 w-5 rounded" />
+                        <div className="flex items-center gap-1">
+                            <Skeleton className="h-4 w-5" />
+                        </div>
+                        <div className="flex items-center gap-1">
+                            <Skeleton className="h-4 w-5" />
+                        </div>
+                    </div>
+                </div>
+            </ItemContent>
+            <ItemActions>
+                <Skeleton className="h-9 w-16 rounded-md" />
+            </ItemActions>
+        </Item>
     );
 }
