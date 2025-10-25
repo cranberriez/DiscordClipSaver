@@ -6,6 +6,7 @@ import os
 import signal
 from dotenv import load_dotenv
 from shared.db.utils import init_db, close_db, start_health_check_loop
+from shared.db.models import ScanStatus
 from worker.discord.bot import WorkerBot
 from shared.redis.redis_client import RedisStreamClient
 from worker.processor import JobProcessor
@@ -39,6 +40,7 @@ class Worker:
         self.shutdown_event = asyncio.Event()
         self.worker_id = worker_id
         self.health_check_task = None
+        self.stale_scan_cleanup_task = None
         
         logger.info(f"🔧 Worker #{worker_id} initialized (consumer: {consumer_name})")
     
@@ -54,12 +56,25 @@ class Worker:
         self.health_check_task = asyncio.create_task(
             start_health_check_loop(interval_seconds=health_check_interval)
         )
+        
+        # Start stale scan cleanup loop
+        stale_scan_interval = int(os.getenv("STALE_SCAN_CLEANUP_INTERVAL", "300"))  # 5 minutes default
+        stale_scan_timeout = int(os.getenv("STALE_SCAN_TIMEOUT_MINUTES", "30"))  # 30 minutes default
+        self.stale_scan_cleanup_task = asyncio.create_task(
+            self.stale_scan_cleanup_loop(
+                interval_seconds=stale_scan_interval,
+                timeout_minutes=stale_scan_timeout
+            )
+        )
     
     async def shutdown(self):
         """Shutdown the worker gracefully"""
         logger.info("Shutting down worker...")
         if self.health_check_task:
             self.health_check_task.cancel()
+        
+        if self.stale_scan_cleanup_task:
+            self.stale_scan_cleanup_task.cancel()
 
         # The bot is stopped via the cancelled bot_task in run()
 
@@ -72,6 +87,44 @@ class Worker:
 
         await close_db()
         logger.info("Worker shutdown complete")
+    
+    async def stale_scan_cleanup_loop(self, interval_seconds: int, timeout_minutes: int):
+        """
+        Periodically check for and recover stale scans.
+        
+        Scans stuck in RUNNING/QUEUED status for longer than timeout_minutes
+        will be marked as CANCELLED to allow re-scanning.
+        
+        Args:
+            interval_seconds: How often to check (default: 300 = 5 minutes)
+            timeout_minutes: How long before a scan is considered stale (default: 30 minutes)
+        """
+        from shared.db.repositories.scan_recovery import recover_all_stale_scans
+        
+        logger.info(
+            f"Starting stale scan cleanup loop "
+            f"(check every {interval_seconds}s, timeout: {timeout_minutes}m)"
+        )
+        
+        while self.running:
+            try:
+                await asyncio.sleep(interval_seconds)
+                
+                # Recover stale scans
+                recovered = await recover_all_stale_scans(
+                    timeout_minutes=timeout_minutes,
+                    new_status=ScanStatus.CANCELLED
+                )
+                
+                if recovered > 0:
+                    logger.info(f"Stale scan cleanup: recovered {recovered} stuck scans")
+                
+            except asyncio.CancelledError:
+                logger.info("Stale scan cleanup loop cancelled")
+                break
+            except Exception as e:
+                logger.error(f"Error in stale scan cleanup loop: {e}", exc_info=True)
+                # Continue running despite errors
     
     async def process_jobs(self):
         """Main job processing loop"""
@@ -110,6 +163,24 @@ class Worker:
                         
                     except Exception as e:
                         logger.error(f"Job {job_data.get('job_id')} failed: {e}", exc_info=True)
+                        
+                        # Mark scan status as CANCELLED if it's a batch scan job
+                        job_type = job_data.get('type')
+                        if job_type == 'batch':
+                            try:
+                                from shared.db.repositories.channel_scan_status import update_scan_status
+                                guild_id = job_data.get('guild_id')
+                                channel_id = job_data.get('channel_id')
+                                if guild_id and channel_id:
+                                    await update_scan_status(
+                                        guild_id=guild_id,
+                                        channel_id=channel_id,
+                                        status=ScanStatus.CANCELLED,
+                                        error_message=f"Job failed and will be retried: {str(e)[:200]}"
+                                    )
+                                    logger.info(f"Marked scan as CANCELLED for channel {channel_id}")
+                            except Exception as status_error:
+                                logger.error(f"Failed to update scan status to CANCELLED: {status_error}")
                         
                         # DO NOT acknowledge failed jobs - leave them pending
                         # They will be reclaimed by another worker after idle timeout
