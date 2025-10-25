@@ -190,7 +190,7 @@ class Clip(Model):
     guild = fields.ForeignKeyField("models.Guild", related_name="clips", indexable=True)
     channel = fields.ForeignKeyField("models.Channel", related_name="clips", indexable=True)
     author_id = fields.CharField(max_length=64, indexable=True) # Message author's user snowflake
-    title = fields.CharField(max_length=255)
+    title = fields.CharField(max_length=255, null=True)
     visibility = fields.CharEnumField(Visibility, default=Visibility.PUBLIC)
     filename = fields.CharField(max_length=255)
     file_size = fields.BigIntField()  # Bytes
