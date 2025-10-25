@@ -172,6 +172,7 @@ class BatchDatabaseOperations:
                 'message_id': clip.message_id,
                 'guild_id': clip.guild_id,
                 'channel_id': clip.channel_id,
+                'author_id': clip.author_id,
                 'filename': clip.filename,
                 'file_size': clip.file_size,
                 'mime_type': clip.mime_type,

@@ -57,6 +57,7 @@ class ClipData:
     message_id: str
     channel_id: str
     guild_id: str
+    author_id: str
     filename: str
     file_size: int
     mime_type: str
@@ -157,6 +158,7 @@ class BatchContext:
         self,
         clip_id: str,
         message_id: str,
+        author_id: str,
         filename: str,
         file_size: int,
         mime_type: str,
@@ -181,19 +183,24 @@ class BatchContext:
                 self.thumbnails_skipped += 1
                 # Still update CDN URL if expired
                 if existing_clip.expires_at < datetime.now(timezone.utc):
-                    self.clips_to_upsert[clip_id] = ClipData(
-                        id=clip_id,
-                        message_id=message_id,
-                        channel_id=self.channel_id,
-                        guild_id=self.guild_id,
-                        filename=filename,
-                        file_size=file_size,
-                        mime_type=mime_type,
-                        cdn_url=cdn_url,
-                        expires_at=expires_at,
-                        thumbnail_status="completed",
-                        settings_hash=self.settings_hash
-                    )
+                    # Get author_id from the message we're processing
+                    message = self.messages_to_upsert.get(message_id)
+                    author_id = message.author_id if message else None
+                    if author_id:
+                        self.clips_to_upsert[clip_id] = ClipData(
+                            id=clip_id,
+                            message_id=message_id,
+                            channel_id=self.channel_id,
+                            guild_id=self.guild_id,
+                            author_id=author_id,
+                            filename=filename,
+                            file_size=file_size,
+                            mime_type=mime_type,
+                            cdn_url=cdn_url,
+                            expires_at=expires_at,
+                            thumbnail_status="completed",
+                            settings_hash=self.settings_hash
+                        )
                 return False
         
         # New clip or needs regeneration
@@ -202,6 +209,7 @@ class BatchContext:
             message_id=message_id,
             channel_id=self.channel_id,
             guild_id=self.guild_id,
+            author_id=author_id,
             filename=filename,
             file_size=file_size,
             mime_type=mime_type,

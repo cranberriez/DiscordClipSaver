@@ -158,9 +158,11 @@ class BatchMessageProcessor:
             if message_id not in clip_map:
                 continue
 
+            author_id = str(message.author.id)
+            
             context.add_message(
                 message_id=message_id,
-                author_id=str(message.author.id),
+                author_id=author_id,
                 timestamp=message.created_at,
                 content=message.content or ""
             )
@@ -170,6 +172,7 @@ class BatchMessageProcessor:
                 context.add_clip(
                     clip_id=clip_info.clip_id,
                     message_id=clip_info.message_id,
+                    author_id=author_id,
                     filename=clip_info.filename,
                     file_size=clip_info.file_size,
                     mime_type=clip_info.mime_type,
