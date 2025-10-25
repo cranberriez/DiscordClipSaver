@@ -87,7 +87,7 @@ export async function startSingleScan(
     const response = await api.scans.start(guildId, channelId, options);
 
     if (!response.success) {
-        throw new Error(response.error);
+        console.error(response.error);
     }
 
     return response;
@@ -104,7 +104,7 @@ export async function startBulkScan(
     const response = await api.scans.startBulk(guildId, channelIds, options);
 
     if (response.failed > 0) {
-        throw new Error(`Failed to start ${response.failed} scans`);
+        console.error(`Failed to start ${response.failed} scans`);
     }
 
     return response;
