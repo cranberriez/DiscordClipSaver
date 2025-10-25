@@ -25,6 +25,7 @@ export {
 export {
     getChannelsByGuildId,
     bulkUpdateChannelsEnabled,
+    updateChannelEnabled,
     getChannelById,
     getChannelsByGuildIdWithClipCount,
 } from "./queries/channels";

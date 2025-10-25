@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
-import { useBulkUpdateChannels } from "@/lib/hooks";
+import { useBulkUpdateChannels, useChannelStats } from "@/lib/hooks";
 import { Button } from "@/components/ui/button";
 import {
     groupChannelsByType,
@@ -9,8 +9,9 @@ import {
     ChannelTypeHeader,
 } from "@/components/composite/ChannelOrganizer";
 import { Channel } from "@/lib/api/channel";
-import { useChannels } from "@/lib/hooks";
 import { useGuild } from "@/lib/hooks";
+import { useToggleChannel } from "@/lib/hooks/useChannels";
+import { Switch } from "@/components/ui/switch";
 
 type ChannelsListProps = {
     guildId: string;
@@ -23,7 +24,7 @@ export function ChannelsList({ guildId }: ChannelsListProps) {
     const guildScanEnabled = guild?.message_scan_enabled;
 
     // Track live channels state from React Query cache
-    const { isLoading, error, data: channelsList } = useChannels(guildId);
+    const { isLoading, error, data: channelsList } = useChannelStats(guildId);
 
     // Group channels by type and sort alphabetically by name within each group
     const groupedChannels = useMemo(
@@ -150,7 +151,13 @@ function ChannelItem({
             key={channel.id}
             className="p-3 border border-white/20 rounded-lg hover:bg-white/5 transition-colors"
         >
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between gap-2 sm:gap-4">
+                <ChannelToggleScan
+                    guildId={channel.guild_id}
+                    channelId={channel.id}
+                    enabled={channel.message_scan_enabled}
+                />
+
                 <div className="flex-1">
                     <div className="flex items-center gap-2">
                         <span className="font-medium">#{channel.name}</span>
@@ -168,31 +175,68 @@ function ChannelItem({
                     </p>
                 </div>
                 <div className="flex flex-col items-end gap-1">
-                    <span
-                        className={`text-xs px-2 py-1 rounded ${
-                            !guildScanEnabled && channel.message_scan_enabled
-                                ? "bg-orange-500/20 text-orange-400"
-                                : channel.message_scan_enabled
-                                ? "bg-green-500/20 text-green-400"
-                                : "bg-gray-500/20 text-gray-400"
-                        }`}
-                    >
-                        {!guildScanEnabled && channel.message_scan_enabled
-                            ? "Scan: Ready"
-                            : channel.message_scan_enabled
-                            ? "Scan: ON"
-                            : "Scan: OFF"}
+                    <span className="text-xs px-2 py-0.5">
+                        {channel.clip_count} Clips
                     </span>
-                    {channel.last_channel_sync_at && (
-                        <span className="text-xs text-muted-foreground">
-                            Last sync:{" "}
-                            {new Date(
-                                channel.last_channel_sync_at
-                            ).toLocaleDateString()}
-                        </span>
-                    )}
+                </div>
+                <div className="flex flex-col items-end gap-1">
+                    <ChannelScanEnabled
+                        channel={channel}
+                        guildScanEnabled={guildScanEnabled}
+                    />
                 </div>
             </div>
         </div>
+    );
+}
+
+function ChannelScanEnabled({
+    channel,
+    guildScanEnabled,
+}: {
+    channel: Channel;
+    guildScanEnabled: boolean;
+}) {
+    return (
+        <span
+            className={`text-xs px-2 py-1 rounded ${
+                !guildScanEnabled && channel.message_scan_enabled
+                    ? "bg-orange-500/20 text-orange-400"
+                    : channel.message_scan_enabled
+                    ? "bg-green-500/20 text-green-400"
+                    : "bg-gray-500/20 text-gray-400"
+            }`}
+        >
+            {!guildScanEnabled && channel.message_scan_enabled
+                ? "Scan: Ready"
+                : channel.message_scan_enabled
+                ? "Scan: ON"
+                : "Scan: OFF"}
+        </span>
+    );
+}
+
+function ChannelToggleScan({
+    guildId,
+    channelId,
+    enabled,
+}: {
+    guildId: string;
+    channelId: string;
+    enabled: boolean;
+}) {
+    const toggleChannel = useToggleChannel(guildId);
+
+    const handleToggle = (enabled: boolean) => {
+        toggleChannel.mutate({ channelId, enabled });
+    };
+
+    return (
+        <Switch
+            checked={enabled}
+            onCheckedChange={handleToggle}
+            disabled={toggleChannel.isPending}
+            className="data-[state=checked]:bg-green-500/60 data-[state=unchecked]:bg-gray-500/40 border-white/20 shadow-sm"
+        />
     );
 }

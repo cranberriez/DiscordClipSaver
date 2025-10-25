@@ -53,6 +53,32 @@ export async function getChannelById(
     return channel;
 }
 
+/**
+ * Update message_scan_enabled for a single channel.
+ *
+ * @param guildId - The guild ID
+ * @param channelId - The channel ID
+ * @param enabled - Whether to enable or disable message scanning
+ * @returns True if the channel was updated, false otherwise
+ */
+export async function updateChannelEnabled(
+    guildId: string,
+    channelId: string,
+    enabled: boolean
+): Promise<boolean> {
+    const result = await getDb()
+        .updateTable("channel")
+        .set({
+            message_scan_enabled: enabled,
+            updated_at: new Date(),
+        })
+        .where("guild_id", "=", guildId)
+        .where("id", "=", channelId)
+        .executeTakeFirst();
+
+    return Number(result.numUpdatedRows ?? 0) > 0;
+}
+
 export async function getChannelsByGuildIdWithClipCount(
     guildId: string
 ): Promise<DbChannelWithClipCount[]> {

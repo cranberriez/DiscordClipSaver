@@ -46,3 +46,23 @@ export function optimisticBulkUpdateChannels(
 
     return { prev };
 }
+
+export function optimisticToggleChannel(
+    qc: QueryClient,
+    guildId: string,
+    channelId: string,
+    enabled: boolean
+) {
+    const key = channelKeys.byGuild(guildId);
+    const prev = qc.getQueryData<Channel[]>(key);
+    if (!prev) return { prev };
+
+    const optimistic: Channel[] = prev.map(ch =>
+        ch.id === channelId
+            ? { ...ch, message_scan_enabled: enabled }
+            : ch
+    );
+    qc.setQueryData(key, optimistic);
+
+    return { prev };
+}

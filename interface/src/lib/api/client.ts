@@ -181,6 +181,20 @@ export const api = {
                 method: "POST",
                 body: JSON.stringify({ enabled }),
             }),
+
+        /**
+         * Toggle message_scan_enabled for a single channel
+         * POST /api/guilds/[guildId]/channels/[channelId]/toggle
+         */
+        toggleChannel: (guildId: string, channelId: string, enabled: boolean) =>
+            apiRequest<{
+                success: boolean;
+                channelId: string;
+                enabled: boolean;
+            }>(`/api/guilds/${guildId}/channels/${channelId}/toggle`, {
+                method: "POST",
+                body: JSON.stringify({ enabled }),
+            }),
     },
 
     // ========================================================================

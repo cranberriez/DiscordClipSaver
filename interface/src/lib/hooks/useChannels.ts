@@ -7,6 +7,7 @@ import {
     channelStatsByGuildQuery,
     guildChannelsQuery,
     optimisticBulkUpdateChannels,
+    optimisticToggleChannel,
 } from "../queries/channel";
 
 // ============================================================================
@@ -89,6 +90,67 @@ export function useTotalClipCount(guildId: string): number {
 // ============================================================================
 // Mutations
 // ============================================================================
+
+/**
+ * Toggle message_scan_enabled for a single channel.
+ *
+ * @example
+ * ```tsx
+ * function ChannelToggle({ guildId, channelId }: { guildId: string; channelId: string }) {
+ *   const toggleChannel = useToggleChannel(guildId);
+ *
+ *   const handleToggle = (enabled: boolean) => {
+ *     toggleChannel.mutate({ channelId, enabled });
+ *   };
+ *
+ *   return (
+ *     <button
+ *       onClick={() => handleToggle(true)}
+ *       disabled={toggleChannel.isPending}
+ *     >
+ *       Enable Channel
+ *     </button>
+ *   );
+ * }
+ * ```
+ */
+export function useToggleChannel(guildId: string) {
+    const qc = useQueryClient();
+
+    return useMutation({
+        mutationFn: ({ channelId, enabled }: { channelId: string; enabled: boolean }) =>
+            api.channels.toggleChannel(guildId, channelId, enabled),
+
+        onMutate: async ({ channelId, enabled }) => {
+            // Stop any in-flight refetches of the channels list
+            await qc.cancelQueries({
+                queryKey: channelKeys.byGuild(guildId),
+            });
+
+            // Optimistically update the specific channel
+            const snapshot = optimisticToggleChannel(qc, guildId, channelId, enabled);
+
+            return { snapshot };
+        },
+
+        onError: (_err, _vars, ctx) => {
+            // Roll back if we had a snapshot
+            const prev = ctx?.snapshot?.prev;
+            if (prev) qc.setQueryData(channelKeys.byGuild(guildId), prev);
+        },
+
+        onSettled: () => {
+            // Revalidate canonical data
+            qc.invalidateQueries({
+                queryKey: channelKeys.byGuild(guildId),
+            });
+            // If other views depend on the same flag (e.g. stats), also:
+            qc.invalidateQueries({
+                queryKey: channelKeys.statsByGuild(guildId),
+            });
+        },
+    });
+}
 
 /**
  * Bulk enable/disable all channels for a guild.
