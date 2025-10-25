@@ -104,23 +104,26 @@ export function ClipModal({
                 return;
             }
             // Spacebar toggles play/pause on the player even if it's not focused
-            if (e.code === "Space" || e.key === " ") {
-                const p: any = playerInstance;
-                if (
-                    p &&
-                    typeof p.play === "function" &&
-                    typeof p.pause === "function"
-                ) {
-                    e.preventDefault();
-                    const isPaused =
-                        (p.state?.paused ?? p.paused ?? true) === true;
-                    if (isPaused) {
-                        p.play?.();
-                    } else {
-                        p.pause?.();
-                    }
-                }
-            }
+
+            // TODO: fix, doesn't work after player src changes using next/prev buttons
+
+            // if (e.code === "Space" || e.key === " ") {
+            //     const p: any = playerInstance;
+            //     if (
+            //         p &&
+            //         typeof p.play === "function" &&
+            //         typeof p.pause === "function"
+            //     ) {
+            //         e.preventDefault();
+            //         const isPaused =
+            //             (p.state?.paused ?? p.paused ?? true) === true;
+            //         if (isPaused) {
+            //             p.play?.();
+            //         } else {
+            //             p.pause?.();
+            //         }
+            //     }
+            // }
         };
 
         window.addEventListener("keydown", handleKeyDown);
@@ -185,7 +188,7 @@ export function ClipModal({
                     <CloseButton onClose={onClose} />
 
                     {/* Main Content Container */}
-                    <div className="h-full flex flex-col">
+                    <div className="h-full flex flex-col max-h-screen">
                         {/* Video Player Section - 16:9 aspect ratio, centered */}
                         <VideoSection
                             isRefreshing={isRefreshing}
