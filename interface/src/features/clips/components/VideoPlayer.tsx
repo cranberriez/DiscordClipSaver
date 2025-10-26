@@ -28,8 +28,9 @@ export function VideoPlayer({
     const playerRef = useRef<any>(null);
     const { volume, setVolume } = useVideoPlayerStore();
 
-    // Subscribe to Vidstack's volume state
-    const currentVolume = useMediaStore(playerRef)?.volume;
+    // Subscribe to Vidstack's volume state (with null check)
+    const mediaStore = useMediaStore(playerRef);
+    const currentVolume = mediaStore?.volume;
 
     // Use the CDN URL as-is (no CORS transformation needed without crossOrigin attribute)
     const videoSrc = src;

@@ -11,9 +11,12 @@ export function Navbar({ noLines = false }: { noLines?: boolean }) {
     const { data: session } = useSession();
 
     return (
-        <nav className="border-b border-white/10 bg-black/20 backdrop-blur-sm">
-            <PageContainer noLines={noLines}>
-                <div className="flex items-center justify-between">
+        <nav 
+            className="border-b border-white/10 bg-background"
+            style={{ height: 'var(--navbar-height)' }}
+        >
+            <PageContainer noLines={noLines} className="h-full">
+                <div className="flex items-center justify-between h-full">
                     {/* Logo/Brand */}
                     <Link
                         href="/"

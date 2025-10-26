@@ -75,6 +75,9 @@
 
 /* Map CSS variables to Tailwind v4 theme */
 @theme {
+    /* Components */
+    --navbar-height: 4rem; /* 64px - accounts for content + padding */
+
     /* Fonts */
     --font-sans: var(--font-geist-sans);
     --font-mono: var(--font-geist-mono);
