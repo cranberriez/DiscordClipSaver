@@ -1,9 +1,10 @@
 "use client";
 
-import { useRef, useEffect } from "react";
+import { useRef, useEffect, useMemo, useState } from "react";
 import type { FullClip } from "@/lib/api/clip";
 import { ClipCard } from "./ClipCard";
 import { AuthorWithStats } from "@/lib/api/author";
+import { PageContainer } from "@/components/layout/PageContainer";
 
 interface ClipGridProps {
     clips: FullClip[];
@@ -24,70 +25,42 @@ export function ClipGrid({
     isFetchingNextPage,
     fetchNextPage,
 }: ClipGridProps) {
-    const containerRef = useRef<HTMLDivElement>(null);
+    const parentRef = useRef<HTMLDivElement>(null);
     const sentinelRef = useRef<HTMLDivElement>(null);
 
-    // Intersection Observer for infinite loading (more reliable)
     useEffect(() => {
         const sentinel = sentinelRef.current;
-        if (!sentinel || !hasNextPage || isFetchingNextPage) return;
-
-        let hasTriggered = false;
+        if (!sentinel) return;
 
         const observer = new IntersectionObserver(
-            entries => {
-                const [entry] = entries;
-
-                // Only trigger if:
-                // 1. Element is intersecting
-                // 2. Has more pages to load
-                // 3. Not currently fetching
-                // 4. Haven't triggered recently (debounce)
-                // 5. Have at least some clips loaded (prevent initial trigger)
+            ([entry]) => {
                 if (
                     entry.isIntersecting &&
                     hasNextPage &&
-                    !isFetchingNextPage &&
-                    !hasTriggered &&
-                    clips.length > 0
+                    !isFetchingNextPage
                 ) {
-                    hasTriggered = true;
                     fetchNextPage?.();
-
-                    // Reset trigger flag after a delay
-                    setTimeout(() => {
-                        hasTriggered = false;
-                    }, 2000); // Increased to 2 seconds
                 }
             },
-            {
-                root: containerRef.current,
-                rootMargin: "50px", // Reduced to be less aggressive
-                threshold: 0,
-            }
+            { root: parentRef.current, rootMargin: "200px" }
         );
 
-        // Small delay to ensure DOM is ready
-        const timeoutId = setTimeout(() => {
-            observer.observe(sentinel);
-        }, 100);
+        observer.observe(sentinel);
 
         return () => {
-            clearTimeout(timeoutId);
             observer.disconnect();
         };
-    }, [hasNextPage, isFetchingNextPage, fetchNextPage, clips.length]); // Added clips.length to dependencies
+    }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
 
     return (
-        <div
-            ref={containerRef}
-            className="h-full w-full overflow-auto px-6 py-4"
-            style={{
-                contain: "layout style paint",
-            }}
+        <PageContainer
+            ref={parentRef}
+            className="overflow-auto"
+            maxWidth="full"
+            noLines
         >
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                {clips.map((clip: FullClip, index: number) => (
+                {clips.map((clip, index) => (
                     <ClipCard
                         key={clip.clip.id}
                         clip={clip}
@@ -100,23 +73,14 @@ export function ClipGrid({
                 ))}
             </div>
 
-            {/* Intersection Observer Sentinel */}
-            {hasNextPage && (
-                <div
-                    ref={sentinelRef}
-                    className="h-4 w-full"
-                    style={{ minHeight: "1px" }}
-                />
-            )}
+            {/* Sentinel for infinite scroll */}
+            <div ref={sentinelRef} style={{ height: "1px" }} />
 
-            {/* Loading indicator */}
             {isFetchingNextPage && (
-                <div className="mt-8 text-center">
-                    <div className="text-muted-foreground">
-                        Loading more clips...
-                    </div>
+                <div className="flex justify-center py-8 text-muted-foreground">
+                    Loading more clips...
                 </div>
             )}
-        </div>
+        </PageContainer>
     );
 }
