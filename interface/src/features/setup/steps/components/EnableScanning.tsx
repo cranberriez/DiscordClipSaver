@@ -49,7 +49,9 @@ export function EnableScanning({
             completeStep("enable_scanning");
 
             // Notify parent that this step is complete
+            console.log("EnableScanning: About to call onComplete");
             setTimeout(() => {
+                console.log("EnableScanning: Calling onComplete now");
                 onComplete();
             }, 1000);
         } catch (error) {
@@ -65,12 +67,7 @@ export function EnableScanning({
     };
 
     const getStepContent = () => {
-        // Debug logging
-        console.log("EnableScanning render:", {
-            stepDataState: stepData.state,
-            shouldStart,
-            currentTask,
-        });
+        // Debug logging removed to prevent infinite loops
 
         if (stepData.state === null) {
             return (

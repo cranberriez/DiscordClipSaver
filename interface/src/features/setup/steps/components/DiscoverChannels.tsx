@@ -86,12 +86,7 @@ export function DiscoverChannels({
     };
 
     const getStepContent = () => {
-        console.log("DiscoverChannels render:", {
-            stepDataState: stepData.state,
-            shouldStart,
-            isLoading,
-            channelCount: channelsData?.length,
-        });
+        // Debug logging removed to prevent infinite loops
 
         if (stepData.state === null) {
             const channelCount = channelsData?.length || 0;

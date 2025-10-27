@@ -52,8 +52,8 @@ export interface SetupState {
 const STEP_ORDER: SetupStep[] = [
     "discover_channels",
     "enable_scanning",
-    "configure_channels",
-    "initial_scan", 
+    "initial_scan",
+    "configure_channels", 
     "setup_webhooks",
     "configure_permissions",
     "test_functionality",
