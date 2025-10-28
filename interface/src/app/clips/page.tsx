@@ -1,13 +1,8 @@
 "use client";
 
-import { useEffect, useState, useMemo, useCallback } from "react";
-import {
-    useGuildsWithClipCount,
-    useChannelStats,
-    useChannelClipsInfinite,
-    useAuthorStats,
-    usePrefetchAuthorStats,
-} from "@/lib/hooks";
+import { useEffect, useState } from "react";
+import { useClipsUrlSync } from "@/features/clips/hooks/useClipsUrlSync";
+import { useClipsData } from "@/features/clips/hooks/useClipsData";
 import { Button } from "@/components/ui/button";
 import { FilterBar } from "@/features/clips/components/FilterBar";
 import { ClipGrid } from "@/features/clips";
@@ -20,7 +15,6 @@ import {
 import { useClipFiltersStore } from "@/features/clips/stores/useClipFiltersStore";
 import { Navbar } from "@/components/composite/navbar";
 import type { FullClip } from "@/lib/api/types";
-import { cn } from "@/lib/utils";
 
 /**
  * Centralized Clips Viewer
@@ -35,62 +29,27 @@ import { cn } from "@/lib/utils";
  * - Sort by date (asc/desc)
  */
 export default function ClipsPage() {
+    const { selectedGuildId, openGuildModal } = useClipFiltersStore();
+
+    // URL <-> Store synchronization and page param
+    const { hydrated, page, setPage } = useClipsUrlSync();
+
+    // Centralized data fetching that waits for hydration and targets page
     const {
-        selectedGuildId,
-        selectedChannelIds,
-        selectedAuthorIds,
-        searchQuery,
-        sortOrder,
-        openGuildModal,
-    } = useClipFiltersStore();
+        guilds,
+        guildsLoading,
+        channels,
+        channelsLoading,
+        authors,
+        authorMap,
+        selectedGuild,
+        filteredClips,
+        allClipCount,
+        clipsQuery,
+    } = useClipsData({ hydrated, targetPage: page });
 
     const [selectedClip, setSelectedClip] = useState<FullClip | null>(null);
     const [clipIndex, setClipIndex] = useState<number>(-1);
-
-    // Fetch guilds with clip counts
-    const { data: guilds = [], isLoading: guildsLoading } =
-        useGuildsWithClipCount();
-
-    // Fetch channels for selected guild
-    const { data: channels = [], isLoading: channelsLoading } = useChannelStats(
-        selectedGuildId || ""
-    );
-
-    // Fetch authors for selected guild
-    const { data: authors = [] } = useAuthorStats(selectedGuildId || "");
-
-    // Create author lookup map for O(1) access
-    const authorMap = useMemo(
-        () => new Map(authors.map(a => [a.user_id, a])),
-        [authors]
-    );
-
-    // Prefetch hook for authors
-    const prefetchAuthors = usePrefetchAuthorStats();
-
-    // Fetch clips with server-side filtering (infinite query)
-    const {
-        data,
-        fetchNextPage,
-        hasNextPage,
-        isFetchingNextPage,
-        isLoading: clipsLoading,
-        error: clipsError,
-    } = useChannelClipsInfinite({
-        guildId: selectedGuildId || "",
-        channelIds:
-            selectedChannelIds.length > 0 &&
-            selectedChannelIds.length < channels.length
-                ? selectedChannelIds
-                : undefined,
-        authorIds:
-            selectedAuthorIds.length > 0 &&
-            selectedAuthorIds.length < authors.length
-                ? selectedAuthorIds
-                : undefined,
-        limit: 50,
-        sort: sortOrder,
-    });
 
     // Auto-open guild modal if no guild selected
     useEffect(() => {
@@ -99,65 +58,45 @@ export default function ClipsPage() {
         }
     }, [selectedGuildId, guildsLoading, openGuildModal]);
 
-    // Note: Infinite query automatically resets when filters change (query key changes)
-
-    // Get selected guild info
-    const selectedGuild = guilds.find(g => g.id === selectedGuildId);
-
-    // Apply client-side search filter only (authors filtered server-side)
-    const allClips = data?.pages.flatMap(page => page.clips) ?? [];
-    const filteredClips = useMemo(() => {
-        if (!searchQuery.trim()) return allClips;
-
-        const query = searchQuery.toLowerCase();
-        return allClips.filter((clip: FullClip) => {
-            const messageContent = clip.message.content?.toLowerCase() || "";
-            const filename = clip.clip.filename.toLowerCase();
-            const author = authorMap.get(clip.message.author_id);
-            const authorName = author?.display_name.toLowerCase() || "";
-            return (
-                messageContent.includes(query) ||
-                filename.includes(query) ||
-                authorName.includes(query)
-            );
-        });
-    }, [allClips, searchQuery, authorMap]);
-
-    // hasNextPage is provided by infinite query
+    // Keep URL page param in sync with number of loaded pages
+    useEffect(() => {
+        if (!hydrated) return;
+        const pagesLoaded = clipsQuery.data?.pages.length ?? 0;
+        if (pagesLoaded > 0 && pagesLoaded !== page) {
+            setPage(pagesLoaded);
+        }
+    }, [hydrated, clipsQuery.data?.pages.length, page, setPage]);
 
     return (
         <>
             {/* Full-screen clips grid background */}
-            <div className="flex flex-col h-screen bg-background">
+            <div className="flex flex-col h-screen inset-0 bg-background">
                 <Navbar noLines />
                 <FilterBar
                     guildName={selectedGuild?.name}
                     channelCount={channels.length}
                     authorCount={authors.length}
                 />
-                {/* Content area (below navbar + filter bar). Make relative so overlays don't cover navbar. */}
-                <div className="relative flex-1">
-                    <ClipGrid
-                        clips={filteredClips}
-                        authorMap={authorMap}
-                        setClipIndex={setClipIndex}
-                        setSelectedClip={setSelectedClip}
-                        hasNextPage={hasNextPage}
-                        isFetchingNextPage={isFetchingNextPage}
-                        fetchNextPage={fetchNextPage}
-                    />
-
-                    {/* Content overlays for states (when no clips or loading) */}
-                    <ErrorOverlay
-                        selectedGuildId={selectedGuildId}
-                        clipsLoading={clipsLoading}
-                        clipsError={clipsError}
-                        filteredClips={filteredClips}
-                        openGuildModal={openGuildModal}
-                        allClipCount={allClips.length}
-                    />
-                </div>
+                <ClipGrid
+                    clips={filteredClips}
+                    authorMap={authorMap}
+                    setClipIndex={setClipIndex}
+                    setSelectedClip={setSelectedClip}
+                    hasNextPage={clipsQuery.hasNextPage}
+                    isFetchingNextPage={clipsQuery.isFetchingNextPage}
+                    fetchNextPage={clipsQuery.fetchNextPage}
+                />
             </div>
+
+            {/* Content overlays for states (when no clips or loading) */}
+            <ErrorOverlay
+                selectedGuildId={selectedGuildId}
+                clipsLoading={clipsQuery.isLoading}
+                clipsError={clipsQuery.error}
+                filteredClips={filteredClips}
+                openGuildModal={openGuildModal}
+                allClipCount={allClipCount}
+            />
 
             {/* Modals */}
             <GuildSelectModal guilds={guilds} isLoading={guildsLoading} />
@@ -194,10 +133,10 @@ export default function ClipsPage() {
                                   // Load more clips if we're near the end and more are available
                                   if (
                                       newIndex >= filteredClips.length - 2 &&
-                                      hasNextPage &&
-                                      !isFetchingNextPage
+                                      clipsQuery.hasNextPage &&
+                                      !clipsQuery.isFetchingNextPage
                                   ) {
-                                      fetchNextPage();
+                                      clipsQuery.fetchNextPage();
                                   }
                               }
                             : undefined

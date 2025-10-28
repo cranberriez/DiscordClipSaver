@@ -55,7 +55,7 @@ export function ClipGrid({
     return (
         <PageContainer
             ref={parentRef}
-            className="overflow-auto"
+            className="h-full overflow-auto"
             maxWidth="full"
             noLines
         >
