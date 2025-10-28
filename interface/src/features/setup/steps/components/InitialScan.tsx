@@ -22,26 +22,23 @@ export function InitialScan({
 }) {
     const [scanStarted, setScanStarted] = useState(false);
     const [failedChannels, setFailedChannels] = useState<string[]>([]);
-    
+
     const { data: serverChannels = [] } = useChannels(guild.id);
-    const { 
-        data: scanStatuses = [], 
-        isLoading: statusesLoading 
-    } = useScanStatuses(guild.id);
+    const { data: scanStatuses = [], isLoading: statusesLoading } =
+        useScanStatuses(guild.id);
     const startBulkScanMutation = useStartBulkScan(guild.id);
-    
-    const { 
-        startStep, 
-        updateStepState, 
-        completeStep, 
-        getStepData 
-    } = useSetupStoreHydrated();
-    
+
+    const { startStep, updateStepState, completeStep, getStepData } =
+        useSetupStoreHydrated();
+
     const stepData = getStepData("initial_scan");
 
     // Check if initial scan was already completed
     const isInitialScanCompleted = () => {
-        return localStorage.getItem(`${INITIAL_SCAN_STORAGE_KEY}-${guild.id}`) === "true";
+        return (
+            localStorage.getItem(`${INITIAL_SCAN_STORAGE_KEY}-${guild.id}`) ===
+            "true"
+        );
     };
 
     // Mark initial scan as completed
@@ -61,7 +58,7 @@ export function InitialScan({
         running: scanStatuses.filter(s => s.status === "RUNNING").length,
         completed: scanStatuses.filter(s => s.status === "SUCCEEDED").length,
         failed: scanStatuses.filter(s => s.status === "FAILED").length,
-        total: scanStatuses.length
+        total: scanStatuses.length,
     };
 
     // Get failed channel details
@@ -70,17 +67,21 @@ export function InitialScan({
     // Get channels that need scanning (don't have any scan status and aren't category channels)
     const getChannelsNeedingScans = () => {
         const scannedChannelIds = new Set(scanStatuses.map(s => s.channel_id));
-        return serverChannels.filter(channel => 
-            !scannedChannelIds.has(channel.id) && 
-            channel.type !== "category"
+        return serverChannels.filter(
+            channel =>
+                !scannedChannelIds.has(channel.id) &&
+                channel.type !== "category"
         );
     };
 
     // Filter out category channels from all server channels for display
-    const scannableChannels = serverChannels.filter(channel => channel.type !== "category");
+    const scannableChannels = serverChannels.filter(
+        channel => channel.type !== "category"
+    );
 
     const channelsNeedingScans = getChannelsNeedingScans();
-    const alreadyScannedCount = scannableChannels.length - channelsNeedingScans.length;
+    const alreadyScannedCount =
+        scannableChannels.length - channelsNeedingScans.length;
 
     // Start the step when shouldStart becomes true
     useEffect(() => {
@@ -97,7 +98,11 @@ export function InitialScan({
 
     // Start initial scan when step is loading and not yet started
     useEffect(() => {
-        if (stepData.state === "loading" && !scanStarted && serverChannels.length > 0) {
+        if (
+            stepData.state === "loading" &&
+            !scanStarted &&
+            serverChannels.length > 0
+        ) {
             // Check if we need to scan or can skip
             const channelsNeedingScans = getChannelsNeedingScans();
             if (channelsNeedingScans.length === 0) {
@@ -114,8 +119,9 @@ export function InitialScan({
     // Monitor scan completion
     useEffect(() => {
         if (scanStarted && scanStats.total > 0) {
-            const allCompleted = scanStats.queued === 0 && scanStats.running === 0;
-            
+            const allCompleted =
+                scanStats.queued === 0 && scanStats.running === 0;
+
             if (allCompleted) {
                 if (scanStats.failed === 0) {
                     // All scans succeeded
@@ -126,7 +132,9 @@ export function InitialScan({
                     // Some scans failed
                     const failedChannelIds = failedScans.map(s => s.channel_id);
                     setFailedChannels(failedChannelIds);
-                    updateStepState("initial_scan", "need_action", 
+                    updateStepState(
+                        "initial_scan",
+                        "need_action",
                         `${scanStats.failed} channels failed to scan`
                     );
                 }
@@ -135,38 +143,48 @@ export function InitialScan({
     }, [scanStarted, scanStats, failedScans]);
 
     const startInitialScan = (channelsToScan = serverChannels) => {
-        console.log("Starting initial scan for", channelsToScan.length, "channels");
-        
+        console.log(
+            "Starting initial scan for",
+            channelsToScan.length,
+            "channels"
+        );
+
         const channelIds = channelsToScan.map(ch => ch.id);
-        
+
         startBulkScanMutation.mutate(
             {
                 channelIds,
                 options: {
-                    isUpdate: false,      // Start from newest message
-                    limit: 500,           // Higher limit for initial scan
-                    autoContinue: false,  // Don't auto-continue
-                    rescan: "stop",       // Stop on duplicates
+                    isUpdate: false, // Start from newest message
+                    limit: 500, // Higher limit for initial scan
+                    autoContinue: false, // Don't auto-continue
+                    rescan: "stop", // Stop on duplicates
                 },
             },
             {
-                onSuccess: (result) => {
+                onSuccess: result => {
                     console.log("Initial scan started:", result);
                     setScanStarted(true);
                 },
-                onError: (error) => {
+                onError: error => {
                     console.error("Failed to start initial scan:", error);
-                    updateStepState("initial_scan", "error", 
+                    updateStepState(
+                        "initial_scan",
+                        "error",
                         "Failed to start initial scan"
                     );
-                }
+                },
             }
         );
     };
 
     const retryFailedScans = () => {
-        console.log("Retrying failed scans for", failedChannels.length, "channels");
-        
+        console.log(
+            "Retrying failed scans for",
+            failedChannels.length,
+            "channels"
+        );
+
         startBulkScanMutation.mutate(
             {
                 channelIds: failedChannels,
@@ -178,15 +196,15 @@ export function InitialScan({
                 },
             },
             {
-                onSuccess: (result) => {
+                onSuccess: result => {
                     console.log("Retry scan started:", result);
                     // Reset to loading state to monitor the retry
                     startStep("initial_scan");
                     setFailedChannels([]);
                 },
-                onError: (error) => {
+                onError: error => {
                     console.error("Failed to retry scans:", error);
-                }
+                },
             }
         );
     };
@@ -204,14 +222,22 @@ export function InitialScan({
                 return (
                     <div className="space-y-2">
                         <p className="text-sm text-muted-foreground">
-                            All scannable channels have already been scanned, skipping initial scan.
+                            All scannable channels have already been scanned,
+                            skipping initial scan.
                         </p>
                         <div className="text-sm">
-                            <span className="font-semibold">{alreadyScannedCount}</span> / {scannableChannels.length} channels already scanned
+                            <span className="font-semibold">
+                                {alreadyScannedCount}
+                            </span>{" "}
+                            / {scannableChannels.length} channels already
+                            scanned
                         </div>
                         {serverChannels.length > scannableChannels.length && (
                             <div className="text-xs text-muted-foreground">
-                                ({serverChannels.length - scannableChannels.length} category channels ignored)
+                                (
+                                {serverChannels.length -
+                                    scannableChannels.length}{" "}
+                                category channels ignored)
                             </div>
                         )}
                         {shouldStart && (
@@ -225,17 +251,28 @@ export function InitialScan({
                 return (
                     <div className="space-y-2">
                         <p className="text-sm text-muted-foreground">
-                            We'll scan the remaining channels to complete the initial database setup.
+                            We&apos;ll scan the remaining channels to complete
+                            the initial database setup.
                         </p>
                         <div className="text-sm">
-                            <span className="font-semibold">{alreadyScannedCount}</span> / {scannableChannels.length} channels already scanned
+                            <span className="font-semibold">
+                                {alreadyScannedCount}
+                            </span>{" "}
+                            / {scannableChannels.length} channels already
+                            scanned
                         </div>
                         <div className="text-xs text-muted-foreground space-y-1">
-                            <div>• Scan {channelsNeedingScans.length} remaining channels for clips</div>
+                            <div>
+                                • Scan {channelsNeedingScans.length} remaining
+                                channels for clips
+                            </div>
                             <div>• Process up to 500 messages per channel</div>
                             <div>• Complete initial clip database</div>
-                            {serverChannels.length > scannableChannels.length && (
-                                <div>• Category channels automatically ignored</div>
+                            {serverChannels.length >
+                                scannableChannels.length && (
+                                <div>
+                                    • Category channels automatically ignored
+                                </div>
                             )}
                         </div>
                         {shouldStart && (
@@ -249,14 +286,21 @@ export function InitialScan({
                 return (
                     <div className="space-y-2">
                         <p className="text-sm text-muted-foreground">
-                            We'll scan all channels to discover existing clips and set up the initial database.
+                            We&apos;ll scan all channels to discover existing
+                            clips and set up the initial database.
                         </p>
                         <div className="text-xs text-muted-foreground space-y-1">
-                            <div>• Scan {scannableChannels.length} channels for clips</div>
+                            <div>
+                                • Scan {scannableChannels.length} channels for
+                                clips
+                            </div>
                             <div>• Process up to 500 messages per channel</div>
                             <div>• Build initial clip database</div>
-                            {serverChannels.length > scannableChannels.length && (
-                                <div>• Category channels automatically ignored</div>
+                            {serverChannels.length >
+                                scannableChannels.length && (
+                                <div>
+                                    • Category channels automatically ignored
+                                </div>
                             )}
                         </div>
                         {shouldStart && (
@@ -271,10 +315,13 @@ export function InitialScan({
 
         if (stepData.state === "loading") {
             if (!scanStarted) {
-                const channelsToScan = channelsNeedingScans.length || scannableChannels.length;
+                const channelsToScan =
+                    channelsNeedingScans.length || scannableChannels.length;
                 return (
                     <div className="space-y-2">
-                        <p className="text-sm font-medium">Starting initial scan...</p>
+                        <p className="text-sm font-medium">
+                            Starting initial scan...
+                        </p>
                         <div className="text-xs text-muted-foreground">
                             Preparing to scan {channelsToScan} channels...
                         </div>
@@ -285,7 +332,10 @@ export function InitialScan({
                         )}
                         {serverChannels.length > scannableChannels.length && (
                             <div className="text-xs text-muted-foreground">
-                                ({serverChannels.length - scannableChannels.length} category channels ignored)
+                                (
+                                {serverChannels.length -
+                                    scannableChannels.length}{" "}
+                                category channels ignored)
                             </div>
                         )}
                     </div>
@@ -294,42 +344,68 @@ export function InitialScan({
 
             return (
                 <div className="space-y-3">
-                    <p className="text-sm font-medium">Initial scan in progress...</p>
-                    
+                    <p className="text-sm font-medium">
+                        Initial scan in progress...
+                    </p>
+
                     <div className="grid grid-cols-2 gap-4 text-sm">
                         <div className="space-y-1">
                             <div className="flex justify-between">
-                                <span className="text-muted-foreground">Queued:</span>
-                                <span className="font-medium">{scanStats.queued}</span>
+                                <span className="text-muted-foreground">
+                                    Queued:
+                                </span>
+                                <span className="font-medium">
+                                    {scanStats.queued}
+                                </span>
                             </div>
                             <div className="flex justify-between">
-                                <span className="text-muted-foreground">Running:</span>
-                                <span className="font-medium text-blue-600">{scanStats.running}</span>
+                                <span className="text-muted-foreground">
+                                    Running:
+                                </span>
+                                <span className="font-medium text-blue-600">
+                                    {scanStats.running}
+                                </span>
                             </div>
                         </div>
                         <div className="space-y-1">
                             <div className="flex justify-between">
-                                <span className="text-muted-foreground">Completed:</span>
-                                <span className="font-medium text-green-600">{scanStats.completed}</span>
+                                <span className="text-muted-foreground">
+                                    Completed:
+                                </span>
+                                <span className="font-medium text-green-600">
+                                    {scanStats.completed}
+                                </span>
                             </div>
                             <div className="flex justify-between">
-                                <span className="text-muted-foreground">Failed:</span>
-                                <span className="font-medium text-red-600">{scanStats.failed}</span>
+                                <span className="text-muted-foreground">
+                                    Failed:
+                                </span>
+                                <span className="font-medium text-red-600">
+                                    {scanStats.failed}
+                                </span>
                             </div>
                         </div>
                     </div>
 
                     <div className="w-full bg-gray-200 rounded-full h-2">
-                        <div 
-                            className="bg-blue-600 h-2 rounded-full transition-all duration-300" 
-                            style={{ 
-                                width: `${scanStats.total > 0 ? ((scanStats.completed + scanStats.failed) / scanStats.total) * 100 : 0}%` 
+                        <div
+                            className="bg-blue-600 h-2 rounded-full transition-all duration-300"
+                            style={{
+                                width: `${
+                                    scanStats.total > 0
+                                        ? ((scanStats.completed +
+                                              scanStats.failed) /
+                                              scanStats.total) *
+                                          100
+                                        : 0
+                                }%`,
                             }}
                         />
                     </div>
 
                     <div className="text-xs text-muted-foreground">
-                        Progress: {scanStats.completed + scanStats.failed} / {scanStats.total} channels
+                        Progress: {scanStats.completed + scanStats.failed} /{" "}
+                        {scanStats.total} channels
                     </div>
                 </div>
             );
@@ -345,12 +421,19 @@ export function InitialScan({
                     <div className="text-sm">
                         {alreadyScannedCount > 0 ? (
                             <>
-                                <span className="font-semibold">{totalProcessed}</span> channels processed 
-                                ({scanStats.total} scanned, {alreadyScannedCount} already done)
+                                <span className="font-semibold">
+                                    {totalProcessed}
+                                </span>{" "}
+                                channels processed ({scanStats.total} scanned,{" "}
+                                {alreadyScannedCount} already done)
                             </>
                         ) : (
                             <>
-                                Scanned <span className="font-semibold">{scanStats.total}</span> channels successfully.
+                                Scanned{" "}
+                                <span className="font-semibold">
+                                    {scanStats.total}
+                                </span>{" "}
+                                channels successfully.
                             </>
                         )}
                     </div>
@@ -367,21 +450,36 @@ export function InitialScan({
                     <p className="text-sm font-medium text-yellow-600">
                         Some channels failed to scan
                     </p>
-                    
+
                     <div className="text-sm">
-                        <span className="font-semibold text-green-600">{scanStats.completed}</span> succeeded, {" "}
-                        <span className="font-semibold text-red-600">{scanStats.failed}</span> failed
+                        <span className="font-semibold text-green-600">
+                            {scanStats.completed}
+                        </span>{" "}
+                        succeeded,{" "}
+                        <span className="font-semibold text-red-600">
+                            {scanStats.failed}
+                        </span>{" "}
+                        failed
                     </div>
 
                     {failedScans.length > 0 && (
                         <div className="space-y-2">
-                            <div className="text-xs font-medium">Failed channels:</div>
+                            <div className="text-xs font-medium">
+                                Failed channels:
+                            </div>
                             <div className="max-h-32 overflow-y-auto space-y-1">
                                 {failedScans.map(scan => (
-                                    <div key={scan.channel_id} className="text-xs bg-red-50 p-2 rounded">
-                                        <div className="font-medium">#{getChannelName(scan.channel_id)}</div>
+                                    <div
+                                        key={scan.channel_id}
+                                        className="text-xs bg-red-50 p-2 rounded"
+                                    >
+                                        <div className="font-medium">
+                                            #{getChannelName(scan.channel_id)}
+                                        </div>
                                         {scan.error_message && (
-                                            <div className="text-red-600 mt-1">{scan.error_message}</div>
+                                            <div className="text-red-600 mt-1">
+                                                {scan.error_message}
+                                            </div>
                                         )}
                                     </div>
                                 ))}

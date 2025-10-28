@@ -160,8 +160,8 @@ export function DiscoverChannels({
                         No Channels Discovered
                     </p>
                     <div className="text-xs text-muted-foreground">
-                        We couldn't find any channels in your server. This might
-                        be a temporary issue.
+                        We couldn&apos;t find any channels in your server. This
+                        might be a temporary issue.
                     </div>
                     <Button onClick={handleRefresh} disabled={isLoading}>
                         Refresh

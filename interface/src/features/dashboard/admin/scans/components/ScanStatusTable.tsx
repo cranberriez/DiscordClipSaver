@@ -186,8 +186,8 @@ export function ScanStatusTable({ channels, onRefresh }: ScanStatusTableProps) {
 
                 {filteredChannels.length === 0 && channels.length > 0 && (
                     <div className="p-6 text-center text-muted-foreground">
-                        All channels are disabled. Click "Show Disabled" to view
-                        them.
+                        All channels are disabled. Click &quot;Show
+                        Disabled&quot; to view them.
                     </div>
                 )}
                 {channels.length === 0 && (

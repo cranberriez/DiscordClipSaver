@@ -115,14 +115,16 @@ export function SetupComplete({ guild }: { guild: Guild }) {
 
                 {/* Next Steps */}
                 <div className="space-y-3 p-4 bg-blue-900/20 rounded-lg border border-blue-900/10">
-                    <h4 className="font-bold text-blue-300">What's Next?</h4>
+                    <h4 className="font-bold text-blue-300">
+                        What&apos;s Next?
+                    </h4>
                     <ul className="space-y-2 text-sm text-blue-100">
                         <li className="flex items-start gap-2">
                             <div className="w-1.5 h-1.5 bg-blue-100 rounded-full mt-2 flex-shrink-0"></div>
                             <span>
                                 <strong>Automatic Scanning:</strong> New
                                 messages will be automatically scanned for clips
-                                as they're posted
+                                as they&apos;re posted
                             </span>
                         </li>
                         <li className="flex items-start gap-2">

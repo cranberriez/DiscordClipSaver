@@ -5,6 +5,7 @@ import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import { Button } from "@/components/ui/button";
 import { MoveLeft } from "lucide-react";
 import { SetupMain } from "@/features/setup/components";
+import Link from "next/link";
 
 type PageProps = {
     params: Promise<{ guildId: string }>;
@@ -41,10 +42,10 @@ function ErrorBox({ message }: { message: string }) {
         <div className="flex flex-col items-center justify-center h-full gap-4">
             <p className="text-xl font-semibold text-red-400">{message}</p>
             <Button asChild variant="outline">
-                <a href="/dashboard">
+                <Link href="/dashboard">
                     <MoveLeft />
                     Back to Dashboard
-                </a>
+                </Link>
             </Button>
         </div>
     );

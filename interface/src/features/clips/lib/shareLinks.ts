@@ -49,8 +49,6 @@ export function openInDiscord(
     const appUrl = getDiscordAppUrl(guildId, channelId, messageId);
     const webUrl = getDiscordWebUrl(guildId, channelId, messageId);
 
-    let fallbackTimer: ReturnType<typeof setTimeout>;
-
     const cleanup = () => {
         document.removeEventListener(
             "visibilitychange",
@@ -69,7 +67,7 @@ export function openInDiscord(
     document.addEventListener("visibilitychange", handleVisibilityChange);
 
     // Set a timer to fallback to the web URL.
-    fallbackTimer = setTimeout(() => {
+    const fallbackTimer = setTimeout(() => {
         // If this timer runs, the page was likely not hidden, so the app didn't open.
         window.open(webUrl, target);
         cleanup();
