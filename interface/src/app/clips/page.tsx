@@ -128,33 +128,36 @@ export default function ClipsPage() {
     return (
         <>
             {/* Full-screen clips grid background */}
-            <div className="flex flex-col h-screen inset-0 bg-background">
+            <div className="flex flex-col h-screen bg-background">
                 <Navbar noLines />
                 <FilterBar
                     guildName={selectedGuild?.name}
                     channelCount={channels.length}
                     authorCount={authors.length}
                 />
-                <ClipGrid
-                    clips={filteredClips}
-                    authorMap={authorMap}
-                    setClipIndex={setClipIndex}
-                    setSelectedClip={setSelectedClip}
-                    hasNextPage={hasNextPage}
-                    isFetchingNextPage={isFetchingNextPage}
-                    fetchNextPage={fetchNextPage}
-                />
-            </div>
+                {/* Content area (below navbar + filter bar). Make relative so overlays don't cover navbar. */}
+                <div className="relative flex-1">
+                    <ClipGrid
+                        clips={filteredClips}
+                        authorMap={authorMap}
+                        setClipIndex={setClipIndex}
+                        setSelectedClip={setSelectedClip}
+                        hasNextPage={hasNextPage}
+                        isFetchingNextPage={isFetchingNextPage}
+                        fetchNextPage={fetchNextPage}
+                    />
 
-            {/* Content overlays for states (when no clips or loading) */}
-            <ErrorOverlay
-                selectedGuildId={selectedGuildId}
-                clipsLoading={clipsLoading}
-                clipsError={clipsError}
-                filteredClips={filteredClips}
-                openGuildModal={openGuildModal}
-                allClipCount={allClips.length}
-            />
+                    {/* Content overlays for states (when no clips or loading) */}
+                    <ErrorOverlay
+                        selectedGuildId={selectedGuildId}
+                        clipsLoading={clipsLoading}
+                        clipsError={clipsError}
+                        filteredClips={filteredClips}
+                        openGuildModal={openGuildModal}
+                        allClipCount={allClips.length}
+                    />
+                </div>
+            </div>
 
             {/* Modals */}
             <GuildSelectModal guilds={guilds} isLoading={guildsLoading} />

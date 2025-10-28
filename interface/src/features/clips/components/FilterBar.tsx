@@ -10,7 +10,10 @@ import {
     SelectValue,
 } from "@/components/ui/select";
 import { Server, Hash, User, Search, ArrowUpDown } from "lucide-react";
-import { useClipFiltersStore, type SortOrder } from "../stores/useClipFiltersStore";
+import {
+    useClipFiltersStore,
+    type SortOrder,
+} from "../stores/useClipFiltersStore";
 
 interface FilterBarProps {
     guildName?: string;
@@ -20,7 +23,7 @@ interface FilterBarProps {
 
 /**
  * FilterBar component - Sticky filter bar at the top of the clips page
- * 
+ *
  * Features:
  * - Guild selection button
  * - Channel selection button (disabled if no guild selected)
@@ -52,18 +55,22 @@ export function FilterBar({
         if (!hasGuildSelected) return "Channels";
         if (selectedChannelIds.length === 0) return "All Channels";
         if (selectedChannelIds.length === channelCount) return "All Channels";
-        return `${selectedChannelIds.length} Channel${selectedChannelIds.length === 1 ? "" : "s"}`;
+        return `${selectedChannelIds.length} Channel${
+            selectedChannelIds.length === 1 ? "" : "s"
+        }`;
     };
 
     const getAuthorButtonText = () => {
         if (!hasGuildSelected) return "Authors";
         if (selectedAuthorIds.length === 0) return "All Authors";
         if (selectedAuthorIds.length === authorCount) return "All Authors";
-        return `${selectedAuthorIds.length} Author${selectedAuthorIds.length === 1 ? "" : "s"}`;
+        return `${selectedAuthorIds.length} Author${
+            selectedAuthorIds.length === 1 ? "" : "s"
+        }`;
     };
 
     return (
-        <div className="sticky top-0 z-10 bg-background border-b shadow-sm">
+        <div className="sticky top-0 z-10 bg-background border-b">
             <div className="container mx-auto px-4 py-4">
                 <div className="flex flex-col gap-4">
                     {/* Top row: Filter buttons */}
@@ -103,7 +110,7 @@ export function FilterBar({
                         {/* Sort order */}
                         <Select
                             value={sortOrder}
-                            onValueChange={(value) =>
+                            onValueChange={value =>
                                 setSortOrder(value as SortOrder)
                             }
                             disabled={!hasGuildSelected}
@@ -118,7 +125,9 @@ export function FilterBar({
                                 <SelectItem value="desc">
                                     Newest First
                                 </SelectItem>
-                                <SelectItem value="asc">Oldest First</SelectItem>
+                                <SelectItem value="asc">
+                                    Oldest First
+                                </SelectItem>
                             </SelectContent>
                         </Select>
                     </div>
@@ -129,7 +138,7 @@ export function FilterBar({
                         <Input
                             placeholder="Search clips by filename or message content..."
                             value={searchQuery}
-                            onChange={(e) => setSearchQuery(e.target.value)}
+                            onChange={e => setSearchQuery(e.target.value)}
                             disabled={!hasGuildSelected}
                             className="pl-9"
                         />
