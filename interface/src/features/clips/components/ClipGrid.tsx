@@ -14,6 +14,8 @@ interface ClipGridProps {
     hasNextPage?: boolean;
     isFetchingNextPage?: boolean;
     fetchNextPage?: () => void;
+    scrollToClipId?: string | null;
+    highlightClipId?: string | null;
 }
 
 export function ClipGrid({
@@ -24,6 +26,8 @@ export function ClipGrid({
     hasNextPage,
     isFetchingNextPage,
     fetchNextPage,
+    scrollToClipId,
+    highlightClipId,
 }: ClipGridProps) {
     const parentRef = useRef<HTMLDivElement>(null);
     const sentinelRef = useRef<HTMLDivElement>(null);
@@ -52,6 +56,24 @@ export function ClipGrid({
         };
     }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
 
+    // Auto-scroll to a specific clip ID when requested or when clips change
+    useEffect(() => {
+        if (!scrollToClipId) return;
+        const parent = parentRef.current;
+        if (!parent) return;
+        const el = parent.querySelector<HTMLDivElement>(`#clip-${scrollToClipId}`);
+        if (el) {
+            el.scrollIntoView({ behavior: "smooth", block: "center" });
+            return;
+        }
+        // Retry shortly in case it's just rendered after pagination
+        const t = window.setTimeout(() => {
+            const el2 = parent.querySelector<HTMLDivElement>(`#clip-${scrollToClipId}`);
+            if (el2) el2.scrollIntoView({ behavior: "smooth", block: "center" });
+        }, 150);
+        return () => window.clearTimeout(t);
+    }, [scrollToClipId, clips]);
+
     return (
         <PageContainer
             ref={parentRef}
@@ -69,6 +91,7 @@ export function ClipGrid({
                             setSelectedClip(clickedClip);
                         }}
                         authorMap={authorMap}
+                        highlighted={highlightClipId === clip.clip.id}
                     />
                 ))}
             </div>

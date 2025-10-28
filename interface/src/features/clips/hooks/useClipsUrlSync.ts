@@ -44,6 +44,8 @@ export function useClipsUrlSync() {
     // Track hydration from URL to avoid feedback loop
     const hydratedRef = useRef(false);
     const suppressWriteRef = useRef(true);
+    // Track clipId separately from persisted filters
+    const clipIdRef = useRef<string | null>(null);
 
     // Debounce writes (especially search typing)
     const debounceRef = useRef<number | null>(null);
@@ -64,6 +66,9 @@ export function useClipsUrlSync() {
         return Number.isFinite(n) && n > 0 ? n : 1;
     }, [searchParams]);
 
+    // Read clipId from URL
+    const clipIdFromUrl = useMemo(() => searchParams.get("clipId"), [searchParams]);
+
     // Hydrate store from URL once
     useEffect(() => {
         if (hydratedRef.current) return;
@@ -81,6 +86,9 @@ export function useClipsUrlSync() {
         if (authorIds) setAuthorIds(authorIds);
         if (q !== "") setSearchQuery(q);
         if (sort === "asc" || sort === "desc") setSortOrder(sort);
+
+        // Track initial clipId
+        clipIdRef.current = searchParams.get("clipId");
 
         hydratedRef.current = true;
         // Allow writes after a tick to avoid replacing immediately
@@ -113,6 +121,8 @@ export function useClipsUrlSync() {
 
         // Preserve page param if present
         if (pageFromUrl && pageFromUrl > 1) params.page = String(pageFromUrl);
+        // Preserve clipId if present
+        if (clipIdRef.current) params.clipId = clipIdRef.current;
 
         const qs = buildQuery(params);
         // Skip if unchanged
@@ -147,6 +157,7 @@ export function useClipsUrlSync() {
                 sort: sortOrder === "desc" ? undefined : sortOrder,
                 page: String(p),
             };
+            if (clipIdRef.current) params.clipId = clipIdRef.current;
             const qs = buildQuery(params);
             router.replace(`${pathname}${qs ? `?${qs}` : ""}`);
         },
@@ -194,5 +205,27 @@ export function useClipsUrlSync() {
         hydrated: hydratedRef.current,
         page: pageFromUrl,
         setPage,
+        clipId: clipIdFromUrl,
+        setClipId: (id: string | null) => {
+            if (!hydratedRef.current) return;
+            clipIdRef.current = id;
+            const params: Record<string, string | undefined> = {
+                guildId: selectedGuildId || undefined,
+                channelIds:
+                    selectedChannelIds && selectedChannelIds.length > 0
+                        ? selectedChannelIds.join(",")
+                        : undefined,
+                authorIds:
+                    selectedAuthorIds && selectedAuthorIds.length > 0
+                        ? selectedAuthorIds.join(",")
+                        : undefined,
+                q: searchQuery?.trim() ? searchQuery.trim() : undefined,
+                sort: sortOrder === "desc" ? undefined : sortOrder,
+                page: String(pageFromUrl || 1),
+                clipId: id || undefined,
+            };
+            const qs = buildQuery(params);
+            scheduleReplace(qs);
+        },
     } as const;
 }

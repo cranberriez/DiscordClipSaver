@@ -14,6 +14,7 @@ interface ClipCardProps {
     clip: FullClip;
     onClick: (clip: FullClip) => void;
     authorMap?: Map<string, AuthorWithStats>;
+    highlighted?: boolean;
 }
 
 /**
@@ -24,7 +25,7 @@ interface ClipCardProps {
  * - Author avatar and name
  * - Time posted (relative)
  */
-export function ClipCard({ clip, onClick, authorMap }: ClipCardProps) {
+export function ClipCard({ clip, onClick, authorMap, highlighted }: ClipCardProps) {
     const { hasTooManyErrors, reportError } = useImageErrorStore();
 
     const getThumbnailUrl = (): string | null => {
@@ -48,7 +49,11 @@ export function ClipCard({ clip, onClick, authorMap }: ClipCardProps) {
 
     return (
         <div
-            className="group relative cursor-pointer rounded-lg overflow-hidden hover:shadow-lg hover:bg-muted/20 transition-all"
+            id={`clip-${clip.clip.id}`}
+            className={
+                "group relative cursor-pointer rounded-lg overflow-hidden hover:shadow-lg hover:bg-muted/20 transition-all" +
+                (highlighted ? " ring-2 ring-blue-500" : "")
+            }
             onClick={() => onClick(clip)}
         >
             {/* Thumbnail - 16:9 aspect ratio */}

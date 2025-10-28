@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useClipsUrlSync } from "@/features/clips/hooks/useClipsUrlSync";
 import { useClipsData } from "@/features/clips/hooks/useClipsData";
 import { Button } from "@/components/ui/button";
@@ -32,7 +32,7 @@ export default function ClipsPage() {
     const { selectedGuildId, openGuildModal } = useClipFiltersStore();
 
     // URL <-> Store synchronization and page param
-    const { hydrated, page, setPage } = useClipsUrlSync();
+    const { hydrated, page, setPage, clipId, setClipId } = useClipsUrlSync();
 
     // Centralized data fetching that waits for hydration and targets page
     const {
@@ -50,6 +50,18 @@ export default function ClipsPage() {
 
     const [selectedClip, setSelectedClip] = useState<FullClip | null>(null);
     const [clipIndex, setClipIndex] = useState<number>(-1);
+    const [lastHighlightedId, setLastHighlightedId] = useState<string | null>(null);
+    // Track initial clipId from URL and whether we've auto-opened already
+    const initialClipIdRef = useRef<string | null>(null);
+    const autoOpenedRef = useRef(false);
+
+    useEffect(() => {
+        if (!hydrated) return;
+        // Capture initial clipId exactly once after hydration
+        if (initialClipIdRef.current === null) {
+            initialClipIdRef.current = clipId ?? null;
+        }
+    }, [hydrated, clipId]);
 
     // Auto-open guild modal if no guild selected
     useEffect(() => {
@@ -67,6 +79,39 @@ export default function ClipsPage() {
         }
     }, [hydrated, clipsQuery.data?.pages.length, page, setPage]);
 
+    // If an initial clipId is present in URL, ensure we load until it's available and open modal (only once)
+    useEffect(() => {
+        if (!hydrated) return;
+        const targetClipId = initialClipIdRef.current;
+        if (!targetClipId || autoOpenedRef.current) return;
+        // Attempt to find the clip in currently loaded clips
+        const idx = filteredClips.findIndex(c => c.clip.id === targetClipId);
+        if (idx >= 0) {
+            // If modal not already on this clip, open and set index
+            if (!selectedClip || selectedClip.clip.id !== targetClipId) {
+                setClipIndex(idx);
+                setSelectedClip(filteredClips[idx]);
+            }
+            // Mark as auto-opened to avoid re-opening again
+            autoOpenedRef.current = true;
+            return;
+        }
+        // Not found yet, keep fetching next pages until found or exhausted
+        if (clipsQuery.hasNextPage && !clipsQuery.isFetchingNextPage) {
+            clipsQuery.fetchNextPage();
+        } else if (!clipsQuery.hasNextPage) {
+            // Exhausted pages; don't try again
+            autoOpenedRef.current = true;
+        }
+    }, [hydrated, filteredClips, clipsQuery.hasNextPage, clipsQuery.isFetchingNextPage, clipsQuery.fetchNextPage, selectedClip]);
+
+    // When user selects a clip by clicking a card, update URL clipId
+    const handleSelectClip = (clip: FullClip, index: number) => {
+        setClipIndex(index);
+        setSelectedClip(clip);
+        setClipId(clip.clip.id);
+    };
+
     return (
         <>
             {/* Full-screen clips grid background */}
@@ -81,10 +126,12 @@ export default function ClipsPage() {
                     clips={filteredClips}
                     authorMap={authorMap}
                     setClipIndex={setClipIndex}
-                    setSelectedClip={setSelectedClip}
+                    setSelectedClip={clip => handleSelectClip(clip, filteredClips.findIndex(c => c.clip.id === clip.clip.id))}
                     hasNextPage={clipsQuery.hasNextPage}
                     isFetchingNextPage={clipsQuery.isFetchingNextPage}
                     fetchNextPage={clipsQuery.fetchNextPage}
+                    scrollToClipId={clipId ?? null}
+                    highlightClipId={lastHighlightedId}
                 />
             </div>
 
@@ -111,15 +158,25 @@ export default function ClipsPage() {
                 <ClipModal
                     clip={selectedClip}
                     onClose={() => {
+                        // Highlight the clip that was just watched for a moment
+                        const justWatchedId = selectedClip.clip.id;
+                        setLastHighlightedId(justWatchedId);
+                        // Clear highlight after 2 seconds
+                        window.setTimeout(() => setLastHighlightedId(current => (current === justWatchedId ? null : current)), 2000);
+
+                        // Clear modal and URL param
                         setSelectedClip(null);
                         setClipIndex(-1);
+                        setClipId(null);
                     }}
                     onPrevious={
                         clipIndex > 0
                             ? () => {
                                   const newIndex = clipIndex - 1;
                                   setClipIndex(newIndex);
-                                  setSelectedClip(filteredClips[newIndex]);
+                                  const newClip = filteredClips[newIndex];
+                                  setSelectedClip(newClip);
+                                  setClipId(newClip.clip.id);
                               }
                             : undefined
                     }
@@ -128,7 +185,9 @@ export default function ClipsPage() {
                             ? () => {
                                   const newIndex = clipIndex + 1;
                                   setClipIndex(newIndex);
-                                  setSelectedClip(filteredClips[newIndex]);
+                                  const newClip = filteredClips[newIndex];
+                                  setSelectedClip(newClip);
+                                  setClipId(newClip.clip.id);
 
                                   // Load more clips if we're near the end and more are available
                                   if (
