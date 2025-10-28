@@ -1,13 +1,13 @@
 import { getServerSession } from "next-auth";
 import { authOptions } from "./api/auth/[...nextauth]/route";
-import { 
-    HeroSection, 
-    FeatureGrid, 
-    PricingSection, 
-    OpenSourceBanner, 
+import {
+    HeroSection,
+    FeatureGrid,
+    PricingSection,
+    OpenSourceBanner,
     CallToAction,
     HeroLayout,
-    SectionLayout
+    SectionLayout,
 } from "@/features/hero/components";
 import { PageContainer, RootLayout } from "@/components/layout";
 
@@ -17,11 +17,11 @@ export default async function HomePage() {
 
     return (
         <RootLayout noLines>
+            <HeroLayout>
+                <HeroSection isAuthenticated={isAuthenticated} />
+            </HeroLayout>
             <PageContainer noLines>
                 <div className="flex flex-col">
-                    <HeroLayout>
-                        <HeroSection isAuthenticated={isAuthenticated} />
-                    </HeroLayout>
                     <SectionLayout>
                         <FeatureGrid />
                     </SectionLayout>

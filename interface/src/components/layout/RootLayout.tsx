@@ -10,7 +10,7 @@ export function RootLayout({
     return (
         <div className="min-h-screen flex flex-col">
             <Navbar noLines={noLines} />
-            <main className="flex flex-1">{children}</main>
+            <main className="flex flex-col flex-1">{children}</main>
         </div>
     );
 }
