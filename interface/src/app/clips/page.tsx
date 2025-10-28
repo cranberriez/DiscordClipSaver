@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { Suspense, useEffect, useRef, useState } from "react";
 import { useClipsUrlSync } from "@/features/clips/hooks/useClipsUrlSync";
 import { useClipsData } from "@/features/clips/hooks/useClipsData";
 import { Button } from "@/components/ui/button";
@@ -122,7 +122,8 @@ export default function ClipsPage() {
     };
 
     return (
-        <>
+        // TODO: Do better...
+        <Suspense fallback={null}>
             {/* Full-screen clips grid background */}
             <div className="flex flex-col h-screen inset-0 bg-background">
                 <Navbar noLines />
@@ -235,7 +236,7 @@ export default function ClipsPage() {
                     authorMap={authorMap}
                 />
             )}
-        </>
+        </Suspense>
     );
 }
 
