@@ -3,7 +3,7 @@
 import { useState, useCallback, useEffect, useRef } from "react";
 import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { InfoModal } from "./InfoModal";
-import { useLatestVideoUrl } from "@/lib/hooks/useLatestVideoUrl";
+import { useLatestVideoUrl } from "@/features/clips/hooks/useLatestVideoUrl";
 import type { FullClip } from "@/lib/api/clip";
 import type { AuthorWithStats } from "@/lib/api/author";
 import { formatClipName } from "../../../lib/formatClipName";
@@ -48,7 +48,9 @@ export function ClipModal({
     const latest = useLatestVideoUrl(initialClip);
     const effective = latest.clip ?? initialClip;
     const clip = effective.clip;
-    const [videoUrl, setVideoUrl] = useState<string>(latest.url ?? clip.cdn_url);
+    const [videoUrl, setVideoUrl] = useState<string>(
+        latest.url ?? clip.cdn_url
+    );
     const [hasPlaybackError, setHasPlaybackError] = useState(false);
     const [showDetailsModal, setShowDetailsModal] = useState(false);
 
@@ -70,7 +72,9 @@ export function ClipModal({
     // =============================
     // Direction-aware preloading
     // =============================
-    const [lastDirection, setLastDirection] = useState<"next" | "prev" | null>(null);
+    const [lastDirection, setLastDirection] = useState<"next" | "prev" | null>(
+        null
+    );
     const preloadTimerRef = useRef<number | null>(null);
     const preloadedSetRef = useRef<Set<string>>(new Set());
     const [preloadUrl, setPreloadUrl] = useState<string | null>(null);
@@ -85,14 +89,16 @@ export function ClipModal({
         if (!urlToPreload) return;
         if (preloadedSetRef.current.has(urlToPreload)) return;
 
-        if (preloadTimerRef.current) window.clearTimeout(preloadTimerRef.current);
+        if (preloadTimerRef.current)
+            window.clearTimeout(preloadTimerRef.current);
         preloadTimerRef.current = window.setTimeout(() => {
             preloadedSetRef.current.add(urlToPreload);
             setPreloadUrl(urlToPreload);
         }, 300);
 
         return () => {
-            if (preloadTimerRef.current) window.clearTimeout(preloadTimerRef.current);
+            if (preloadTimerRef.current)
+                window.clearTimeout(preloadTimerRef.current);
         };
     }, [lastDirection, nextUrl, prevUrl]);
 

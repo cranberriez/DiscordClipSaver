@@ -1,4 +1,8 @@
-import { queryOptions, infiniteQueryOptions } from "@tanstack/react-query";
+import {
+    queryOptions,
+    infiniteQueryOptions,
+    type QueryClient,
+} from "@tanstack/react-query";
 import { api } from "@/lib/api/client";
 import type { FullClip, ClipListResponse } from "@/lib/api/clip";
 
@@ -23,11 +27,8 @@ export const clipKeys = {
     lists: () => [...clipKeys.all, "list"] as const,
 
     // List by guild with optional filters
-    byGuild: (
-        guildId: string,
-        sort?: "asc" | "desc",
-        authorIds?: string[]
-    ) => [...clipKeys.lists(), { guildId, sort, authorIds }] as const,
+    byGuild: (guildId: string, sort?: "asc" | "desc", authorIds?: string[]) =>
+        [...clipKeys.lists(), { guildId, sort, authorIds }] as const,
 
     // List by specific channels with optional author filter
     byChannels: (
@@ -35,7 +36,11 @@ export const clipKeys = {
         channelIds: string[],
         sort?: "asc" | "desc",
         authorIds?: string[]
-    ) => [...clipKeys.lists(), { guildId, channelIds, sort, authorIds }] as const,
+    ) =>
+        [
+            ...clipKeys.lists(),
+            { guildId, channelIds, sort, authorIds },
+        ] as const,
 
     // Single clip detail
     detail: (clipId: string) => [...clipKeys.all, clipId] as const,
@@ -66,7 +71,11 @@ export const clipsQuery = (params: {
                       params.sort,
                       params.authorIds
                   )
-                : clipKeys.byGuild(params.guildId, params.sort, params.authorIds),
+                : clipKeys.byGuild(
+                      params.guildId,
+                      params.sort,
+                      params.authorIds
+                  ),
         queryFn: () => api.clips.list(params),
         enabled: !!params.guildId,
         staleTime: 60_000, // 1 minute
@@ -104,7 +113,11 @@ export const clipsInfiniteQuery = (params: {
                       params.sort,
                       params.authorIds
                   )
-                : clipKeys.byGuild(params.guildId, params.sort, params.authorIds),
+                : clipKeys.byGuild(
+                      params.guildId,
+                      params.sort,
+                      params.authorIds
+                  ),
         queryFn: ({ pageParam }) =>
             api.clips.list({
                 ...params,
@@ -140,4 +153,103 @@ export const clipQuery = (guildId: string, clipId: string) =>
  */
 export function isClipExpired(clip: FullClip): boolean {
     return new Date(clip.clip.expires_at) < new Date();
+}
+
+// ============================================================================
+// Cache patch helpers (minimal invalidation)
+// ============================================================================
+
+type ClipPatch = { cdn_url?: string; expires_at?: string | Date };
+
+/** Patch the single-clip detail cache. */
+export function patchClipDetail(
+    qc: QueryClient,
+    clipId: string,
+    patch: ClipPatch
+) {
+    qc.setQueryData<FullClip | undefined>(clipKeys.detail(clipId), old => {
+        if (!old) return old;
+        const normalized: ClipPatch = { ...patch };
+        if (
+            normalized.expires_at &&
+            typeof normalized.expires_at === "string"
+        ) {
+            normalized.expires_at = new Date(normalized.expires_at);
+        }
+        return { ...old, clip: { ...old.clip, ...normalized } } as FullClip;
+    });
+}
+
+/** Patch a specific infinite list (by current params). */
+export function patchClipInInfiniteList(
+    qc: QueryClient,
+    params: {
+        guildId: string;
+        channelIds?: string[];
+        authorIds?: string[];
+        sort?: "asc" | "desc";
+    },
+    clipId: string,
+    patch: ClipPatch
+) {
+    const listKey =
+        params.channelIds && params.channelIds.length > 0
+            ? clipKeys.byChannels(
+                  params.guildId,
+                  params.channelIds,
+                  params.sort,
+                  params.authorIds
+              )
+            : clipKeys.byGuild(params.guildId, params.sort, params.authorIds);
+
+    qc.setQueryData<
+        | { pages: { clips: any[]; pagination?: any }[]; pageParams: any[] }
+        | undefined
+    >(listKey, old => {
+        if (!old) return old;
+        const pages = old.pages.map(page => ({
+            ...page,
+            clips: page.clips.map(c => {
+                if (c.clip.id !== clipId) return c;
+                const normalized: ClipPatch = { ...patch };
+                if (
+                    normalized.expires_at &&
+                    typeof normalized.expires_at === "string"
+                ) {
+                    normalized.expires_at = new Date(normalized.expires_at);
+                }
+                return { ...c, clip: { ...c.clip, ...normalized } };
+            }),
+        }));
+        return { ...old, pages };
+    });
+}
+
+/** Optionally patch across all list variants under clips/lists (if clip can appear in many). */
+export function patchClipAcrossLists(
+    qc: QueryClient,
+    clipId: string,
+    patch: ClipPatch
+) {
+    qc.setQueriesData<{ pages: { clips: any[] }[]; pageParams: any[] }>(
+        { queryKey: clipKeys.lists(), exact: false },
+        old => {
+            if (!old) return old;
+            const pages = old.pages.map(page => ({
+                ...page,
+                clips: page.clips.map(c => {
+                    if (c.clip.id !== clipId) return c;
+                    const normalized: ClipPatch = { ...patch };
+                    if (
+                        normalized.expires_at &&
+                        typeof normalized.expires_at === "string"
+                    ) {
+                        normalized.expires_at = new Date(normalized.expires_at);
+                    }
+                    return { ...c, clip: { ...c.clip, ...normalized } };
+                }),
+            }));
+            return { ...old, pages };
+        }
+    );
 }

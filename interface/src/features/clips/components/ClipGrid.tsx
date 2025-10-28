@@ -61,15 +61,20 @@ export function ClipGrid({
         if (!scrollToClipId) return;
         const parent = parentRef.current;
         if (!parent) return;
-        const el = parent.querySelector<HTMLDivElement>(`#clip-${scrollToClipId}`);
+        const el = parent.querySelector<HTMLDivElement>(
+            `#clip-${scrollToClipId}`
+        );
         if (el) {
             el.scrollIntoView({ behavior: "smooth", block: "center" });
             return;
         }
         // Retry shortly in case it's just rendered after pagination
         const t = window.setTimeout(() => {
-            const el2 = parent.querySelector<HTMLDivElement>(`#clip-${scrollToClipId}`);
-            if (el2) el2.scrollIntoView({ behavior: "smooth", block: "center" });
+            const el2 = parent.querySelector<HTMLDivElement>(
+                `#clip-${scrollToClipId}`
+            );
+            if (el2)
+                el2.scrollIntoView({ behavior: "smooth", block: "center" });
         }, 150);
         return () => window.clearTimeout(t);
     }, [scrollToClipId, clips]);

@@ -50,7 +50,9 @@ export default function ClipsPage() {
 
     const [selectedClip, setSelectedClip] = useState<FullClip | null>(null);
     const [clipIndex, setClipIndex] = useState<number>(-1);
-    const [lastHighlightedId, setLastHighlightedId] = useState<string | null>(null);
+    const [lastHighlightedId, setLastHighlightedId] = useState<string | null>(
+        null
+    );
     // Track initial clipId from URL and whether we've auto-opened already
     const initialClipIdRef = useRef<string | null>(null);
     const autoOpenedRef = useRef(false);
@@ -103,7 +105,14 @@ export default function ClipsPage() {
             // Exhausted pages; don't try again
             autoOpenedRef.current = true;
         }
-    }, [hydrated, filteredClips, clipsQuery.hasNextPage, clipsQuery.isFetchingNextPage, clipsQuery.fetchNextPage, selectedClip]);
+    }, [
+        hydrated,
+        filteredClips,
+        clipsQuery.hasNextPage,
+        clipsQuery.isFetchingNextPage,
+        clipsQuery.fetchNextPage,
+        selectedClip,
+    ]);
 
     // When user selects a clip by clicking a card, update URL clipId
     const handleSelectClip = (clip: FullClip, index: number) => {
@@ -126,7 +135,14 @@ export default function ClipsPage() {
                     clips={filteredClips}
                     authorMap={authorMap}
                     setClipIndex={setClipIndex}
-                    setSelectedClip={clip => handleSelectClip(clip, filteredClips.findIndex(c => c.clip.id === clip.clip.id))}
+                    setSelectedClip={clip =>
+                        handleSelectClip(
+                            clip,
+                            filteredClips.findIndex(
+                                c => c.clip.id === clip.clip.id
+                            )
+                        )
+                    }
                     hasNextPage={clipsQuery.hasNextPage}
                     isFetchingNextPage={clipsQuery.isFetchingNextPage}
                     fetchNextPage={clipsQuery.fetchNextPage}
@@ -162,7 +178,13 @@ export default function ClipsPage() {
                         const justWatchedId = selectedClip.clip.id;
                         setLastHighlightedId(justWatchedId);
                         // Clear highlight after 2 seconds
-                        window.setTimeout(() => setLastHighlightedId(current => (current === justWatchedId ? null : current)), 2000);
+                        window.setTimeout(
+                            () =>
+                                setLastHighlightedId(current =>
+                                    current === justWatchedId ? null : current
+                                ),
+                            2000
+                        );
 
                         // Clear modal and URL param
                         setSelectedClip(null);
@@ -200,7 +222,11 @@ export default function ClipsPage() {
                               }
                             : undefined
                     }
-                    prevUrl={clipIndex > 0 ? filteredClips[clipIndex - 1]?.clip.cdn_url : undefined}
+                    prevUrl={
+                        clipIndex > 0
+                            ? filteredClips[clipIndex - 1]?.clip.cdn_url
+                            : undefined
+                    }
                     nextUrl={
                         clipIndex < filteredClips.length - 1
                             ? filteredClips[clipIndex + 1]?.clip.cdn_url

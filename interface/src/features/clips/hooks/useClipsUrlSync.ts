@@ -67,7 +67,10 @@ export function useClipsUrlSync() {
     }, [searchParams]);
 
     // Read clipId from URL
-    const clipIdFromUrl = useMemo(() => searchParams.get("clipId"), [searchParams]);
+    const clipIdFromUrl = useMemo(
+        () => searchParams.get("clipId"),
+        [searchParams]
+    );
 
     // Hydrate store from URL once
     useEffect(() => {
