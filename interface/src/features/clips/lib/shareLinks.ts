@@ -29,7 +29,13 @@ export function getSiteClipUrl(params: {
     const base =
         origin ?? (typeof window !== "undefined" ? window.location.origin : "");
     if (!base) return "";
-    return new URL(`/clips/${guildId}/${channelId}/${clipId}`, base).toString();
+    const url = new URL("/clips", base);
+    const qs = new URLSearchParams();
+    if (guildId) qs.set("guildId", guildId);
+    if (channelId) qs.set("channelIds", channelId); // single or comma-separated supported by reader
+    if (clipId) qs.set("clipId", clipId); // reserved for future deep-link to modal
+    url.search = qs.toString();
+    return url.toString();
 }
 
 /**
