@@ -1,13 +1,13 @@
-import { NextResponse } from 'next/server';
-import type { NextRequest } from 'next/server';
-import { getToken } from 'next-auth/jwt';
+import { NextResponse } from "next/server";
+import type { NextRequest } from "next/server";
+import { getToken } from "next-auth/jwt";
 
 /**
  * Next.js Middleware
- * 
+ *
  * Runs on Edge Runtime before route handlers.
  * Provides fast authentication checks for all API routes.
- * 
+ *
  * This is the FIRST line of defense - blocks unauthenticated requests
  * before they even reach the API route handlers.
  */
@@ -16,16 +16,19 @@ export async function middleware(request: NextRequest) {
     const { pathname } = request.nextUrl;
 
     // Check if this is an API route that requires authentication
-    if (pathname.startsWith('/api/')) {
+    if (pathname.startsWith("/api/")) {
         // Exclude public routes (auth callbacks, webhooks, etc.)
         const publicRoutes = [
-            '/api/auth/', // NextAuth routes
+            "/api/auth/", // NextAuth routes
             // Add other public routes here if needed
             // '/api/webhooks/',
+            "/api/storage/",
         ];
 
-        const isPublicRoute = publicRoutes.some(route => pathname.startsWith(route));
-        
+        const isPublicRoute = publicRoutes.some(route =>
+            pathname.startsWith(route)
+        );
+
         if (!isPublicRoute) {
             // Check authentication
             const token = await getToken({
@@ -36,7 +39,7 @@ export async function middleware(request: NextRequest) {
             if (!token) {
                 // No valid session - reject immediately
                 return NextResponse.json(
-                    { error: 'Unauthorized' },
+                    { error: "Unauthorized" },
                     { status: 401 }
                 );
             }
@@ -51,7 +54,7 @@ export async function middleware(request: NextRequest) {
 
 /**
  * Matcher Configuration
- * 
+ *
  * Specifies which routes this middleware applies to.
  * Using matcher is more efficient than checking pathname in the middleware.
  */
@@ -63,6 +66,6 @@ export const config = {
          * - Static files
          * - _next internal routes
          */
-        '/api/((?!auth).*)',
+        "/api/((?!auth).*)",
     ],
 };

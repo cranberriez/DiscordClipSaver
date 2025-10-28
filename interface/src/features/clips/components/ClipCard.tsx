@@ -80,6 +80,7 @@ export function ClipCard({
                             className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
                             width={320}
                             height={180}
+                            unoptimized
                             onError={() => {
                                 reportError();
                             }}
