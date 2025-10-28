@@ -1,9 +1,9 @@
 "use client";
 
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { InfoModal } from "./InfoModal";
-import { useClip } from "@/lib/hooks";
+import { useLatestVideoUrl } from "@/lib/hooks/useLatestVideoUrl";
 import type { FullClip } from "@/lib/api/clip";
 import type { AuthorWithStats } from "@/lib/api/author";
 import { formatClipName } from "../../../lib/formatClipName";
@@ -18,6 +18,9 @@ interface ClipModalProps {
     onPrevious?: () => void;
     onNext?: () => void;
     authorMap?: Map<string, AuthorWithStats>;
+    /** Optional neighbor URLs for direction-aware preloading */
+    prevUrl?: string;
+    nextUrl?: string;
 }
 
 /**
@@ -36,24 +39,16 @@ export function ClipModal({
     onPrevious,
     onNext,
     authorMap,
+    prevUrl,
+    nextUrl,
 }: ClipModalProps) {
     const { clip: initialClipData, message, thumbnail } = initialClip;
     const author = authorMap?.get(message.author_id);
 
-    // Check if URL is expired
-    const isExpired = new Date(initialClipData.expires_at) < new Date();
-
-    // Refetch clip if expired (server will refresh CDN URL automatically)
-    const shouldRefetch = isExpired;
-    const { data: refreshedClip, isLoading: isRefreshing } = useClip(
-        initialClipData.guild_id,
-        initialClipData.id
-    );
-
-    // Use refreshed clip if available and was needed, otherwise use initial
-    const clip =
-        shouldRefetch && refreshedClip ? refreshedClip.clip : initialClipData;
-    const [videoUrl, setVideoUrl] = useState<string>(clip.cdn_url);
+    const latest = useLatestVideoUrl(initialClip);
+    const effective = latest.clip ?? initialClip;
+    const clip = effective.clip;
+    const [videoUrl, setVideoUrl] = useState<string>(latest.url ?? clip.cdn_url);
     const [hasPlaybackError, setHasPlaybackError] = useState(false);
     const [showDetailsModal, setShowDetailsModal] = useState(false);
 
@@ -64,12 +59,60 @@ export function ClipModal({
 
     // Update video URL when clip changes (for navigation)
     useEffect(() => {
-        setVideoUrl(clip.cdn_url);
+        const url = latest.url ?? clip.cdn_url;
+        setVideoUrl(url);
         setHasPlaybackError(false);
-    }, [clip.cdn_url, clip.id]);
+    }, [latest.url, clip.cdn_url, clip.id]);
 
     // Keep a reference to the Vidstack player instance
     const [playerInstance, setPlayerInstance] = useState<any>(null);
+
+    // =============================
+    // Direction-aware preloading
+    // =============================
+    const [lastDirection, setLastDirection] = useState<"next" | "prev" | null>(null);
+    const preloadTimerRef = useRef<number | null>(null);
+    const preloadedSetRef = useRef<Set<string>>(new Set());
+    const [preloadUrl, setPreloadUrl] = useState<string | null>(null);
+
+    // Debounced selection of which URL to preload based on last direction
+    useEffect(() => {
+        if (!lastDirection) return;
+        // pick candidate based on last direction; fallback: other direction
+        const candidate = lastDirection === "next" ? nextUrl : prevUrl;
+        const fallback = lastDirection === "next" ? prevUrl : nextUrl;
+        const urlToPreload = candidate || fallback || null;
+        if (!urlToPreload) return;
+        if (preloadedSetRef.current.has(urlToPreload)) return;
+
+        if (preloadTimerRef.current) window.clearTimeout(preloadTimerRef.current);
+        preloadTimerRef.current = window.setTimeout(() => {
+            preloadedSetRef.current.add(urlToPreload);
+            setPreloadUrl(urlToPreload);
+        }, 300);
+
+        return () => {
+            if (preloadTimerRef.current) window.clearTimeout(preloadTimerRef.current);
+        };
+    }, [lastDirection, nextUrl, prevUrl]);
+
+    // Hidden native video element to warm the browser cache/buffer
+    const PreloadBucket = () => {
+        if (!preloadUrl) return null;
+        return (
+            <video
+                src={preloadUrl}
+                preload="auto"
+                playsInline
+                muted
+                style={{ display: "none" }}
+                onError={() => {
+                    // If preload fails, allow retries on future direction changes
+                    preloadedSetRef.current.delete(preloadUrl);
+                }}
+            />
+        );
+    };
 
     // Keyboard navigation + spacebar play/pause when modal has focus
     useEffect(() => {
@@ -130,13 +173,7 @@ export function ClipModal({
         return () => window.removeEventListener("keydown", handleKeyDown);
     }, [onPrevious, onNext, onClose, playerInstance, showDetailsModal]);
 
-    // Update video URL when clip is refreshed
-    useEffect(() => {
-        if (shouldRefetch && refreshedClip) {
-            setVideoUrl(refreshedClip.clip.cdn_url);
-            setHasPlaybackError(false);
-        }
-    }, [shouldRefetch, refreshedClip]);
+    // (Removed old refresh effect; handled by useLatestVideoUrl)
 
     const handleVideoError = useCallback(() => {
         // Simple error handling - CDN refresh is now automatic on server
@@ -191,8 +228,8 @@ export function ClipModal({
                     <div className="h-full flex flex-col max-h-screen">
                         {/* Video Player Section - 16:9 aspect ratio, centered */}
                         <VideoSection
-                            isRefreshing={isRefreshing}
-                            shouldRefetch={shouldRefetch}
+                            isRefreshing={latest.isLoading}
+                            shouldRefetch={latest.didRefresh}
                             hasPlaybackError={hasPlaybackError}
                             videoUrl={videoUrl}
                             posterUrl={getThumbnailUrl()}
@@ -207,8 +244,22 @@ export function ClipModal({
                             author={author}
                             message={message}
                             clip={clip}
-                            onPrevious={onPrevious}
-                            onNext={onNext}
+                            onPrevious={
+                                onPrevious
+                                    ? () => {
+                                          setLastDirection("prev");
+                                          onPrevious();
+                                      }
+                                    : undefined
+                            }
+                            onNext={
+                                onNext
+                                    ? () => {
+                                          setLastDirection("next");
+                                          onNext();
+                                      }
+                                    : undefined
+                            }
                             onShowInfo={() => setShowDetailsModal(true)}
                         />
                     </div>
@@ -226,6 +277,9 @@ export function ClipModal({
                     initialClip={initialClip}
                 />
             )}
+
+            {/* Hidden preloader video to warm next likely clip */}
+            <PreloadBucket />
         </DialogPrimitive.Root>
     );
 }

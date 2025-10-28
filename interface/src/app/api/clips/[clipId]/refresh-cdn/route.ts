@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireAuth } from "@/server/middleware/auth";
 import { DataService } from "@/server/services/data-service";
 import { updateClipCdnUrl } from "@/server/db/queries/clips";
+import { calculateExpiresAt } from "@/server/expires-at";
 
 /**
  * POST /api/clips/[clipId]/refresh-cdn
@@ -116,7 +117,8 @@ export async function POST(
 
         // Update the clip with new CDN URL
         // Discord CDN URLs typically expire after 24 hours
-        const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
+        const urlObj = new URL(attachment.url);
+        const expiresAt = calculateExpiresAt(urlObj.href);
         await updateClipCdnUrl(clipId, attachment.url, expiresAt);
 
         return NextResponse.json({

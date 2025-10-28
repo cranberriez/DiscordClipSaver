@@ -41,3 +41,13 @@ export function formatDuration(seconds: number | null): string {
     const secs = Math.floor(seconds % 60);
     return `${mins}:${secs.toString().padStart(2, "0")}`;
 }
+
+// Parse ISO timestamp to Date object
+export function parseIsoDate(timestamp: Date): Date {
+    return new Date(timestamp);
+}
+
+// Parse ISO timestamp to unix timestamps
+export function parseIsoTimestamp(timestamp: Date): number {
+    return new Date(timestamp).getTime() / 1000;
+}

@@ -9,6 +9,7 @@ import { Play } from "lucide-react";
 import Image from "next/image";
 import { messageTitleOrFilename } from "@/features/clips/lib/discordText";
 import { useImageErrorStore } from "../stores/useImageErrorStore";
+import { parseIsoTimestamp } from "@/lib/utils/time-helpers";
 
 interface ClipCardProps {
     clip: FullClip;
@@ -25,7 +26,12 @@ interface ClipCardProps {
  * - Author avatar and name
  * - Time posted (relative)
  */
-export function ClipCard({ clip, onClick, authorMap, highlighted }: ClipCardProps) {
+export function ClipCard({
+    clip,
+    onClick,
+    authorMap,
+    highlighted,
+}: ClipCardProps) {
     const { hasTooManyErrors, reportError } = useImageErrorStore();
 
     const getThumbnailUrl = (): string | null => {
@@ -46,6 +52,14 @@ export function ClipCard({ clip, onClick, authorMap, highlighted }: ClipCardProp
     );
 
     const showThumbnail = thumbnailUrl && !hasTooManyErrors;
+    const isExpired =
+        parseIsoTimestamp(clip.clip.expires_at) < Date.now() / 1000;
+
+    // Temporary onclick wrapper for displaying extra data
+    const handleClick = () => {
+        console.log("Clip clicked:", clip);
+        onClick(clip);
+    };
 
     return (
         <div
@@ -54,7 +68,7 @@ export function ClipCard({ clip, onClick, authorMap, highlighted }: ClipCardProp
                 "group relative cursor-pointer rounded-lg overflow-hidden hover:shadow-lg hover:bg-muted/20 transition-all" +
                 (highlighted ? " ring-2 ring-blue-500" : "")
             }
-            onClick={() => onClick(clip)}
+            onClick={handleClick}
         >
             {/* Thumbnail - 16:9 aspect ratio */}
             <div className="aspect-video bg-muted relative overflow-hidden rounded-lg">
@@ -115,6 +129,10 @@ export function ClipCard({ clip, onClick, authorMap, highlighted }: ClipCardProp
                     </p>
                 </div>
             </div>
+
+            {isExpired && (
+                <div className="absolute top-2 right-2 bg-red-500 p-[2px] rounded-full"></div>
+            )}
         </div>
     );
 }

@@ -200,6 +200,12 @@ export default function ClipsPage() {
                               }
                             : undefined
                     }
+                    prevUrl={clipIndex > 0 ? filteredClips[clipIndex - 1]?.clip.cdn_url : undefined}
+                    nextUrl={
+                        clipIndex < filteredClips.length - 1
+                            ? filteredClips[clipIndex + 1]?.clip.cdn_url
+                            : undefined
+                    }
                     authorMap={authorMap}
                 />
             )}

@@ -73,7 +73,20 @@ export function useClipsData(opts: { hydrated: boolean; targetPage?: number }) {
         clipsQuery.isFetchingNextPage,
     ]);
 
-    const allClips = clipsQuery.data?.pages.flatMap(p => p.clips) ?? [];
+    // Flatten and de-duplicate by clip ID to avoid duplicate renders across pages
+    const allClips = (() => {
+        const raw = clipsQuery.data?.pages.flatMap(p => p.clips) ?? [];
+        if (raw.length <= 1) return raw;
+        const seen = new Set<string>();
+        const unique: typeof raw = [];
+        for (const c of raw) {
+            const id = c.clip.id;
+            if (seen.has(id)) continue;
+            seen.add(id);
+            unique.push(c);
+        }
+        return unique;
+    })();
 
     const filteredClips = useMemo(() => {
         if (!searchQuery.trim()) return allClips;
