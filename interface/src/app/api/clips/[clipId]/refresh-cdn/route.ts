@@ -14,6 +14,9 @@ export async function POST(
     req: NextRequest,
     { params }: { params: Promise<{ clipId: string }> }
 ) {
+    console.log("DEPRECATED ROUTE CALL!!!");
+    return NextResponse.json({ error: "Deprecated route" }, { status: 400 });
+
     const { clipId } = await params;
 
     // Verify authentication

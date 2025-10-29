@@ -7,7 +7,7 @@ import { DataService } from "@/server/services/data-service";
  *
  * Get a single clip by ID with full metadata and favorites status.
  * Securely verifies user has access to the guild before fetching clip data.
- * 
+ *
  * Security: This route first checks guild access using minimal queries,
  * then fetches the full clip data only if authorized.
  */
@@ -16,6 +16,9 @@ export async function GET(
     req: NextRequest,
     { params }: { params: Promise<{ clipId: string }> }
 ) {
+    console.log("DEPRECATED ROUTE CALL!!!");
+    return NextResponse.json({ error: "Deprecated route" }, { status: 400 });
+
     const { clipId } = await params;
 
     // Verify authentication
@@ -26,7 +29,7 @@ export async function GET(
         // Security: Get only the guild_id for permission check (minimal query)
         // This prevents data leakage before authorization
         const clipGuildId = await DataService.getClipGuildId(clipId);
-        
+
         if (!clipGuildId) {
             return NextResponse.json(
                 { error: "Clip not found" },
@@ -42,7 +45,10 @@ export async function GET(
         }
 
         // Now fetch full clip data with favorites support since user is authorized
-        const clipWithMetadata = await DataService.getClipById(clipId, auth.discordUserId);
+        const clipWithMetadata = await DataService.getClipById(
+            clipId,
+            auth.discordUserId
+        );
 
         if (!clipWithMetadata) {
             // This shouldn't happen since we found the clip above, but handle gracefully
