@@ -138,6 +138,7 @@ class MessageHandler:
                 "message_id": clip_info.message_id,
                 "channel_id": channel_id,
                 "guild_id": guild_id,
+                "author_id": str(discord_message.author.id),
                 "filename": clip_info.filename,
                 "file_size": clip_info.file_size,
                 "mime_type": clip_info.mime_type,
