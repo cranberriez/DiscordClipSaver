@@ -1,15 +1,15 @@
 /**
  * TanStack Query Definitions for Favorites
- * 
+ *
  * Query options and keys for favorites-related API calls.
  * Follows the established API → Query → Hook pattern.
  */
 
 import { queryOptions } from "@tanstack/react-query";
 import { api } from "@/lib/api/client";
-import type { 
-    FavoriteStatusResponse, 
-    FavoriteBulkResponse 
+import type {
+    FavoriteStatusResponse,
+    FavoriteBulkResponse,
 } from "@/lib/api/favorites";
 
 // ============================================================================
@@ -20,7 +20,8 @@ export const favoriteKeys = {
     all: ["favorites"] as const,
     status: (clipId: string) => ["favorites", "status", clipId] as const,
     lists: ["favorites", "lists"] as const,
-    list: (guildIds: string[]) => ["favorites", "lists", ...guildIds.sort()] as const,
+    list: (guildIds: string[]) =>
+        ["favorites", "lists", ...guildIds.sort()] as const,
 } as const;
 
 // ============================================================================
@@ -35,7 +36,7 @@ export function favoriteStatusQuery(clipId: string) {
         queryKey: favoriteKeys.status(clipId),
         queryFn: () => api.favorites.status(clipId),
         staleTime: 5 * 60 * 1000, // 5 minutes
-        gcTime: 10 * 60 * 1000,   // 10 minutes
+        gcTime: 10 * 60 * 1000, // 10 minutes
     });
 }
 

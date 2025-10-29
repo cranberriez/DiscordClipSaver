@@ -44,6 +44,7 @@ export function ClipModal({
 }: ClipModalProps) {
     const { clip: initialClipData, message, thumbnail } = initialClip;
     const author = authorMap?.get(message.author_id);
+    const isFavorited = initialClip.isFavorited;
 
     const latest = useLatestVideoUrl(initialClip);
     const effective = latest.clip ?? initialClip;
@@ -249,6 +250,7 @@ export function ClipModal({
                             vidTitle={vidTitle}
                             author={author}
                             message={message}
+                            isFavoritedInitial={isFavorited || false}
                             clip={clip}
                             onPrevious={
                                 onPrevious

@@ -1,6 +1,6 @@
 /**
  * Favorites API Types
- * 
+ *
  * Type definitions for favorites-related API requests and responses.
  */
 
@@ -22,11 +22,11 @@ export interface FavoriteStatusResponse {
 
 export interface FavoriteBulkResponse {
     success: boolean;
-    added?: number;      // For POST requests
-    removed?: number;    // For DELETE requests
+    added?: number; // For POST requests
+    removed?: number; // For DELETE requests
     failed: number;
     clipIds: string[];
-    missingClips?: string[];      // Clips that don't exist
+    missingClips?: string[]; // Clips that don't exist
     unauthorizedClips?: string[]; // Clips user can't access
 }
 
@@ -35,7 +35,7 @@ export interface FavoriteBulkResponse {
 // ============================================================================
 
 export interface FavoriteClipsParams {
-    guildIds: string[];  // Guilds user has access to
+    guildIds: string[]; // Guilds user has access to
     limit?: number;
     offset?: number;
     sort?: "asc" | "desc";

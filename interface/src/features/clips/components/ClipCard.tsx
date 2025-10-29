@@ -5,7 +5,7 @@ import type { AuthorWithStats } from "@/lib/api/author";
 import { formatClipName } from "../lib/formatClipName";
 import { formatDuration, formatRelativeTime } from "@/lib/utils/time-helpers";
 import { UserAvatar } from "@/components/core/UserAvatar";
-import { Play } from "lucide-react";
+import { Heart, Play } from "lucide-react";
 import Image from "next/image";
 import { messageTitleOrFilename } from "@/features/clips/lib/discordText";
 import { useImageErrorStore } from "../stores/useImageErrorStore";
@@ -109,12 +109,19 @@ export function ClipCard({
             {/* Metadata */}
             <div className="flex flex-col p-2 gap-2">
                 {/* Filename */}
-                <p
-                    className="text-sm font-semibold line-clamp-1 overflow-hidden"
-                    title={clipData.filename}
-                >
-                    {vidTitle}
-                </p>
+                <div className="flex items-center justify-between gap-1">
+                    <p
+                        className="flex-1 text-sm font-semibold line-clamp-1 overflow-hidden"
+                        title={clipData.filename}
+                    >
+                        {vidTitle}
+                    </p>
+                    <div>
+                        {clip.isFavorited && (
+                            <Heart className="w-4 h-4 text-red-500" />
+                        )}
+                    </div>
+                </div>
 
                 {/* Author & Time posted */}
                 <div className="flex items-center justify-between gap-2 text-xs text-muted-foreground">

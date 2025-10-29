@@ -57,7 +57,7 @@ export function SharePopover({
         <Popover open={open} onOpenChange={setOpen}>
             <PopoverTrigger asChild>
                 <Button
-                    variant="outline"
+                    variant="ghost"
                     size="icon-lg"
                     className="gap-1 text-muted-foreground hover:text-foreground"
                 >

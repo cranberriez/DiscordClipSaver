@@ -5,16 +5,20 @@ import { FullClip } from "@/lib/api/clip";
 import { UserAvatar } from "@/components/core/UserAvatar";
 import { formatRelativeTime } from "@/lib/utils/time-helpers";
 import { Button } from "@/components/ui/button";
-import { Info } from "lucide-react";
+import { Heart, Info } from "lucide-react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { ButtonGroup } from "@/components/ui/button-group";
 import { SharePopover } from "./SharePopover";
+import { useToggleFavorite } from "@/lib/hooks/useFavorites";
+import { useFavoriteStatus } from "@/lib/hooks/useFavorites";
+import { cn } from "@/lib/utils";
 
 interface InfoBarProps {
     vidTitle: string;
     author?: AuthorWithStats;
     message: FullClip["message"];
     clip: FullClip["clip"];
+    isFavoritedInitial: boolean;
     onPrevious?: () => void;
     onNext?: () => void;
     onShowInfo: () => void;
@@ -25,10 +29,18 @@ export function InfoBar({
     author,
     message,
     clip,
+    isFavoritedInitial,
     onPrevious,
     onNext,
     onShowInfo,
 }: InfoBarProps) {
+    const { data: isFavorited } = useFavoriteStatus(clip.id);
+    const toggleFavorite = useToggleFavorite();
+
+    const handleToggleFavorite = () => {
+        toggleFavorite.mutate(clip.id);
+    };
+
     return (
         <div className="bg-background border-t">
             <div className="max-w-[95vw] 2xl:max-w-[1920px] mx-auto px-4 md:px-8 py-4">
@@ -62,6 +74,21 @@ export function InfoBar({
                             >
                                 <Info className="w-4 h-4" />
                                 <span className="text-xs">Info</span>
+                            </Button>
+
+                            <Button
+                                variant="ghost"
+                                size="icon-lg"
+                                onClick={handleToggleFavorite}
+                                className="gap-1 text-muted-foreground hover:text-foreground"
+                            >
+                                <Heart
+                                    className={cn(
+                                        "w-4 h-4",
+                                        isFavorited &&
+                                            "text-red-600 fill-red-500"
+                                    )}
+                                />
                             </Button>
 
                             <SharePopover

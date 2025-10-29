@@ -1,6 +1,6 @@
 /**
  * React Hooks for Favorites
- * 
+ *
  * Custom hooks that wrap TanStack Query for favorites functionality.
  * Includes optimistic updates and cache invalidation.
  */
@@ -26,12 +26,12 @@ import type { FullClip } from "@/lib/api/clip";
 
 /**
  * Check if a clip is favorited by the current user
- * 
+ *
  * @example
  * ```tsx
  * function HeartButton({ clipId }: { clipId: string }) {
  *   const { data: isFavorited, isLoading } = useFavoriteStatus(clipId);
- *   
+ *
  *   return (
  *     <button disabled={isLoading}>
  *       {isFavorited ? "❤️" : "🤍"}
@@ -43,7 +43,7 @@ import type { FullClip } from "@/lib/api/clip";
 export function useFavoriteStatus(clipId: string) {
     return useQuery({
         ...favoriteStatusQuery(clipId),
-        select: (data) => data.isFavorited,
+        select: data => data.isFavorited,
     });
 }
 
@@ -61,13 +61,19 @@ export function useAddFavorite() {
         ...addFavoriteMutation,
         onMutate: async (clipId: string) => {
             // Cancel outgoing refetches
-            await queryClient.cancelQueries({ queryKey: favoriteKeys.status(clipId) });
+            await queryClient.cancelQueries({
+                queryKey: favoriteKeys.status(clipId),
+            });
 
             // Snapshot previous value
-            const previousStatus = queryClient.getQueryData(favoriteKeys.status(clipId));
+            const previousStatus = queryClient.getQueryData(
+                favoriteKeys.status(clipId)
+            );
 
             // Optimistically update to favorited
-            queryClient.setQueryData(favoriteKeys.status(clipId), { isFavorited: true });
+            queryClient.setQueryData(favoriteKeys.status(clipId), {
+                isFavorited: true,
+            });
 
             // Update clip data in lists and detail views
             updateClipFavoriteStatus(queryClient, clipId, true);
@@ -77,13 +83,18 @@ export function useAddFavorite() {
         onError: (err, clipId, context) => {
             // Rollback on error
             if (context?.previousStatus) {
-                queryClient.setQueryData(favoriteKeys.status(clipId), context.previousStatus);
+                queryClient.setQueryData(
+                    favoriteKeys.status(clipId),
+                    context.previousStatus
+                );
                 updateClipFavoriteStatus(queryClient, clipId, false);
             }
         },
         onSettled: (data, error, clipId) => {
             // Refetch to ensure consistency
-            queryClient.invalidateQueries({ queryKey: favoriteKeys.status(clipId) });
+            queryClient.invalidateQueries({
+                queryKey: favoriteKeys.status(clipId),
+            });
         },
     });
 }
@@ -98,13 +109,19 @@ export function useRemoveFavorite() {
         ...removeFavoriteMutation,
         onMutate: async (clipId: string) => {
             // Cancel outgoing refetches
-            await queryClient.cancelQueries({ queryKey: favoriteKeys.status(clipId) });
+            await queryClient.cancelQueries({
+                queryKey: favoriteKeys.status(clipId),
+            });
 
             // Snapshot previous value
-            const previousStatus = queryClient.getQueryData(favoriteKeys.status(clipId));
+            const previousStatus = queryClient.getQueryData(
+                favoriteKeys.status(clipId)
+            );
 
             // Optimistically update to not favorited
-            queryClient.setQueryData(favoriteKeys.status(clipId), { isFavorited: false });
+            queryClient.setQueryData(favoriteKeys.status(clipId), {
+                isFavorited: false,
+            });
 
             // Update clip data in lists and detail views
             updateClipFavoriteStatus(queryClient, clipId, false);
@@ -114,28 +131,33 @@ export function useRemoveFavorite() {
         onError: (err, clipId, context) => {
             // Rollback on error
             if (context?.previousStatus) {
-                queryClient.setQueryData(favoriteKeys.status(clipId), context.previousStatus);
+                queryClient.setQueryData(
+                    favoriteKeys.status(clipId),
+                    context.previousStatus
+                );
                 updateClipFavoriteStatus(queryClient, clipId, true);
             }
         },
         onSettled: (data, error, clipId) => {
             // Refetch to ensure consistency
-            queryClient.invalidateQueries({ queryKey: favoriteKeys.status(clipId) });
+            queryClient.invalidateQueries({
+                queryKey: favoriteKeys.status(clipId),
+            });
         },
     });
 }
 
 /**
  * Toggle favorite status for a single clip with optimistic updates
- * 
+ *
  * @example
  * ```tsx
  * function HeartButton({ clipId }: { clipId: string }) {
  *   const { data: isFavorited } = useFavoriteStatus(clipId);
  *   const toggleFavorite = useToggleFavorite();
- *   
+ *
  *   return (
- *     <button 
+ *     <button
  *       onClick={() => toggleFavorite.mutate(clipId)}
  *       disabled={toggleFavorite.isPending}
  *     >
@@ -152,16 +174,21 @@ export function useToggleFavorite() {
         ...toggleFavoriteMutation,
         onMutate: async (clipId: string) => {
             // Cancel outgoing refetches
-            await queryClient.cancelQueries({ queryKey: favoriteKeys.status(clipId) });
+            await queryClient.cancelQueries({
+                queryKey: favoriteKeys.status(clipId),
+            });
 
             // Get current status
-            const currentStatus = queryClient.getQueryData(favoriteKeys.status(clipId)) as 
-                { isFavorited: boolean } | undefined;
+            const currentStatus = queryClient.getQueryData(
+                favoriteKeys.status(clipId)
+            ) as { isFavorited: boolean } | undefined;
             const currentFavorited = currentStatus?.isFavorited || false;
             const newFavorited = !currentFavorited;
 
             // Optimistically update
-            queryClient.setQueryData(favoriteKeys.status(clipId), { isFavorited: newFavorited });
+            queryClient.setQueryData(favoriteKeys.status(clipId), {
+                isFavorited: newFavorited,
+            });
 
             // Update clip data in lists and detail views
             updateClipFavoriteStatus(queryClient, clipId, newFavorited);
@@ -171,14 +198,19 @@ export function useToggleFavorite() {
         onError: (err, clipId, context) => {
             // Rollback on error
             if (context?.previousStatus) {
-                queryClient.setQueryData(favoriteKeys.status(clipId), context.previousStatus);
+                queryClient.setQueryData(
+                    favoriteKeys.status(clipId),
+                    context.previousStatus
+                );
                 const wasFavorited = context.previousStatus.isFavorited;
                 updateClipFavoriteStatus(queryClient, clipId, wasFavorited);
             }
         },
         onSettled: (data, error, clipId) => {
             // Refetch to ensure consistency
-            queryClient.invalidateQueries({ queryKey: favoriteKeys.status(clipId) });
+            queryClient.invalidateQueries({
+                queryKey: favoriteKeys.status(clipId),
+            });
         },
     });
 }
@@ -194,20 +226,24 @@ export function useAddMultipleFavorites() {
         onMutate: async (clipIds: string[]) => {
             // Cancel outgoing refetches for all clips
             await Promise.all(
-                clipIds.map(clipId => 
-                    queryClient.cancelQueries({ queryKey: favoriteKeys.status(clipId) })
+                clipIds.map(clipId =>
+                    queryClient.cancelQueries({
+                        queryKey: favoriteKeys.status(clipId),
+                    })
                 )
             );
 
             // Snapshot previous values
             const previousStatuses = clipIds.map(clipId => ({
                 clipId,
-                status: queryClient.getQueryData(favoriteKeys.status(clipId))
+                status: queryClient.getQueryData(favoriteKeys.status(clipId)),
             }));
 
             // Optimistically update all to favorited
             clipIds.forEach(clipId => {
-                queryClient.setQueryData(favoriteKeys.status(clipId), { isFavorited: true });
+                queryClient.setQueryData(favoriteKeys.status(clipId), {
+                    isFavorited: true,
+                });
                 updateClipFavoriteStatus(queryClient, clipId, true);
             });
 
@@ -218,9 +254,17 @@ export function useAddMultipleFavorites() {
             if (context?.previousStatuses) {
                 context.previousStatuses.forEach(({ clipId, status }) => {
                     if (status) {
-                        queryClient.setQueryData(favoriteKeys.status(clipId), status);
-                        const wasFavorited = (status as any)?.isFavorited || false;
-                        updateClipFavoriteStatus(queryClient, clipId, wasFavorited);
+                        queryClient.setQueryData(
+                            favoriteKeys.status(clipId),
+                            status
+                        );
+                        const wasFavorited =
+                            (status as any)?.isFavorited || false;
+                        updateClipFavoriteStatus(
+                            queryClient,
+                            clipId,
+                            wasFavorited
+                        );
                     }
                 });
             }
@@ -228,7 +272,9 @@ export function useAddMultipleFavorites() {
         onSettled: (data, error, clipIds) => {
             // Refetch to ensure consistency
             clipIds.forEach(clipId => {
-                queryClient.invalidateQueries({ queryKey: favoriteKeys.status(clipId) });
+                queryClient.invalidateQueries({
+                    queryKey: favoriteKeys.status(clipId),
+                });
             });
         },
     });
@@ -245,20 +291,24 @@ export function useRemoveMultipleFavorites() {
         onMutate: async (clipIds: string[]) => {
             // Cancel outgoing refetches for all clips
             await Promise.all(
-                clipIds.map(clipId => 
-                    queryClient.cancelQueries({ queryKey: favoriteKeys.status(clipId) })
+                clipIds.map(clipId =>
+                    queryClient.cancelQueries({
+                        queryKey: favoriteKeys.status(clipId),
+                    })
                 )
             );
 
             // Snapshot previous values
             const previousStatuses = clipIds.map(clipId => ({
                 clipId,
-                status: queryClient.getQueryData(favoriteKeys.status(clipId))
+                status: queryClient.getQueryData(favoriteKeys.status(clipId)),
             }));
 
             // Optimistically update all to not favorited
             clipIds.forEach(clipId => {
-                queryClient.setQueryData(favoriteKeys.status(clipId), { isFavorited: false });
+                queryClient.setQueryData(favoriteKeys.status(clipId), {
+                    isFavorited: false,
+                });
                 updateClipFavoriteStatus(queryClient, clipId, false);
             });
 
@@ -269,9 +319,17 @@ export function useRemoveMultipleFavorites() {
             if (context?.previousStatuses) {
                 context.previousStatuses.forEach(({ clipId, status }) => {
                     if (status) {
-                        queryClient.setQueryData(favoriteKeys.status(clipId), status);
-                        const wasFavorited = (status as any)?.isFavorited || false;
-                        updateClipFavoriteStatus(queryClient, clipId, wasFavorited);
+                        queryClient.setQueryData(
+                            favoriteKeys.status(clipId),
+                            status
+                        );
+                        const wasFavorited =
+                            (status as any)?.isFavorited || false;
+                        updateClipFavoriteStatus(
+                            queryClient,
+                            clipId,
+                            wasFavorited
+                        );
                     }
                 });
             }
@@ -279,7 +337,9 @@ export function useRemoveMultipleFavorites() {
         onSettled: (data, error, clipIds) => {
             // Refetch to ensure consistency
             clipIds.forEach(clipId => {
-                queryClient.invalidateQueries({ queryKey: favoriteKeys.status(clipId) });
+                queryClient.invalidateQueries({
+                    queryKey: favoriteKeys.status(clipId),
+                });
             });
         },
     });
@@ -303,16 +363,17 @@ function updateClipFavoriteStatus(
         { queryKey: clipKeys.lists() },
         (oldData: any) => {
             if (!oldData?.pages) return oldData;
-            
+
             return {
                 ...oldData,
                 pages: oldData.pages.map((page: any) => ({
                     ...page,
-                    clips: page.clips?.map((clip: FullClip) =>
-                        clip.clip.id === clipId
-                            ? { ...clip, isFavorited }
-                            : clip
-                    ) || page.clips,
+                    clips:
+                        page.clips?.map((clip: FullClip) =>
+                            clip.clip.id === clipId
+                                ? { ...clip, isFavorited }
+                                : clip
+                        ) || page.clips,
                 })),
             };
         }
