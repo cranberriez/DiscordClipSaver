@@ -9,6 +9,7 @@ import type { ChannelScanStatusTable } from "./channel_scan_status.kysely";
 import type { MessageTable } from "./message.kysely";
 import type { ClipTable } from "./clip.kysely";
 import type { ThumbnailTable } from "./thumbnail.kysely";
+import type { FavoriteClipTable } from "./favorite_clips.kysely";
 
 export interface DB {
     author: AuthorTable;
@@ -22,4 +23,5 @@ export interface DB {
     message: MessageTable;
     clip: ClipTable;
     thumbnail: ThumbnailTable;
+    favorite_clip: FavoriteClipTable;
 }

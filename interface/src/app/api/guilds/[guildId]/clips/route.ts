@@ -3,15 +3,17 @@ import { requireGuildAccess } from "@/server/middleware/auth";
 import { DataService } from "@/server/services/data-service";
 
 /**
- * GET /api/guilds/[guildId]/clips?channelIds=xxx,yyy&authorIds=aaa,bbb&limit=50&offset=0&sort=desc
+ * GET /api/guilds/[guildId]/clips?channelIds=xxx,yyy&authorIds=aaa,bbb&limit=50&offset=0&sort=desc&favorites=true
  *
- * Get clips for a guild with pagination.
+ * Get clips for a guild with pagination and favorites support.
  * - If channelIds is provided: Returns clips for those specific channels (comma-separated)
  * - If authorIds is provided: Returns clips from those specific authors (comma-separated)
+ * - If favorites=true: Returns only favorited clips for the authenticated user
  * - If both omitted: Returns all clips for the guild
  * - sort: "desc" (newest first) or "asc" (oldest first), defaults to "desc"
  *
  * Requires user to have access to the guild.
+ * Returns clips with isFavorited status for authenticated users.
  */
 export async function GET(
     req: NextRequest,
@@ -29,26 +31,32 @@ export async function GET(
     const channelIds = channelIdsParam ? channelIdsParam.split(",") : null;
     const authorIdsParam = searchParams.get("authorIds");
     const authorIds = authorIdsParam ? authorIdsParam.split(",") : undefined;
+    const favoritesOnly = searchParams.get("favorites") === "true";
     const limit = Math.min(parseInt(searchParams.get("limit") || "50"), 100);
     const offset = parseInt(searchParams.get("offset") || "0");
     const sort = (searchParams.get("sort") || "desc") as "asc" | "desc";
 
     try {
         // Fetch one extra to determine if there are more results
+        // Pass user ID for favorites support
         const clips = channelIds
             ? await DataService.getClipsByChannelIds(
                   channelIds,
                   offset,
                   limit + 1,
                   sort,
-                  authorIds
+                  authorIds,
+                  auth.discordUserId, // User ID for favorites
+                  favoritesOnly
               )
             : await DataService.getClipsByGuildId(
                   guildId,
                   offset,
                   limit + 1,
                   sort,
-                  authorIds
+                  authorIds,
+                  auth.discordUserId, // User ID for favorites
+                  favoritesOnly
               );
 
         if (!clips) {

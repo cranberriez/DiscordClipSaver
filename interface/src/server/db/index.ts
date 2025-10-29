@@ -37,7 +37,10 @@ export {
     getClipCountByChannelId,
     updateClipCdnUrl,
     isClipExpired,
+    getFavoriteClips,
+    getClipGuildId,
 } from "./queries/clips";
+export type { ClipQueryOptions, ClipQueryFilters } from "./queries/clips";
 export {
     getChannelScanStatus,
     getGuildScanStatuses,
@@ -48,3 +51,7 @@ export {
     getAuthorsByGuildId,
     getAuthorById,
 } from "./queries/authors";
+export {
+    toggleFavorite,
+    getFavoriteStatusForClips,
+} from "./queries/_helpers/favorites";

@@ -6,9 +6,10 @@ import { updateClipCdnUrl } from "@/server/db/queries/clips";
 /**
  * GET /api/guilds/[guildId]/clips/[clipId]
  *
- * Get a single clip by ID with full metadata.
+ * Get a single clip by ID with full metadata and favorites status.
  * Automatically refreshes expired CDN URLs transparently.
  * Verifies user has access to the guild.
+ * Returns clip with isFavorited status for authenticated users.
  */
 export async function GET(
     req: NextRequest,
@@ -21,7 +22,8 @@ export async function GET(
     if (auth instanceof NextResponse) return auth;
 
     try {
-        const clipWithMetadata = await DataService.getClipById(clipId);
+        // Pass user ID for favorites support
+        const clipWithMetadata = await DataService.getClipById(clipId, auth.discordUserId);
 
         if (!clipWithMetadata) {
             return NextResponse.json(

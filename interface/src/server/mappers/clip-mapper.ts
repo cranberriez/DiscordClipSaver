@@ -56,9 +56,11 @@ export class ClipMapper {
         return {
             clip: ClipMapper.toClip(dbClipWithMetadata.clip),
             message: ClipMapper.toMessage(dbClipWithMetadata.message),
-            thumbnail: dbClipWithMetadata.thumbnails.length > 0
-                ? ClipMapper.toThumbnail(dbClipWithMetadata.thumbnails[0])
-                : null,
+            thumbnail:
+                dbClipWithMetadata.thumbnails.length > 0
+                    ? ClipMapper.toThumbnail(dbClipWithMetadata.thumbnails[0])
+                    : null,
+            isFavorited: dbClipWithMetadata.isFavorited || false,
         };
     }
 }

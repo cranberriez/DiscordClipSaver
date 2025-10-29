@@ -267,6 +267,17 @@ class InstallIntent(Model):
     class Meta:
         table="install_intent"
 
+class FavoriteClip(Model):
+    """User's favorite clips"""
+    id = fields.IntField(auto_increment=True, pk=True)  # auto id
+    user = fields.ForeignKeyField("models.User", related_name="favorite_clips", indexable=True)  # User must exist (logged in to interface)
+    clip = fields.ForeignKeyField("models.Clip", related_name="favorite_clips", indexable=True)  # Clip must exist
+    created_at = fields.DatetimeField(auto_now_add=True)
+    updated_at = fields.DatetimeField(auto_now=True)
+
+    class Meta:
+        table="favorite_clip"
+        unique_together = (("user", "clip"),)  # One favorite per user per clip
 
 # Optional: Job tracking table for monitoring and debugging
 class Job(Model):

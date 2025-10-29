@@ -132,20 +132,24 @@ export class DataService {
         return ScanMapper.toScanStatus(scanStatus);
     }
 
-    // Clips
+    // Clips - Using clips-v2 architecture
     static async getClipsByGuildId(
         guildId: string,
         offset: number = 0,
         limit: number = 50,
         sort: "asc" | "desc" = "desc",
-        authorIds?: string[]
+        authorIds?: string[],
+        userId?: string,
+        favoritesOnly?: boolean
     ) {
         const clips = await db.getClipsByGuildId(
             guildId,
             limit,
             offset,
             sort,
-            authorIds
+            authorIds,
+            userId,
+            favoritesOnly
         );
 
         if (!clips) {
@@ -161,14 +165,18 @@ export class DataService {
         offset: number = 0,
         limit: number = 50,
         sort: "asc" | "desc" = "desc",
-        authorIds?: string[]
+        authorIds?: string[],
+        userId?: string,
+        favoritesOnly?: boolean
     ) {
         const clips = await db.getClipsByChannelIds(
             channelIds,
             limit,
             offset,
             sort,
-            authorIds
+            authorIds,
+            userId,
+            favoritesOnly
         );
 
         if (!clips) {
@@ -185,13 +193,17 @@ export class DataService {
         channelId: string,
         offset: number = 0,
         limit: number = 50,
-        sort: "asc" | "desc" = "desc"
+        sort: "asc" | "desc" = "desc",
+        userId?: string,
+        favoritesOnly?: boolean
     ) {
         const clips = await db.getClipsByChannelId(
             channelId,
             limit,
             offset,
-            sort
+            sort,
+            userId,
+            favoritesOnly
         );
 
         if (!clips) {
@@ -202,8 +214,8 @@ export class DataService {
         return clips.map(clip => ClipMapper.toClipWithMetadata(clip));
     }
 
-    static async getClipById(clipId: string) {
-        const clip = await db.getClipById(clipId);
+    static async getClipById(clipId: string, userId?: string) {
+        const clip = await db.getClipById(clipId, userId);
 
         if (!clip) {
             console.error("Clip not found, clipId: " + clipId);
@@ -211,6 +223,36 @@ export class DataService {
         }
 
         return ClipMapper.toClipWithMetadata(clip);
+    }
+
+    // Security method: Get only guild_id for permission checks
+    static async getClipGuildId(clipId: string): Promise<string | undefined> {
+        const clip = await db.getClipGuildId(clipId);
+        return clip;
+    }
+
+    // New method for user's favorites across guilds
+    static async getFavoriteClips(
+        userId: string,
+        guildIds: string[],
+        offset: number = 0,
+        limit: number = 50,
+        sort: "asc" | "desc" = "desc"
+    ) {
+        const clips = await db.getFavoriteClips(
+            userId,
+            guildIds,
+            limit,
+            offset,
+            sort
+        );
+
+        if (!clips) {
+            console.error("Favorite clips not found, userId: " + userId);
+            return undefined;
+        }
+
+        return clips.map(clip => ClipMapper.toClipWithMetadata(clip));
     }
 
     static async getClipCountByChannelId(channelId: string) {
@@ -258,4 +300,5 @@ export class DataService {
 
         return SettingsMapper.toGuildSettings(settings);
     }
+
 }

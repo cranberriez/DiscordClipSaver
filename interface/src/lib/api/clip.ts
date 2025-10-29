@@ -39,6 +39,7 @@ export interface FullClip {
     clip: Clip;
     message: Message;
     thumbnail: Thumbnail | null;
+    isFavorited?: boolean;
 }
 
 export interface ClipListResponse {
