@@ -23,7 +23,10 @@ export async function GET(
 
     try {
         // Pass user ID for favorites support
-        const clipWithMetadata = await DataService.getClipById(clipId, auth.discordUserId);
+        const clipWithMetadata = await DataService.getClipById(
+            clipId,
+            auth.discordUserId
+        );
 
         if (!clipWithMetadata) {
             return NextResponse.json(

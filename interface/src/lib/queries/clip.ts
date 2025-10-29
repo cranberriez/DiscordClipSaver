@@ -52,7 +52,7 @@ export const clipKeys = {
 
 /**
  * Query options for fetching clips with pagination.
- * Supports filtering by channels, authors, and sorting.
+ * Supports filtering by channels, authors, favorites, and sorting.
  */
 export const clipsQuery = (params: {
     guildId: string;
@@ -61,6 +61,7 @@ export const clipsQuery = (params: {
     limit?: number;
     offset?: number;
     sort?: "asc" | "desc";
+    favorites?: boolean;
 }) =>
     queryOptions<ClipListResponse>({
         queryKey:

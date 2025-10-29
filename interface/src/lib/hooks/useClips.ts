@@ -49,6 +49,7 @@ export function useChannelClips(params: {
     limit?: number;
     offset?: number;
     sort?: "asc" | "desc";
+    favorites?: boolean;
 }) {
     return useQuery(clipsQuery(params));
 }

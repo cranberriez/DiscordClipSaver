@@ -25,6 +25,11 @@ import {
 } from "./scan";
 import { ClipListResponse, FullClip } from "./clip";
 import type { AuthorStatsResponse } from "./author";
+import type { 
+    FavoriteStatusResponse, 
+    FavoriteBulkResponse, 
+    FavoriteToggleRequest 
+} from "./favorites";
 
 // ============================================================================
 // Error Handling
@@ -300,7 +305,7 @@ export const api = {
     clips: {
         /**
          * Get clips for a guild or specific channels/authors with pagination
-         * GET /api/guilds/[guildId]/clips?channelIds=xxx,yyy&authorIds=aaa,bbb&limit=50&offset=0&sort=desc
+         * GET /api/guilds/[guildId]/clips?channelIds=xxx,yyy&authorIds=aaa,bbb&limit=50&offset=0&sort=desc&favorites=true
          */
         list: (params: {
             guildId: string;
@@ -309,6 +314,7 @@ export const api = {
             limit?: number;
             offset?: number;
             sort?: "asc" | "desc";
+            favorites?: boolean;
         }) => {
             const searchParams = new URLSearchParams();
             if (params.channelIds && params.channelIds.length > 0)
@@ -320,6 +326,7 @@ export const api = {
             if (params.offset)
                 searchParams.set("offset", params.offset.toString());
             if (params.sort) searchParams.set("sort", params.sort);
+            if (params.favorites) searchParams.set("favorites", "true");
 
             const query = searchParams.toString();
             return apiRequest<ClipListResponse>(
@@ -334,5 +341,76 @@ export const api = {
          */
         get: (guildId: string, clipId: string) =>
             apiRequest<FullClip>(`/api/guilds/${guildId}/clips/${clipId}`),
+    },
+
+    // ========================================================================
+    // Favorites
+    // ========================================================================
+    favorites: {
+        /**
+         * Check if a clip is favorited by the current user
+         * GET /api/clips/[clipId]/favorite
+         */
+        status: (clipId: string) =>
+            apiRequest<FavoriteStatusResponse>(`/api/clips/${clipId}/favorite`),
+
+        /**
+         * Add single clip to favorites
+         * POST /api/clips/[clipId]/favorite
+         */
+        add: (clipId: string) =>
+            apiRequest<FavoriteBulkResponse>(`/api/clips/${clipId}/favorite`, {
+                method: "POST",
+            }),
+
+        /**
+         * Add multiple clips to favorites
+         * POST /api/clips/[clipId]/favorite with clipIds in body
+         */
+        addMultiple: (clipIds: string[]) => {
+            // Use first clipId as URL param, all clipIds in body
+            const primaryClipId = clipIds[0];
+            return apiRequest<FavoriteBulkResponse>(
+                `/api/clips/${primaryClipId}/favorite`,
+                {
+                    method: "POST",
+                    body: JSON.stringify({ clipIds }),
+                }
+            );
+        },
+
+        /**
+         * Remove single clip from favorites
+         * DELETE /api/clips/[clipId]/favorite
+         */
+        remove: (clipId: string) =>
+            apiRequest<FavoriteBulkResponse>(`/api/clips/${clipId}/favorite`, {
+                method: "DELETE",
+            }),
+
+        /**
+         * Remove multiple clips from favorites
+         * DELETE /api/clips/[clipId]/favorite with clipIds in body
+         */
+        removeMultiple: (clipIds: string[]) => {
+            // Use first clipId as URL param, all clipIds in body
+            const primaryClipId = clipIds[0];
+            return apiRequest<FavoriteBulkResponse>(
+                `/api/clips/${primaryClipId}/favorite`,
+                {
+                    method: "DELETE",
+                    body: JSON.stringify({ clipIds }),
+                }
+            );
+        },
+
+        /**
+         * Toggle favorite status for a single clip
+         * Uses the toggleFavorite database function
+         */
+        toggle: (clipId: string) =>
+            apiRequest<FavoriteBulkResponse>(`/api/clips/${clipId}/favorite`, {
+                method: "POST",
+            }),
     },
 };
