@@ -87,6 +87,7 @@ export function useClipsUrlSync() {
             (searchParams.get("sort") as "asc" | "desc" | null) || null;
 
         // Apply to store (URL overrides persisted once)
+        // Only override store values if URL params are actually present
         if (guildId != null) setGuildId(guildId || null);
         if (channelIds) setChannelIds(channelIds);
         if (authorIds) setAuthorIds(authorIds);

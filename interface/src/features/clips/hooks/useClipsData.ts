@@ -20,8 +20,9 @@ export function useClipsData(opts: { hydrated: boolean; targetPage?: number }) {
         sortOrder,
     } = useClipFiltersStore();
 
-    // Only enable data tied to a guild after hydration so URL wins over persisted store
-    const effectiveGuildId = hydrated ? selectedGuildId || "" : "";
+    // Use selectedGuildId immediately if available, but still wait for hydration for other URL params
+    // This prevents the race condition where URL hydrates before Zustand store on first navigation
+    const effectiveGuildId = selectedGuildId || "";
 
     const { data: guilds = [], isLoading: guildsLoading } =
         useGuildsWithClipCount();
