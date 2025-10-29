@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useCallback } from "react";
+import { useEffect, useMemo, useRef, useCallback, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useClipFiltersStore } from "@/features/clips/stores/useClipFiltersStore";
 
@@ -43,9 +43,12 @@ export function useClipsUrlSync() {
 
     // Track hydration from URL to avoid feedback loop
     const hydratedRef = useRef(false);
+    const [hydratedState, setHydratedState] = useState(false);
     const suppressWriteRef = useRef(true);
     // Track clipId separately from persisted filters
     const clipIdRef = useRef<string | null>(null);
+    // Track initial clipId from URL (never changes after hydration)
+    const initialClipIdRef = useRef<string | null>(null);
 
     // Debounce writes (especially search typing)
     const debounceRef = useRef<number | null>(null);
@@ -66,7 +69,7 @@ export function useClipsUrlSync() {
         return Number.isFinite(n) && n > 0 ? n : 1;
     }, [searchParams]);
 
-    // Read clipId from URL
+    // Read clipId from URL (but only use for initial hydration)
     const clipIdFromUrl = useMemo(
         () => searchParams.get("clipId"),
         [searchParams]
@@ -90,13 +93,15 @@ export function useClipsUrlSync() {
         if (q !== "") setSearchQuery(q);
         if (sort === "asc" || sort === "desc") setSortOrder(sort);
 
-        // Track initial clipId
+        // Track initial clipId (never changes after this)
+        initialClipIdRef.current = searchParams.get("clipId");
         clipIdRef.current = searchParams.get("clipId");
 
         hydratedRef.current = true;
         // Allow writes after a tick to avoid replacing immediately
         const t = window.setTimeout(() => {
             suppressWriteRef.current = false;
+            setHydratedState(true);
         }, 0);
         return () => window.clearTimeout(t);
         // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -124,8 +129,9 @@ export function useClipsUrlSync() {
 
         // Preserve page param if present
         if (pageFromUrl && pageFromUrl > 1) params.page = String(pageFromUrl);
-        // Preserve clipId if present
-        if (clipIdRef.current) params.clipId = clipIdRef.current;
+        // Preserve clipId if present (but don't auto-write clipId changes, only manual ones)
+        const currentClipId = searchParams.get("clipId");
+        if (currentClipId) params.clipId = currentClipId;
 
         const qs = buildQuery(params);
         // Skip if unchanged
@@ -139,6 +145,7 @@ export function useClipsUrlSync() {
         sortOrder,
         pageFromUrl,
         scheduleReplace,
+        searchParams,
     ]);
 
     // setPage API: lets page update URL intentionally
@@ -192,6 +199,9 @@ export function useClipsUrlSync() {
             sort: sortOrder === "desc" ? undefined : sortOrder,
             // page intentionally omitted to reset to 1 (implicit)
         };
+        // Preserve clipId if present
+        const currentClipId = searchParams.get("clipId");
+        if (currentClipId) params.clipId = currentClipId;
         const qs = buildQuery(params);
         if (qs === searchParams.toString()) return;
         scheduleReplace(qs);
@@ -205,10 +215,10 @@ export function useClipsUrlSync() {
     ]);
 
     return {
-        hydrated: hydratedRef.current,
+        hydrated: hydratedState,
         page: pageFromUrl,
         setPage,
-        clipId: clipIdFromUrl,
+        clipId: initialClipIdRef.current, // Return the captured initial clipId, not reactive URL value
         setClipId: (id: string | null) => {
             if (!hydratedRef.current) return;
             clipIdRef.current = id;
@@ -224,7 +234,7 @@ export function useClipsUrlSync() {
                         : undefined,
                 q: searchQuery?.trim() ? searchQuery.trim() : undefined,
                 sort: sortOrder === "desc" ? undefined : sortOrder,
-                page: String(pageFromUrl || 1),
+                // Don't include page when setting clipId - let it reset to 1
                 clipId: id || undefined,
             };
             const qs = buildQuery(params);
