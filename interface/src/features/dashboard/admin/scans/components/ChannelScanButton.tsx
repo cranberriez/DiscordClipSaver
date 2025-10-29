@@ -86,7 +86,13 @@ export function ChannelScanButton({ channel }: { channel: ChannelWithStatus }) {
 
                     <MenuItemWithInfo
                         onClick={() =>
-                            toast("Historical scan not implemented yet")
+                            handleStart({
+                                isUpdate: false,
+                                isHistorical: true,
+                                limit: 100,
+                                autoContinue: true,
+                                rescan: "stop",
+                            })
                         }
                         disabled={isDisabled}
                         hoverText="Scan channel for all clips, in case you don't see any newly added clips."
@@ -114,7 +120,6 @@ function MenuItemWithInfo({
         <DropdownMenuItem
             onClick={onClick}
             disabled={disabled}
-            title={hoverText}
             className="cursor-pointer"
         >
             {children}
