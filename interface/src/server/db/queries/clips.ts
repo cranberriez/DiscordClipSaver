@@ -169,15 +169,17 @@ export async function getClipById(
     clipId: string,
     userId?: string
 ): Promise<ClipWithMetadata | null> {
-    // Single query with all JOINs for better performance
+    // Single query with optimized JOIN - always join but with proper condition
     const result = await getDb()
         .selectFrom("clip")
         .innerJoin("message", "message.id", "clip.message_id")
-        .leftJoin("favorite_clip", join =>
-            join
-                .onRef("favorite_clip.clip_id", "=", "clip.id")
-                .on("favorite_clip.user_id", "=", userId || "")
-        )
+        .leftJoin("favorite_clip", join => {
+            const baseJoin = join.onRef("favorite_clip.clip_id", "=", "clip.id");
+            // When no userId, join with impossible condition to avoid matching any rows
+            return userId 
+                ? baseJoin.on("favorite_clip.user_id", "=", userId)
+                : baseJoin.on("favorite_clip.user_id", "=", ""); // Empty string will never match
+        })
         .selectAll("clip")
         .select([
             "message.id as message_id",
@@ -190,15 +192,18 @@ export async function getClipById(
             "message.updated_at as message_updated_at",
             "message.deleted_at as message_deleted_at",
         ])
-        .select(eb =>
-            eb
+        .select(eb => {
+            if (!userId) {
+                return eb.lit(false).as("is_favorited");
+            }
+            return eb
                 .case()
                 .when("favorite_clip.user_id", "is not", null)
                 .then(true)
                 .else(false)
                 .end()
-                .as("is_favorited")
-        )
+                .as("is_favorited");
+        })
         .where("clip.id", "=", clipId)
         .where("clip.deleted_at", "is", null)
         .where("message.deleted_at", "is", null)

@@ -379,12 +379,29 @@ function updateClipFavoriteStatus(
         }
     );
 
-    // Update clip detail queries
+    // Update clip detail queries (single clip queries)
     queryClient.setQueriesData(
         { queryKey: clipKeys.all },
-        (oldData: FullClip | undefined) => {
-            if (!oldData || oldData.clip.id !== clipId) return oldData;
-            return { ...oldData, isFavorited };
+        (oldData: any) => {
+            // Skip if no data
+            if (!oldData) return oldData;
+            
+            // Handle paginated list data (infinite queries)
+            if (oldData.pages) {
+                return oldData; // Already handled above in clip lists update
+            }
+            
+            // Handle single clip data (detail queries)
+            if (oldData.clip && oldData.clip.id === clipId) {
+                return { ...oldData, isFavorited };
+            }
+            
+            // Handle direct clip data (if any queries return clip directly)
+            if (oldData.id === clipId) {
+                return { ...oldData, isFavorited };
+            }
+            
+            return oldData;
         }
     );
 }
