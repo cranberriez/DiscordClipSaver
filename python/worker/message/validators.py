@@ -35,6 +35,7 @@ def matches_regex_filter(message: discord.Message, regex_pattern: Optional[str])
 def is_video_attachment(attachment: discord.Attachment, allowed_mime_types: List[str]) -> bool:
     """
     Check if attachment is a video based on MIME type.
+    Falls back to file extension for old messages without content_type.
     
     Args:
         attachment: Discord attachment
@@ -43,7 +44,17 @@ def is_video_attachment(attachment: discord.Attachment, allowed_mime_types: List
     Returns:
         True if attachment is a video
     """
-    return bool(attachment.content_type and attachment.content_type in allowed_mime_types)
+    # First try content_type if available
+    if attachment.content_type and attachment.content_type in allowed_mime_types:
+        return True
+    
+    # Fallback to file extension for old messages without content_type
+    if not attachment.content_type:
+        filename = attachment.filename.lower()
+        video_extensions = {'.mp4', '.mov', '.webm', '.avi', '.mkv', '.flv', '.wmv'}
+        return any(filename.endswith(ext) for ext in video_extensions)
+    
+    return False
 
 
 def filter_video_attachments(
