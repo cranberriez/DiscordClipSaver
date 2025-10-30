@@ -237,7 +237,7 @@ export function ClipModal({
                     <CloseButton onClose={onClose} />
 
                     {/* Main Content Container */}
-                    <div className="h-full flex flex-col max-h-screen">
+                    <div className="h-full flex flex-col max-h-screen min-h-0">
                         {/* Video Player Section - 16:9 aspect ratio, centered */}
                         <VideoSection
                             isRefreshing={latest.isLoading}

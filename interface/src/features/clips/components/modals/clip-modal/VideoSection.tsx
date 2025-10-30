@@ -25,8 +25,8 @@ export function VideoSection({
     onPlayerReady,
 }: VideoSectionProps) {
     return (
-        <div className="flex-1 flex items-center justify-center px-2 py-4 md:px-4 md:py-6">
-            <div className="flex items-center justify-center w-full max-w-[95vw] 2xl:max-w-[1920px]">
+        <div className="flex-1 flex items-center justify-center px-2 py-4 md:px-4 md:py-6 min-h-0 overflow-hidden">
+            <div className="flex items-center justify-center w-full h-full max-w-[98vw] max-h-full 2xl:max-w-none">
                 {shouldRefetch && isRefreshing ? (
                     <div className="aspect-video bg-muted rounded-lg flex flex-col items-center justify-center gap-4">
                         <p className="text-muted-foreground text-center px-4">
