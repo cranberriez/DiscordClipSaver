@@ -95,7 +95,7 @@ export function ChannelScanButton({ channel }: { channel: ChannelWithStatus }) {
                             })
                         }
                         disabled={isDisabled}
-                        hoverText="Scan channel for all clips, in case you don't see any newly added clips."
+                        hoverText="Scan channels backwards for all clips, in case you don't see any newly added clips."
                     >
                         Historical Scan
                     </MenuItemWithInfo>
