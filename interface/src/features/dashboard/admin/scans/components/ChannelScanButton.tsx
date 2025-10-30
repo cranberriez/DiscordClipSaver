@@ -89,15 +89,31 @@ export function ChannelScanButton({ channel }: { channel: ChannelWithStatus }) {
                             handleStart({
                                 isUpdate: false,
                                 isHistorical: true,
-                                limit: 100,
+                                limit: 1000,
                                 autoContinue: true,
                                 rescan: "stop",
                             })
                         }
                         disabled={isDisabled}
-                        hoverText="Scan channels backwards for all clips, in case you don't see any newly added clips."
+                        hoverText="Scan channel backwards for all clips, in case you don't see any newly added clips."
                     >
                         Historical Scan
+                    </MenuItemWithInfo>
+
+                    <MenuItemWithInfo
+                        onClick={() =>
+                            handleStart({
+                                isUpdate: false,
+                                isHistorical: true,
+                                limit: 1000,
+                                autoContinue: true,
+                                rescan: "continue",
+                            })
+                        }
+                        disabled={isDisabled}
+                        hoverText="Scan channel backwards for all clips, continuing all the way until the beginning."
+                    >
+                        Historical Hard Re-Scan
                     </MenuItemWithInfo>
                 </DropdownMenuContent>
             </DropdownMenu>
