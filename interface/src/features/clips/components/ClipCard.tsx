@@ -65,7 +65,7 @@ export function ClipCard({
 
     // Temporary onclick wrapper for displaying extra data
     const handleClick = () => {
-        console.log("Clip clicked:", clip);
+        // console.log("Clip clicked:", clip);
         onClick(clip);
     };
 

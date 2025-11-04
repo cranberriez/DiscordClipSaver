@@ -40,8 +40,8 @@ export function VideoSection({
                         </p>
                         <p className="text-sm text-muted-foreground text-center px-4">
                             This may be due to an expired CDN URL, unsupported
-                            video codec (HEVC/H.265), or the clip was deleted
-                            from Discord.
+                            video codec (HEVC/H.265) for your browser, or the
+                            clip was deleted from Discord.
                         </p>
                         <Button
                             onClick={() => window.open(videoUrl, "_blank")}

@@ -91,7 +91,6 @@ export function VideoPlayer({
                 }}
             >
                 <MediaPlayer
-                    key={videoSrc}
                     ref={playerRef}
                     title={title || "Video"}
                     src={{
