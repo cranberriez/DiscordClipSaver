@@ -10,6 +10,7 @@ interface VideoSectionProps {
     videoUrl: string;
     posterUrl?: string | null;
     clipTitle: string;
+    clipId: string;
     onError: () => void;
     onPlayerReady: (player: any) => void;
 }
@@ -21,6 +22,7 @@ export function VideoSection({
     videoUrl,
     posterUrl,
     clipTitle,
+    clipId,
     onError,
     onPlayerReady,
 }: VideoSectionProps) {
@@ -55,6 +57,7 @@ export function VideoSection({
                         src={videoUrl}
                         poster={posterUrl || undefined}
                         title={clipTitle}
+                        clipId={clipId}
                         onError={onError}
                         onPlayerReady={onPlayerReady}
                     />

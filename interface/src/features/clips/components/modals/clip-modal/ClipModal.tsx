@@ -255,6 +255,7 @@ export function ClipModal({
                             videoUrl={videoUrl}
                             posterUrl={getThumbnailUrl()}
                             clipTitle={clip.filename}
+                            clipId={clip.id}
                             onError={handleVideoError}
                             onPlayerReady={setPlayerInstance}
                         />

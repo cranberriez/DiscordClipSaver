@@ -7,7 +7,7 @@ import {
 } from "@vidstack/react/player/layouts/default";
 import "@vidstack/react/player/styles/default/theme.css";
 import "@vidstack/react/player/styles/default/layouts/video.css";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
 import { useVideoPlayerStore } from "../stores/useVideoPlayerStore";
 
 interface VideoPlayerProps {
@@ -16,6 +16,8 @@ interface VideoPlayerProps {
     title?: string;
     onError?: () => void;
     onPlayerReady?: (player: any) => void;
+    /** Unique key to force remount on clip changes */
+    clipId?: string;
 }
 
 export function VideoPlayer({
@@ -24,16 +26,59 @@ export function VideoPlayer({
     title,
     onError,
     onPlayerReady,
+    clipId,
 }: VideoPlayerProps) {
     const playerRef = useRef<any>(null);
     const { volume, setVolume } = useVideoPlayerStore();
+    const [currentSrc, setCurrentSrc] = useState(src);
+    const debounceTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
     // Subscribe to Vidstack's volume state (with null check)
     const mediaStore = useMediaStore(playerRef);
     const currentVolume = mediaStore?.volume;
 
-    // Use the CDN URL as-is (no CORS transformation needed without crossOrigin attribute)
-    const videoSrc = src;
+    // Debounced source update to prevent rapid switching issues
+    useEffect(() => {
+        if (debounceTimeoutRef.current) {
+            clearTimeout(debounceTimeoutRef.current);
+        }
+
+        // If source hasn't changed, no need to debounce
+        if (src === currentSrc) return;
+
+        // Debounce source changes by 150ms to prevent race conditions
+        debounceTimeoutRef.current = setTimeout(() => {
+            setCurrentSrc(src);
+        }, 150);
+
+        return () => {
+            if (debounceTimeoutRef.current) {
+                clearTimeout(debounceTimeoutRef.current);
+            }
+        };
+    }, [src, currentSrc]);
+
+    // Transform Discord CDN URLs to avoid CORS issues
+    const videoSrc = useCallback((url: string) => {
+        try {
+            const urlObj = new URL(url);
+
+            // For Discord CDN URLs, try to use media.discordapp.net which has better CORS support
+            if (urlObj.hostname === "cdn.discordapp.com") {
+                return url.replace(
+                    "cdn.discordapp.com",
+                    "media.discordapp.net"
+                );
+            }
+
+            return url;
+        } catch {
+            // If URL parsing fails, return as-is
+            return url;
+        }
+    }, []);
+
+    const transformedSrc = videoSrc(currentSrc);
 
     // Sync Vidstack volume changes to our store
     useEffect(() => {
@@ -53,30 +98,69 @@ export function VideoPlayer({
                 detail: errorDetail,
                 error: event.error,
                 target: event.target,
+                src: currentSrc,
+                clipId,
             });
 
-            // Check if it's a codec/decode error
+            // Check for specific error types
             if (
                 errorDetail?.message?.includes("decode") ||
-                errorDetail?.code === 4
+                errorDetail?.code === 4 ||
+                errorDetail?.message?.includes(
+                    "NS_ERROR_DOM_MEDIA_NOT_SUPPORTED_ERR"
+                )
             ) {
                 console.warn(
-                    "Video decode error - likely HEVC/H.265 codec which this browser doesn't support. " +
+                    "Video decode error - likely HEVC/H.265 codec or unsupported format. " +
                         "Try Chrome, Safari, or download the video directly."
+                );
+            }
+
+            // Check for CORS/network errors
+            if (
+                errorDetail?.message?.includes("CORS") ||
+                errorDetail?.message?.includes("OpaqueResponseBlocking") ||
+                event.type === "abort"
+            ) {
+                console.warn(
+                    "Network/CORS error loading video. This may be due to Discord CDN restrictions."
                 );
             }
 
             onError?.();
         };
 
+        const handleLoadStart = () => {
+            // Video started loading
+        };
+
+        const handleCanPlay = () => {
+            // Video can start playing
+        };
+
+        const handleAbort = () => {
+            console.log("Video loading aborted for:", {
+                src: currentSrc,
+                clipId,
+            });
+            // Don't call onError for abort - this is expected during rapid switching
+        };
+
         player.addEventListener("error", handleError);
+        player.addEventListener("loadstart", handleLoadStart);
+        player.addEventListener("canplay", handleCanPlay);
+        player.addEventListener("abort", handleAbort);
+
         // Expose player instance to parent when ready
         onPlayerReady?.(player);
 
         return () => {
             player.removeEventListener("error", handleError);
+            player.removeEventListener("loadstart", handleLoadStart);
+            player.removeEventListener("canplay", handleCanPlay);
+            player.removeEventListener("abort", handleAbort);
         };
-    }, [onError, onPlayerReady]);
+    }, [onError, onPlayerReady, currentSrc, clipId]);
 
     return (
         <div className="w-full h-full max-w-[95vw] max-h-full flex items-center justify-center">
@@ -91,10 +175,11 @@ export function VideoPlayer({
                 }}
             >
                 <MediaPlayer
+                    key={clipId || transformedSrc} // Force remount on clip changes
                     ref={playerRef}
                     title={title || "Video"}
                     src={{
-                        src: videoSrc,
+                        src: transformedSrc,
                         type: "video/mp4",
                     }}
                     poster={poster}
