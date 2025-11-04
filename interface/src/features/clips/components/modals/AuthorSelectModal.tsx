@@ -29,8 +29,27 @@ export function AuthorSelectModal({
         isAuthorModalOpen,
         closeAuthorModal,
         selectedAuthorIds,
+        selectedChannelIds,
         setAuthorIds,
     } = useClipFiltersStore();
+
+    // Calculate accurate clip count based on selected channels
+    const getAuthorClipCount = (author: AuthorWithStats): number => {
+        // If no channels are selected, show total clip count
+        if (!selectedChannelIds || selectedChannelIds.length === 0) {
+            return author.clip_count || 0;
+        }
+        
+        // If channels are selected, sum up clips from those specific channels
+        if (author.channel_clip_counts) {
+            return selectedChannelIds.reduce((total, channelId) => {
+                return total + (author.channel_clip_counts?.[channelId] || 0);
+            }, 0);
+        }
+        
+        // Fallback to total if channel_clip_counts is not available
+        return author.clip_count || 0;
+    };
 
     // Filter authors by search query
     const filteredAuthors = useMemo(() => {
@@ -157,10 +176,10 @@ export function AuthorSelectModal({
                                                     {author.display_name}
                                                 </p>
                                                 <p className="text-xs text-muted-foreground">
-                                                    {author.clip_count}{" "}
-                                                    {author.clip_count === 1
-                                                        ? "clip"
-                                                        : "clips"}
+                                                    {(() => {
+                                                        const count = getAuthorClipCount(author);
+                                                        return `${count} ${count === 1 ? "clip" : "clips"}`;
+                                                    })()}
                                                 </p>
                                             </div>
                                         </div>

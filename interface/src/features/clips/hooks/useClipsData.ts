@@ -90,20 +90,33 @@ export function useClipsData(opts: { hydrated: boolean; targetPage?: number }) {
     })();
 
     const filteredClips = useMemo(() => {
-        if (!searchQuery.trim()) return allClips;
-        const query = searchQuery.toLowerCase();
-        return allClips.filter(clip => {
-            const messageContent = clip.message.content?.toLowerCase() || "";
-            const filename = clip.clip.filename.toLowerCase();
-            const author = authorMap.get(clip.message.author_id);
-            const authorName = author?.display_name.toLowerCase() || "";
-            return (
-                messageContent.includes(query) ||
-                filename.includes(query) ||
-                authorName.includes(query)
+        let clips = allClips;
+
+        // Apply author filtering (client-side)
+        if (selectedAuthorIds.length > 0 && selectedAuthorIds.length < authors.length) {
+            clips = clips.filter(clip => 
+                selectedAuthorIds.includes(clip.message.author_id)
             );
-        });
-    }, [allClips, searchQuery, authorMap]);
+        }
+
+        // Apply search query filtering
+        if (searchQuery.trim()) {
+            const query = searchQuery.toLowerCase();
+            clips = clips.filter(clip => {
+                const messageContent = clip.message.content?.toLowerCase() || "";
+                const filename = clip.clip.filename.toLowerCase();
+                const author = authorMap.get(clip.message.author_id);
+                const authorName = author?.display_name.toLowerCase() || "";
+                return (
+                    messageContent.includes(query) ||
+                    filename.includes(query) ||
+                    authorName.includes(query)
+                );
+            });
+        }
+
+        return clips;
+    }, [allClips, selectedAuthorIds, authors.length, searchQuery, authorMap]);
 
     const selectedGuild = guilds.find(g => g.id === selectedGuildId);
 
