@@ -29,7 +29,7 @@ export function HeroSection({ isAuthenticated }: HeroSectionProps) {
             <div className="flex flex-col sm:flex-row gap-8 justify-center items-center mt-16">
                 <Button
                     size="lg"
-                    className="text-lg px-8 py-6 min-w-48 bg-sky-400/1 hover:bg-sky-400/5 text-sky-400 border border-sky-400/50 text-shadow-lg font-bold -tracking-tight group/btn shadow-[0_0_28px_oklch(74.6%_0.16_232.661_/_0.45)] hover:shadow-[0_0_42px_oklch(74.6%_0.16_232.661_/_0.6)] transition-shadow"
+                    className="text-lg px-8 py-6 min-w-48 bg-gradient-to-br hover:bg-gradient-to-br from-sky-600 to-emerald-500 text-white border border-sky-400/50 text-shadow-lg font-bold -tracking-tight group/btn shadow-[0_0_28px_oklch(74.6%_0.16_232.661_/_0.45)] hover:shadow-[0_0_42px_oklch(74.6%_0.16_232.661_/_0.6)] transition-shadow"
                     asChild
                 >
                     {isAuthenticated ? (

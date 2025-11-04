@@ -4,7 +4,7 @@ import { useState, useCallback, useEffect, useRef } from "react";
 import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { InfoModal } from "./InfoModal";
 import { useLatestVideoUrl } from "@/features/clips/hooks/useLatestVideoUrl";
-import type { FullClip } from "@/lib/api/clip";
+import type { FullClip, Thumbnail } from "@/lib/api/clip";
 import type { AuthorWithStats } from "@/lib/api/author";
 import { formatClipName } from "../../../lib/formatClipName";
 import { messageTitleOrFilename } from "@/features/clips/lib/discordText";
@@ -189,9 +189,18 @@ export function ClipModal({
     }, [clip.id]);
 
     const getThumbnailUrl = (): string | null => {
-        if (thumbnail && thumbnail.url) {
-            // Use API route to serve thumbnails from storage
-            return `/api/storage/${thumbnail.url}`;
+        const largeThumbnail = thumbnail?.filter(t => t.size === "large")[0];
+        const smallThumbnail = thumbnail?.filter(t => t.size === "small")[0];
+
+        if (!largeThumbnail && !smallThumbnail) {
+            return null;
+        }
+
+        if (largeThumbnail && largeThumbnail.url) {
+            return `/api/storage/${largeThumbnail.url}`;
+        }
+        if (smallThumbnail && smallThumbnail.url) {
+            return `/api/storage/${smallThumbnail.url}`;
         }
         return null;
     };

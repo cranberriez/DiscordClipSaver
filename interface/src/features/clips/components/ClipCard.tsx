@@ -10,6 +10,7 @@ import Image from "next/image";
 import { messageTitleOrFilename } from "@/features/clips/lib/discordText";
 import { useImageErrorStore } from "../stores/useImageErrorStore";
 import { parseIsoTimestamp } from "@/lib/utils/time-helpers";
+import { Thumbnail } from "@/lib/api/clip";
 
 interface ClipCardProps {
     clip: FullClip;
@@ -35,7 +36,14 @@ export function ClipCard({
     const { hasTooManyErrors, reportError } = useImageErrorStore();
 
     const getThumbnailUrl = (): string | null => {
-        const thumbnail = clip.thumbnail;
+        const thumbnail: Thumbnail | undefined =
+            clip.thumbnail?.filter(t => t.size === "large")[0] ??
+            clip.thumbnail?.filter(t => t.size === "small")[0];
+
+        if (!thumbnail) {
+            return null;
+        }
+
         if (thumbnail && thumbnail.url) {
             return `/api/storage/${thumbnail.url}`;
         }
@@ -78,8 +86,8 @@ export function ClipCard({
                             src={thumbnailUrl}
                             alt={clipData.filename}
                             className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
-                            width={320}
-                            height={180}
+                            width={640}
+                            height={360}
                             unoptimized
                             onError={() => {
                                 reportError();

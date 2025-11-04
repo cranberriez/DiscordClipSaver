@@ -58,7 +58,7 @@ export class ClipMapper {
             message: ClipMapper.toMessage(dbClipWithMetadata.message),
             thumbnail:
                 dbClipWithMetadata.thumbnails.length > 0
-                    ? ClipMapper.toThumbnail(dbClipWithMetadata.thumbnails[0])
+                    ? dbClipWithMetadata.thumbnails.map(ClipMapper.toThumbnail)
                     : null,
             isFavorited: dbClipWithMetadata.isFavorited || false,
         };

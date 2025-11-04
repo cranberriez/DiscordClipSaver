@@ -167,11 +167,15 @@ export function InfoModal({
                                     </h3>
                                     <div className="flex gap-2">
                                         {thumbnail ? (
-                                            <Badge variant="secondary">
-                                                {thumbnail.size} (
-                                                {thumbnail.width}x
-                                                {thumbnail.height})
-                                            </Badge>
+                                            thumbnail.map(t => (
+                                                <Badge
+                                                    variant="secondary"
+                                                    key={t.size}
+                                                >
+                                                    {t.size} ({t.width}x
+                                                    {t.height})
+                                                </Badge>
+                                            ))
                                         ) : (
                                             <span className="text-sm text-muted-foreground">
                                                 No thumbnail available

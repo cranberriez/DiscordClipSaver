@@ -38,7 +38,7 @@ export interface Thumbnail {
 export interface FullClip {
     clip: Clip;
     message: Message;
-    thumbnail: Thumbnail | null;
+    thumbnail: Thumbnail[] | null;
     isFavorited?: boolean;
 }
 
