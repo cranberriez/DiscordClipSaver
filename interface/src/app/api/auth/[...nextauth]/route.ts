@@ -45,7 +45,8 @@ function createAuthOptions(baseUrl?: string): NextAuthOptions {
             async signIn({ user, account, profile }) {
                 const discordProfile = profile as DiscordProfile | undefined;
                 const discordUserId =
-                    (typeof discordProfile?.id === "string" && discordProfile.id) ??
+                    (typeof discordProfile?.id === "string" &&
+                        discordProfile.id) ??
                     account?.providerAccountId ??
                     (typeof user.id === "string" ? user.id : undefined);
 
@@ -70,7 +71,8 @@ function createAuthOptions(baseUrl?: string): NextAuthOptions {
                 // Persist Discord user id in the JWT for stable server-side identity
                 const discordProfile = profile as DiscordProfile | undefined;
                 const discordUserId =
-                    (typeof discordProfile?.id === "string" && discordProfile.id) ??
+                    (typeof discordProfile?.id === "string" &&
+                        discordProfile.id) ??
                     account?.providerAccountId ??
                     (typeof token.sub === "string" ? token.sub : undefined);
 
@@ -82,8 +84,9 @@ function createAuthOptions(baseUrl?: string): NextAuthOptions {
 
                 // Keep the provider access token server-only on the JWT
                 if (account?.access_token) {
-                    (token as typeof token & { accessToken?: string }).accessToken =
-                        account.access_token;
+                    (
+                        token as typeof token & { accessToken?: string }
+                    ).accessToken = account.access_token;
                 }
                 return token;
             },
@@ -93,8 +96,11 @@ function createAuthOptions(baseUrl?: string): NextAuthOptions {
                         (token as typeof token & { discordUserId?: string })
                             .discordUserId ?? token.sub;
                     if (discordUserId) {
-                        (session.user as typeof session.user & { id?: string }).id =
-                            discordUserId as string;
+                        (
+                            session.user as typeof session.user & {
+                                id?: string;
+                            }
+                        ).id = discordUserId as string;
                     }
                 }
                 return session;
@@ -125,11 +131,15 @@ function createAuthOptions(baseUrl?: string): NextAuthOptions {
 export const authOptions = createAuthOptions();
 
 // Create dynamic handlers that use request-specific authOptions
-async function GET(req: Request, context: { params: Promise<{ nextauth: string[] }> }) {
+async function GET(
+    req: Request,
+    context: { params: Promise<{ nextauth: string[] }> }
+) {
     // In development, create authOptions with dynamic URL
-    const options = process.env.NODE_ENV === "development" 
-        ? createAuthOptions(getAuthUrl(req))
-        : authOptions;
+    const options =
+        process.env.NODE_ENV === "development"
+            ? createAuthOptions(getAuthUrl(req))
+            : authOptions;
 
     const handler = NextAuth(options);
     // Await params for Next.js 15+ compatibility
@@ -137,11 +147,15 @@ async function GET(req: Request, context: { params: Promise<{ nextauth: string[]
     return handler(req, { params });
 }
 
-async function POST(req: Request, context: { params: Promise<{ nextauth: string[] }> }) {
+async function POST(
+    req: Request,
+    context: { params: Promise<{ nextauth: string[] }> }
+) {
     // In development, create authOptions with dynamic URL
-    const options = process.env.NODE_ENV === "development" 
-        ? createAuthOptions(getAuthUrl(req))
-        : authOptions;
+    const options =
+        process.env.NODE_ENV === "development"
+            ? createAuthOptions(getAuthUrl(req))
+            : authOptions;
 
     const handler = NextAuth(options);
     // Await params for Next.js 15+ compatibility

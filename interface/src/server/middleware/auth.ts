@@ -14,6 +14,7 @@ import { discordFetch, DiscordAPIError } from "@/server/discord/discordClient";
 import { getSingleGuildById } from "@/server/db";
 import type { DiscordGuild } from "@/server/discord/types";
 import type { DbGuild } from "@/server/db/types";
+import type { DiscordUser } from "@/server/discord/types";
 
 // ============================================================================
 // Types
