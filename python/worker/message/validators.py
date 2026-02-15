@@ -26,16 +26,17 @@ def matches_regex_filter(message: discord.Message, regex_pattern: Optional[str])
     if not regex_pattern:
         return True
     
-    if not message.content:
-        return False
+    # Treat None as empty string for matching
+    content = message.content or ""
     
-    return bool(re.search(regex_pattern, message.content))
+    return bool(re.search(regex_pattern, content))
 
 
 def is_video_attachment(attachment: discord.Attachment, allowed_mime_types: List[str]) -> bool:
     """
     Check if attachment is a video based on MIME type.
-    Falls back to file extension for old messages without content_type.
+    Falls back to file extension for old messages without content_type
+    or with generic content types (application/octet-stream).
     
     Args:
         attachment: Discord attachment
@@ -48,13 +49,13 @@ def is_video_attachment(attachment: discord.Attachment, allowed_mime_types: List
     if attachment.content_type and attachment.content_type in allowed_mime_types:
         return True
     
-    # Fallback to file extension for old messages without content_type
-    if not attachment.content_type:
-        filename = attachment.filename.lower()
-        video_extensions = {'.mp4', '.mov', '.webm', '.avi', '.mkv', '.flv', '.wmv'}
-        return any(filename.endswith(ext) for ext in video_extensions)
-    
-    return False
+    # Check extension if content_type is missing OR if it didn't match allowed types
+    # This handles cases like:
+    # 1. content_type is None (very old messages)
+    # 2. content_type is "application/octet-stream" (generic binary)
+    filename = attachment.filename.lower()
+    video_extensions = {'.mp4', '.mov', '.webm', '.avi', '.mkv', '.flv', '.wmv'}
+    return any(filename.endswith(ext) for ext in video_extensions)
 
 
 def filter_video_attachments(
