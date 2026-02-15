@@ -32,6 +32,8 @@ export function VideoPlayer({
     const { volume, setVolume } = useVideoPlayerStore();
     const [currentSrc, setCurrentSrc] = useState(src);
     const debounceTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+    const volumeInitializedRef = useRef(false);
+    const lastAppliedVolumeRef = useRef<number | null>(null);
 
     // Subscribe to Vidstack's volume state (with null check)
     const mediaStore = useMediaStore(playerRef);
@@ -80,9 +82,52 @@ export function VideoPlayer({
 
     const transformedSrc = videoSrc(currentSrc);
 
-    // Sync Vidstack volume changes to our store
+    // Reset volume init state whenever the underlying player is forced to remount.
+    // (The MediaPlayer is keyed by clipId/src, so its internal default volume can change.)
     useEffect(() => {
-        if (currentVolume !== undefined && currentVolume !== volume) {
+        volumeInitializedRef.current = false;
+        lastAppliedVolumeRef.current = null;
+    }, [clipId, transformedSrc]);
+
+    // Apply our persisted volume to the player.
+    // Note: Vidstack's `volume` prop isn't reliably "controlled" across remounts, so we
+    // also set it imperatively to ensure the new player instance inherits the stored value.
+    useEffect(() => {
+        const player = playerRef.current;
+        if (!player) return;
+
+        // On first initialization for this player instance, always push store -> player.
+        if (!volumeInitializedRef.current) {
+            try {
+                player.volume = volume;
+                lastAppliedVolumeRef.current = volume;
+            } finally {
+                volumeInitializedRef.current = true;
+            }
+            return;
+        }
+
+        // After initialization, keep store -> player in sync (e.g. when store hydrates).
+        if (typeof player.volume === "number" && player.volume !== volume) {
+            player.volume = volume;
+            lastAppliedVolumeRef.current = volume;
+        }
+    }, [volume]);
+
+    // Sync Vidstack volume changes back to our store (user-initiated changes).
+    useEffect(() => {
+        if (!volumeInitializedRef.current) return;
+        if (currentVolume === undefined) return;
+
+        // Ignore the immediate echo of a store->player write.
+        if (
+            lastAppliedVolumeRef.current !== null &&
+            currentVolume === lastAppliedVolumeRef.current
+        ) {
+            return;
+        }
+
+        if (currentVolume !== volume) {
             setVolume(currentVolume);
         }
     }, [currentVolume, volume, setVolume]);
