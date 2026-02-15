@@ -9,14 +9,23 @@ import {
     SelectTrigger,
     SelectValue,
 } from "@/components/ui/select";
-import { Server, Hash, User, Search, ArrowUpDown } from "lucide-react";
+import {
+    Server,
+    Hash,
+    User,
+    Search,
+    ArrowUpDown,
+    ArrowDownUp,
+} from "lucide-react";
 import {
     useClipFiltersStore,
     type SortOrder,
 } from "../stores/useClipFiltersStore";
+import { FilterNavButton } from "./FilterButtons";
 
 interface FilterBarProps {
     guildName?: string;
+    guildIcon?: string | null;
     channelCount?: number;
     authorCount?: number;
 }
@@ -33,6 +42,7 @@ interface FilterBarProps {
  */
 export function FilterBar({
     guildName,
+    guildIcon,
     channelCount = 0,
     authorCount = 0,
 }: FilterBarProps) {
@@ -68,6 +78,49 @@ export function FilterBar({
             selectedAuthorIds.length === 1 ? "" : "s"
         }`;
     };
+
+    // NEW Filter bar thats not finished
+    if (0)
+        return (
+            <div className="flex items-center flex-shrink bg-background">
+                {/* Guild Selector */}
+                <FilterNavButton
+                    onClick={openGuildModal}
+                    className="w-64 px-2!"
+                >
+                    <div className="w-8 h-8 rounded overflow-hidden flex-shrink-0">
+                        {guildIcon ? (
+                            <img
+                                src={guildIcon}
+                                alt={guildName}
+                                width={32}
+                                height={32}
+                            />
+                        ) : (
+                            <div className="flex items-center justify-center w-8 h-8 rounded overflow-hidden flex-shrink-0 bg-muted">
+                                <Server className="w-8 h-8 text-background" />
+                            </div>
+                        )}
+                    </div>
+                    <p className="truncate text-muted-foreground group-hover:text-foreground transition-colors">
+                        {guildName || "Select Server"}
+                    </p>
+                    <ArrowDownUp className="ml-auto w-4 h-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
+                </FilterNavButton>
+
+                {/* Channel Selector */}
+                <FilterNavButton onClick={openChannelModal}>
+                    <Hash className="h-5 w-5" />
+                    {getChannelButtonText()}
+                </FilterNavButton>
+
+                {/* Author Selector */}
+                <FilterNavButton onClick={openAuthorModal}>
+                    <User className="h-5 w-5" />
+                    {getAuthorButtonText()}
+                </FilterNavButton>
+            </div>
+        );
 
     return (
         <div className="sticky top-0 z-10 bg-background border-b">

@@ -61,10 +61,10 @@ export function ClipsPageContent() {
     }, [hydrated, clipId, initialClipId]);
 
     // Fetch single clip by ID for initial modal open if it's not yet in the list
-    const {
-        data: fetchedClipById,
-        error: fetchedClipError,
-    } = useClip(selectedGuildId || "", initialClipId || "");
+    const { data: fetchedClipById, error: fetchedClipError } = useClip(
+        selectedGuildId || "",
+        initialClipId || ""
+    );
 
     // Auto-open guild modal if no guild selected
     useEffect(() => {
@@ -112,8 +112,14 @@ export function ClipsPageContent() {
         }
         // If fetch by ID errored and we've exhausted pages, surface a toast
         if (!clipsQuery.hasNextPage && fetchedClipError) {
-            const msg = (fetchedClipError as any)?.message || "Clip not found or inaccessible.";
-            toast.error(msg.includes("403") ? "You don't have access to this clip." : "Clip not found.");
+            const msg =
+                (fetchedClipError as any)?.message ||
+                "Clip not found or inaccessible.";
+            toast.error(
+                msg.includes("403")
+                    ? "You don't have access to this clip."
+                    : "Clip not found."
+            );
             autoOpenedRef.current = true;
             return;
         }
@@ -122,12 +128,10 @@ export function ClipsPageContent() {
             clipsQuery.fetchNextPage();
         } else if (
             !clipsQuery.hasNextPage &&
-            (
-                // Only consider exhausted if we've loaded some pages
-                (clipsQuery.data?.pages.length ?? 0) > 0 ||
+            // Only consider exhausted if we've loaded some pages
+            ((clipsQuery.data?.pages.length ?? 0) > 0 ||
                 // Or query is not loading or fetching anymore (settled)
-                (!clipsQuery.isLoading && !clipsQuery.isFetchingNextPage)
-            )
+                (!clipsQuery.isLoading && !clipsQuery.isFetchingNextPage))
         ) {
             // Exhausted pages; don't try again
             autoOpenedRef.current = true;
@@ -150,7 +154,9 @@ export function ClipsPageContent() {
     useEffect(() => {
         if (!selectedClip) return;
         if (clipIndex !== -1) return;
-        const idx = filteredClips.findIndex(c => c.clip.id === selectedClip.clip.id);
+        const idx = filteredClips.findIndex(
+            c => c.clip.id === selectedClip.clip.id
+        );
         if (idx >= 0) setClipIndex(idx);
     }, [filteredClips, selectedClip, clipIndex]);
 
@@ -175,29 +181,32 @@ export function ClipsPageContent() {
             {/* Full-screen clips grid background */}
             <div className="flex flex-col h-screen inset-0 bg-background">
                 <Navbar noLines />
-                <FilterBar
-                    guildName={selectedGuild?.name}
-                    channelCount={channels.length}
-                    authorCount={authors.length}
-                />
-                <ClipGrid
-                    clips={filteredClips}
-                    authorMap={authorMap}
-                    setClipIndex={setClipIndex}
-                    setSelectedClip={clip =>
-                        handleSelectClip(
-                            clip,
-                            filteredClips.findIndex(
-                                c => c.clip.id === clip.clip.id
+                <div className="flex flex-col h-full relative">
+                    <FilterBar
+                        guildName={selectedGuild?.name}
+                        guildIcon={selectedGuild?.icon_url}
+                        channelCount={channels.length}
+                        authorCount={authors.length}
+                    />
+                    <ClipGrid
+                        clips={filteredClips}
+                        authorMap={authorMap}
+                        setClipIndex={setClipIndex}
+                        setSelectedClip={clip =>
+                            handleSelectClip(
+                                clip,
+                                filteredClips.findIndex(
+                                    c => c.clip.id === clip.clip.id
+                                )
                             )
-                        )
-                    }
-                    hasNextPage={clipsQuery.hasNextPage}
-                    isFetchingNextPage={clipsQuery.isFetchingNextPage}
-                    fetchNextPage={clipsQuery.fetchNextPage}
-                    scrollToClipId={scrollToClipId}
-                    highlightClipId={lastHighlightedId}
-                />
+                        }
+                        hasNextPage={clipsQuery.hasNextPage}
+                        isFetchingNextPage={clipsQuery.isFetchingNextPage}
+                        fetchNextPage={clipsQuery.fetchNextPage}
+                        scrollToClipId={scrollToClipId}
+                        highlightClipId={lastHighlightedId}
+                    />
+                </div>
             </div>
 
             {/* Content overlays for states (when no clips or loading) */}
@@ -226,14 +235,19 @@ export function ClipsPageContent() {
                         // Highlight the clip that was just watched for a moment
                         const justWatchedId = selectedClip.clip.id;
                         setLastHighlightedId(justWatchedId);
-                        
+
                         // Scroll to the clip once after closing modal
-                        if (filteredClips.some(c => c.clip.id === justWatchedId)) {
+                        if (
+                            filteredClips.some(c => c.clip.id === justWatchedId)
+                        ) {
                             setScrollToClipId(justWatchedId);
                             // Clear scroll target after a short delay
-                            window.setTimeout(() => setScrollToClipId(null), 1000);
+                            window.setTimeout(
+                                () => setScrollToClipId(null),
+                                1000
+                            );
                         }
-                        
+
                         // Clear highlight after 2 seconds
                         window.setTimeout(
                             () =>

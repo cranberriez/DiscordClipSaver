@@ -3,7 +3,7 @@ import { requireAuth } from "@/server/middleware/auth";
 import { DataService } from "@/server/services/data-service";
 
 /**
- * GET /api/discord/user/guilds
+ * GET /api/discord/me/guilds
  *
  * Get the authenticated user's Discord guilds.
  * Guilds are cached with graceful degradation:
