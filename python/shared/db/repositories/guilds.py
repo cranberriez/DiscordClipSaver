@@ -49,7 +49,7 @@ async def delete_guilds(guild_ids: Iterable[str]) -> int:
     return await Guild.filter(id__in=ids).update(deleted_at=utcnow())
 
 async def delete_single_guild(guild_id: str) -> int:
-    return await Guild.filter(id=str(guild_id)).update(deleted_at=utcnow())
+    return await Guild.filter(id=str(guild_id)).update(deleted_at=utcnow(), owner_id=None)
 
 async def get_guilds() -> List[Guild]:
     return await Guild.filter().order_by("name", "id")

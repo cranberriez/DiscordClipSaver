@@ -201,8 +201,7 @@ class PurgeHandler:
             
             # Leave the guild via bot
             try:
-                client = self.bot.get_client()
-                discord_guild = client.get_guild(int(guild_id))
+                discord_guild = self.bot.get_guild(int(guild_id))
                 if discord_guild:
                     await discord_guild.leave()
                     stats["guild_left"] = True
