@@ -1,6 +1,6 @@
 services:
     traefik:
-        image: traefik:v3.1
+        image: traefik
         container_name: dcs-traefik
         command:
             - --api.dashboard=true
@@ -44,8 +44,6 @@ services:
         env_file:
             - ./python/bot/.env
             - ./.env.global
-        ports:
-            - "8000:8000"
         depends_on:
             - dcs-postgres
             - dcs-redis
@@ -82,8 +80,6 @@ services:
             - ./.env.global
         environment:
             - BOT_API_URL=http://bot:8000
-        ports:
-            - "3000:3000"
         depends_on:
             - bot
             - dcs-postgres
@@ -132,9 +128,6 @@ services:
             - traefik.http.middlewares.interface-ratelimit.ratelimit.average=50
             - traefik.http.middlewares.interface-ratelimit.ratelimit.burst=100
 
-            # Middleware: IP Whitelist (replace with your public IP)
-            - traefik.http.middlewares.ip-whitelist.ipwhitelist.sourcerange=127.0.0.1/32, ${PUBLIC_DOMAIN}/32
-
     dcs-postgres:
         image: postgres:16-alpine
         container_name: dcs-postgres
@@ -142,8 +135,6 @@ services:
             POSTGRES_USER: ${POSTGRES_USER:-postgres}
             POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
             POSTGRES_DB: ${POSTGRES_DB:-postgres}
-        ports:
-            - "5432:5432"
         volumes:
             - postgres_data:/var/lib/postgresql/data
         networks:
@@ -155,8 +146,6 @@ services:
         image: redis:7-alpine
         container_name: dcs-redis
         command: ["redis-server", "--save", "60", "1", "--loglevel", "warning"]
-        ports:
-            - "6379:6379"
         volumes:
             - redis_data:/data
         networks:
