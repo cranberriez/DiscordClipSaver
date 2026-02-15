@@ -4,6 +4,7 @@ Get message history for specific guild, channel, and various other properties
 import logging
 from typing import List, Optional
 import discord
+from worker.discord.retry import execute_with_retry
 
 logger = logging.getLogger(__name__)
 
@@ -16,7 +17,7 @@ async def get_message_history(
     direction: str = "backward"
 ) -> List[discord.Message]:
     """
-    Fetch message history from a Discord channel
+    Fetch message history from a Discord channel with retry logic
     
     Args:
         channel: Discord channel object
@@ -28,26 +29,34 @@ async def get_message_history(
     Returns:
         List of Discord messages
     """
-    messages = []
     
-    try:
+    async def _fetch_history():
+        messages = []
         if direction == "backward":
             # Fetch messages going backward in time
             before = discord.Object(id=before_id) if before_id else None
-            
             async for message in channel.history(limit=limit, before=before, oldest_first=False):
                 messages.append(message)
                 
         elif direction == "forward":
             # Fetch messages going forward in time
             after = discord.Object(id=after_id) if after_id else None
-            
             async for message in channel.history(limit=limit, after=after, oldest_first=True):
                 messages.append(message)
         else:
             raise ValueError(f"Invalid direction: {direction}. Must be 'backward' or 'forward'")
+            
+        return messages
+
+    try:
+        messages = await execute_with_retry(
+            _fetch_history,
+            max_retries=3,
+            base_delay=1.0
+        )
         
         logger.info(f"Fetched {len(messages)} messages from channel {channel.id} ({direction})")
+        return messages
         
     except discord.Forbidden:
         logger.error(f"No permission to read messages in channel {channel.id}")
@@ -55,5 +64,3 @@ async def get_message_history(
     except discord.HTTPException as e:
         logger.error(f"HTTP error fetching messages from channel {channel.id}: {e}")
         raise
-    
-    return messages

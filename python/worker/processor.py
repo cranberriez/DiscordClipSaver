@@ -7,6 +7,7 @@ import discord
 from worker.discord.bot import WorkerBot
 from worker.discord.get_message_history import get_message_history
 from worker.discord.get_message import get_message
+from worker.discord.retry import execute_with_retry
 from worker.message.message_handler import MessageHandler
 from worker.message.batch_processor import BatchMessageProcessor
 from worker.thumbnail.thumbnail_handler import ThumbnailHandler
@@ -183,7 +184,12 @@ class JobProcessor:
             
             # Fetch the Discord channel
             try:
-                discord_channel = await self.bot.fetch_channel(int(channel_id))
+                discord_channel = await execute_with_retry(
+                    self.bot.fetch_channel,
+                    int(channel_id),
+                    max_retries=3,
+                    base_delay=1.0
+                )
             except discord.Forbidden:
                 await self._update_scan_status_with_error(
                     guild_id=guild_id,
@@ -449,7 +455,12 @@ class JobProcessor:
                 return
             
             # Fetch the Discord channel
-            discord_channel = await self.bot.fetch_channel(int(channel_id))
+            discord_channel = await execute_with_retry(
+                self.bot.fetch_channel,
+                int(channel_id),
+                max_retries=3,
+                base_delay=1.0
+            )
             
             # Process each message
             total_clips = 0

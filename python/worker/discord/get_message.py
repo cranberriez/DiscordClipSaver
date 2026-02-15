@@ -3,6 +3,7 @@ Get details for a specific message with message_id
 """
 import logging
 import discord
+from worker.discord.retry import execute_with_retry
 
 logger = logging.getLogger(__name__)
 
@@ -12,7 +13,7 @@ async def get_message(
     message_id: int
 ) -> discord.Message:
     """
-    Fetch a specific message from a channel
+    Fetch a specific message from a channel with retry logic
     
     Args:
         channel: Discord channel object
@@ -22,7 +23,13 @@ async def get_message(
         Discord message object
     """
     try:
-        message = await channel.fetch_message(message_id)
+        # Wrap the fetch in retry logic
+        message = await execute_with_retry(
+            channel.fetch_message,
+            message_id,
+            max_retries=3,
+            base_delay=1.0
+        )
         logger.debug(f"Fetched message {message_id} from channel {channel.id}")
         return message
         
