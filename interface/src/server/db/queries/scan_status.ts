@@ -76,15 +76,24 @@ export async function upsertChannelScanStatus(
 ): Promise<DbChannelScanStatus> {
     const db = getDb();
 
+    const now = new Date();
+
     const result = await db
         .insertInto("channel_scan_status")
         .values({
             guild_id: guildId,
             channel_id: channelId,
+            message_count: 0,
+            total_messages_scanned: 0,
             ...status,
+            created_at: now,
+            updated_at: now,
         })
         .onConflict(oc =>
-            oc.columns(["guild_id", "channel_id"]).doUpdateSet(status)
+            oc.columns(["guild_id", "channel_id"]).doUpdateSet({
+                ...status,
+                updated_at: now,
+            })
         )
         .returningAll()
         .executeTakeFirstOrThrow();

@@ -33,6 +33,8 @@ export async function upsertGuildSettings(
 ): Promise<DbGuildSettings> {
     const db = getDb();
 
+    const now = new Date();
+
     // Check if settings exist
     const existing = await getGuildSettings(guildId);
 
@@ -77,6 +79,8 @@ export async function upsertGuildSettings(
                 settings: (settings ?? {}) as unknown,
                 default_channel_settings: (defaultChannelSettings ??
                     {}) as unknown,
+                created_at: now,
+                updated_at: now,
             })
             .returningAll()
             .executeTakeFirstOrThrow();

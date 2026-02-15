@@ -199,12 +199,13 @@ async def bulk_upsert_clips(clips_data: List[dict]) -> Tuple[int, int]:
         
         sql = """
             INSERT INTO clip (
-                id, message_id, guild_id, channel_id, author_id, filename, file_size, mime_type,
+                id, message_id, visibility, guild_id, channel_id, author_id, filename, file_size, mime_type,
                 cdn_url, expires_at, thumbnail_status, settings_hash, created_at, updated_at
             )
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
             ON CONFLICT (id) DO UPDATE SET
                 message_id = EXCLUDED.message_id,
+                visibility = EXCLUDED.visibility,
                 guild_id = EXCLUDED.guild_id,
                 channel_id = EXCLUDED.channel_id,
                 author_id = EXCLUDED.author_id,
@@ -223,6 +224,7 @@ async def bulk_upsert_clips(clips_data: List[dict]) -> Tuple[int, int]:
             (
                 clip['id'],
                 clip['message_id'],
+                (clip.get('visibility') or 'PUBLIC'),
                 clip['guild_id'],
                 clip['channel_id'],
                 clip['author_id'],

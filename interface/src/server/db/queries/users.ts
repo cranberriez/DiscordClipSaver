@@ -6,11 +6,15 @@ export async function upsertUser(params: DbNewUser): Promise<DbUser> {
     if (!params.username) throw new Error("Username is required");
     if (!params.discriminator) throw new Error("Discriminator is required");
 
+    const now = new Date();
+
     const newUser: DbNewUser = {
         id: params.id,
         username: params.username,
         discriminator: params.discriminator,
         avatar_url: params.avatar_url ?? null,
+        created_at: now,
+        updated_at: now,
     };
 
     return getDb()
@@ -21,6 +25,7 @@ export async function upsertUser(params: DbNewUser): Promise<DbUser> {
                 username: newUser.username,
                 discriminator: newUser.discriminator,
                 avatar_url: newUser.avatar_url,
+                updated_at: now,
             })
         )
         .returningAll()
@@ -81,10 +86,7 @@ export async function getAuthorStatsByGuildId(guildId: string) {
             const channelCounts = await db
                 .selectFrom("message as m")
                 .innerJoin("clip as c", "m.id", "c.message_id")
-                .select([
-                    "m.channel_id",
-                    db.fn.countAll<number>().as("count"),
-                ])
+                .select(["m.channel_id", db.fn.countAll<number>().as("count")])
                 .where("m.author_id", "=", author.id)
                 .where("m.guild_id", "=", guildId)
                 .where("m.deleted_at", "is", null)

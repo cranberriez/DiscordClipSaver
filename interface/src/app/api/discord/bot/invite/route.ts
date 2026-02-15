@@ -13,12 +13,27 @@ import { buildInviteUrl } from "@/server/discord/generateBotInvite";
  * If no guildId is provided, Discord will prompt the user to select a guild.
  */
 export async function GET(req: NextRequest) {
+    if (process.env.DISCORD_INVITES_DISABLED === "1") {
+        return NextResponse.json(
+            { error: "Bot invites are temporarily disabled" },
+            { status: 403 }
+        );
+    }
+
     const url = new URL(req.url);
     const guildId = url.searchParams.get("guildId") || undefined;
 
     // Verify authentication
     const auth = await requireAuth(req);
     if (auth instanceof NextResponse) return auth;
+
+    const ownerDiscordId = process.env.OWNER_DISCORD_ID;
+    if (ownerDiscordId && auth.discordUserId !== ownerDiscordId) {
+        return NextResponse.json(
+            { error: "Bot invites are restricted" },
+            { status: 403 }
+        );
+    }
 
     // Generate a cryptographically strong state token
     const state = crypto.randomUUID();

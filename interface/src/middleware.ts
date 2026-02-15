@@ -23,6 +23,7 @@ export async function middleware(request: NextRequest) {
             // Add other public routes here if needed
             // '/api/webhooks/',
             "/api/storage/",
+            "/api/discord/bot/claim",
         ];
 
         const isPublicRoute = publicRoutes.some(route =>

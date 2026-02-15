@@ -24,6 +24,7 @@ export async function consumeInstallIntent(
 export async function createInstallIntent(
     params: DbNewInstallIntent
 ): Promise<Date> {
+    const now = new Date();
     const newIntent = await getDb()
         .insertInto("install_intent")
         .values({
@@ -31,6 +32,7 @@ export async function createInstallIntent(
             user_id: params.user_id,
             guild: params.guild,
             expires_at: params.expires_at,
+            created_at: now,
         })
         .returning("expires_at")
         .executeTakeFirstOrThrow();
