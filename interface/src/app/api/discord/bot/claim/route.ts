@@ -37,7 +37,8 @@ export async function GET(req: NextRequest) {
                 // ignore cleanup failure; still redirect with error details
             }
         }
-        const redirectUrl = new URL(`/install`, req.url);
+        const baseUrl = process.env.NEXTAUTH_URL || req.url;
+        const redirectUrl = new URL("/install", baseUrl);
         if (guildId) redirectUrl.searchParams.set("guild", guildId);
         redirectUrl.searchParams.set("status", "denied");
         redirectUrl.searchParams.set("error", oauthError);
@@ -114,8 +115,9 @@ export async function GET(req: NextRequest) {
     if (!claimed) {
         // already claimed
         await consumeInstallIntent({ state }); // still consume it
+        const baseUrl = process.env.NEXTAUTH_URL || req.url;
         return NextResponse.redirect(
-            new URL(`/install?guild=${guild}&status=already_claimed`, req.url)
+            new URL(`/install?guild=${guild}&status=already_claimed`, baseUrl)
         );
     }
 
@@ -123,7 +125,8 @@ export async function GET(req: NextRequest) {
     await consumeInstallIntent({ state });
 
     // (Optional) You may kick an async check that the bot has joined and update UI later
+    const baseUrl = process.env.NEXTAUTH_URL || req.url;
     return NextResponse.redirect(
-        new URL(`/install?guild=${guild}&status=ok`, req.url)
+        new URL(`/install?guild=${guild}&status=ok`, baseUrl)
     );
 }
