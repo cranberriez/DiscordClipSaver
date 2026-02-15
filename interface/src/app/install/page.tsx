@@ -33,6 +33,7 @@ function InstallContent() {
             <div className="flex flex-col items-center justify-center gap-24">
                 <StatusDisplay status={status ?? ""} />
                 <StatusMessage
+                    status={status ?? ""}
                     error={error ?? null}
                     error_description={error_description ?? null}
                     guildName={guild.data?.name ?? ""}
@@ -68,10 +69,12 @@ function StatusDisplay({ status }: { status: string }) {
 }
 
 function StatusMessage({
+    status,
     error,
     error_description,
     guildName,
 }: {
+    status: string;
     error: string | null;
     error_description: string | null;
     guildName: string;
@@ -81,25 +84,30 @@ function StatusMessage({
         already_claimed: "This guild has already been claimed!",
     };
 
-    return (
-        <div className="flex items-center justify-center px-8 py-4 rounded">
-            {error &&
-            (error as keyof typeof ERORR_MESSAGES) in ERORR_MESSAGES ? (
-                <p className="text-xl text-center">
-                    {ERORR_MESSAGES[error as keyof typeof ERORR_MESSAGES]}
-                </p>
-            ) : (
-                <div className="flex flex-col gap-2">
-                    <p className="text-xl text-center">
-                        You have successfully claimed {guildName}
-                    </p>
-                    <p className="text-center text-muted-foreground">
-                        The bot is now ready to start scanning and saving clips!
-                    </p>
-                </div>
-            )}
-        </div>
-    );
+    console.log(status);
+
+    if (status === "ok") {
+        <div className="flex flex-col gap-2">
+            <p className="text-xl text-center">
+                You have successfully claimed {guildName}
+            </p>
+            <p className="text-center text-muted-foreground">
+                The bot is now ready to start scanning and saving clips!
+            </p>
+        </div>;
+    } else if (status === "already_claimed") {
+        return (
+            <p className="text-xl text-center">
+                {ERORR_MESSAGES[status as keyof typeof ERORR_MESSAGES]}
+            </p>
+        );
+    } else {
+        return (
+            <p className="text-xl text-center">
+                {ERORR_MESSAGES[error as keyof typeof ERORR_MESSAGES]}
+            </p>
+        );
+    }
 }
 
 function WhatNext({ guild }: { guild: Guild }) {
