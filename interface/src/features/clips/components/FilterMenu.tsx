@@ -1,11 +1,8 @@
 "use client";
 
 import { FilterNavButton } from "./FilterButton";
-import {
-    useClipFiltersStore,
-    SortType,
-    SortOrder,
-} from "../stores/useClipFiltersStore";
+import { useClipFiltersStore } from "../stores/useClipFiltersStore";
+import { SortType, SortOrder } from "@/lib/api/clip";
 import { ArrowDownUp, Server, Hash, User, Menu, X } from "lucide-react";
 import { useState } from "react";
 import {
@@ -71,19 +68,21 @@ export function FilterMenu({
     };
 
     const getSortText = (type: SortType, order: SortOrder) => {
-        const text = {
+        const text: Record<string, Record<string, string>> = {
             date: {
                 asc: "Oldest First",
                 desc: "Newest First",
             },
-            likes: {
-                desc: "Most Liked",
+            duration: {
+                asc: "Shortest First",
+                desc: "Longest First",
             },
-            views: {
-                desc: "Most Viewed",
+            size: {
+                asc: "Smallest First",
+                desc: "Largest First",
             },
-        } as Record<SortType, Record<SortOrder, string>>;
-        return text[type][order];
+        };
+        return text[type]?.[order] || "Sort";
     };
 
     return (
@@ -157,20 +156,36 @@ export function FilterMenu({
                         </DropdownMenuItem>
                         <DropdownMenuSeparator />
                         <DropdownMenuLabel className="text-xs text-foreground/50 tracking-wider">
-                            POPULARITY
+                            DURATION
                         </DropdownMenuLabel>
                         <DropdownMenuItem
-                            onClick={() => setSort("likes", "desc")}
-                            className={`${sortType === "likes" ? "bg-accent-foreground! text-accent!" : ""} cursor-pointer`}
+                            onClick={() => setSort("duration", "desc")}
+                            className={`${sortType === "duration" && sortOrder === "desc" ? "bg-accent-foreground! text-accent!" : ""} cursor-pointer`}
                         >
-                            Most Likes
+                            Longest First
                         </DropdownMenuItem>
-                        {/* <DropdownMenuItem
-                            onClick={() => setSort("views", "desc")}
-                            className={`${sortType === "views" ? "bg-accent-foreground! text-accent!" : ""} cursor-pointer`}
+                        <DropdownMenuItem
+                            onClick={() => setSort("duration", "asc")}
+                            className={`${sortType === "duration" && sortOrder === "asc" ? "bg-accent-foreground! text-accent!" : ""} cursor-pointer`}
                         >
-                            Most Views
-                        </DropdownMenuItem> */}
+                            Shortest First
+                        </DropdownMenuItem>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuLabel className="text-xs text-foreground/50 tracking-wider">
+                            SIZE
+                        </DropdownMenuLabel>
+                        <DropdownMenuItem
+                            onClick={() => setSort("size", "desc")}
+                            className={`${sortType === "size" && sortOrder === "desc" ? "bg-accent-foreground! text-accent!" : ""} cursor-pointer`}
+                        >
+                            Largest First
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                            onClick={() => setSort("size", "asc")}
+                            className={`${sortType === "size" && sortOrder === "asc" ? "bg-accent-foreground! text-accent!" : ""} cursor-pointer`}
+                        >
+                            Smallest First
+                        </DropdownMenuItem>
                     </DropdownMenuContent>
                 </DropdownMenu>
             </div>

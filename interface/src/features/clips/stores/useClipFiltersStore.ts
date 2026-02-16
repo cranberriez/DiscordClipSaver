@@ -1,8 +1,6 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
-
-export type SortOrder = "desc" | "asc";
-export type SortType = "date" | "likes" | "views";
+import { SortType, SortOrder } from "@/lib/api/clip";
 
 interface ClipFiltersState {
     // Selected filters

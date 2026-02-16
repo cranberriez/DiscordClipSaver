@@ -16,7 +16,8 @@ export interface ClipQueryFilters {
 export interface ClipQueryOptions {
     limit?: number;
     offset?: number;
-    sort?: "asc" | "desc";
+    sortOrder?: "asc" | "desc";
+    sortType?: "date" | "duration" | "size";
     fetchMultiplier?: number; // For handling deleted message filtering
 }
 
@@ -47,15 +48,27 @@ class ClipQueryBuilder {
      */
     withFilters(filters: ClipQueryFilters): this {
         if (filters.guildId) {
-            this.query = this.query.where("clip.guild_id", "=", filters.guildId);
+            this.query = this.query.where(
+                "clip.guild_id",
+                "=",
+                filters.guildId
+            );
         }
 
         if (filters.channelIds && filters.channelIds.length > 0) {
-            this.query = this.query.where("clip.channel_id", "in", filters.channelIds);
+            this.query = this.query.where(
+                "clip.channel_id",
+                "in",
+                filters.channelIds
+            );
         }
 
         if (filters.authorIds && filters.authorIds.length > 0) {
-            this.query = this.query.where("message.author_id", "in", filters.authorIds);
+            this.query = this.query.where(
+                "message.author_id",
+                "in",
+                filters.authorIds
+            );
         }
 
         if (filters.favoritesOnly && filters.userId) {
@@ -69,11 +82,32 @@ class ClipQueryBuilder {
      * Apply pagination and sorting
      */
     withPagination(options: ClipQueryOptions): this {
-        const { limit = 50, offset = 0, sort = "desc", fetchMultiplier = 2 } = options;
+        const {
+            limit = 50,
+            offset = 0,
+            sortOrder = "desc",
+            sortType = "date",
+            fetchMultiplier = 2,
+        } = options;
         const fetchLimit = Math.min(limit * fetchMultiplier, 200);
 
+        let orderByColumn: any = "message.timestamp";
+
+        switch (sortType) {
+            case "duration":
+                orderByColumn = "clip.duration";
+                break;
+            case "size":
+                orderByColumn = "clip.file_size";
+                break;
+            case "date":
+            default:
+                orderByColumn = "message.timestamp";
+                break;
+        }
+
         this.query = this.query
-            .orderBy("message.timestamp", sort)
+            .orderBy(orderByColumn, sortOrder)
             .limit(fetchLimit)
             .offset(offset);
 
@@ -125,7 +159,7 @@ class RelatedDataFetcher {
                 .where("deleted_at", "is", null)
                 .execute(),
             // Favorites (conditional)
-            userId 
+            userId
                 ? getFavoriteStatusForClips(clipIds, userId)
                 : Promise.resolve(new Map<string, boolean>()),
         ]);
@@ -148,7 +182,7 @@ class ClipDataCombiner {
         // Create lookup maps
         const messageMap = new Map(messages.map(m => [m.id, m]));
         const thumbnailMap = new Map<string, DbThumbnail[]>();
-        
+
         for (const thumb of thumbnails) {
             if (!thumbnailMap.has(thumb.clip_id)) {
                 thumbnailMap.set(thumb.clip_id, []);
@@ -197,11 +231,12 @@ export class ClipQueryOrchestrator {
         const messageIds = clips.map(c => c.message_id);
 
         // 3. Fetch all related data in parallel
-        const { messages, thumbnails, favoritesMap } = await RelatedDataFetcher.fetchAll(
-            clipIds,
-            messageIds,
-            filters.userId
-        );
+        const { messages, thumbnails, favoritesMap } =
+            await RelatedDataFetcher.fetchAll(
+                clipIds,
+                messageIds,
+                filters.userId
+            );
 
         // 4. Combine everything
         return ClipDataCombiner.combine(

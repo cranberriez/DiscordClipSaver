@@ -4,6 +4,8 @@ import { useEffect, useMemo, useRef, useCallback, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useClipFiltersStore } from "@/features/clips/stores/useClipFiltersStore";
 
+import { SortOrder, SortType } from "@/lib/api/clip";
+
 function parseCsv(value: string | null): string[] | undefined {
     if (!value) return undefined;
     const parts = value
@@ -34,11 +36,13 @@ export function useClipsUrlSync() {
         selectedAuthorIds,
         searchQuery,
         sortOrder,
+        sortType,
         setGuildId,
         setChannelIds,
         setAuthorIds,
         setSearchQuery,
         setSortOrder,
+        setSortType,
     } = useClipFiltersStore();
 
     // Track hydration from URL to avoid feedback loop
@@ -83,8 +87,8 @@ export function useClipsUrlSync() {
         const channelIds = parseCsv(searchParams.get("channelIds"));
         const authorIds = parseCsv(searchParams.get("authorIds"));
         const q = searchParams.get("q") || "";
-        const sort =
-            (searchParams.get("sort") as "asc" | "desc" | null) || null;
+        const sort = (searchParams.get("sort") as SortOrder | null) || null;
+        const type = (searchParams.get("sortType") as SortType | null) || null;
 
         // Apply to store (URL overrides persisted once)
         // Only override store values if URL params are actually present
@@ -93,6 +97,8 @@ export function useClipsUrlSync() {
         if (authorIds) setAuthorIds(authorIds);
         if (q !== "") setSearchQuery(q);
         if (sort === "asc" || sort === "desc") setSortOrder(sort);
+        if (type === "date" || type === "duration" || type === "size")
+            setSortType(type);
 
         // Track initial clipId (never changes after this)
         initialClipIdRef.current = searchParams.get("clipId");
@@ -126,6 +132,7 @@ export function useClipsUrlSync() {
                     : undefined,
             q: searchQuery?.trim() ? searchQuery.trim() : undefined,
             sort: sortOrder === "desc" ? undefined : sortOrder, // omit default
+            sortType: sortType === "date" ? undefined : sortType, // omit default
         };
 
         // Preserve page param if present
@@ -144,6 +151,7 @@ export function useClipsUrlSync() {
         selectedAuthorIds,
         searchQuery,
         sortOrder,
+        sortType,
         pageFromUrl,
         scheduleReplace,
         searchParams,
@@ -166,6 +174,7 @@ export function useClipsUrlSync() {
                         : undefined,
                 q: searchQuery?.trim() ? searchQuery.trim() : undefined,
                 sort: sortOrder === "desc" ? undefined : sortOrder,
+                sortType: sortType === "date" ? undefined : sortType,
                 page: String(p),
             };
             if (clipIdRef.current) params.clipId = clipIdRef.current;
@@ -180,6 +189,7 @@ export function useClipsUrlSync() {
             selectedAuthorIds,
             searchQuery,
             sortOrder,
+            sortType,
         ]
     );
 
@@ -198,6 +208,7 @@ export function useClipsUrlSync() {
                     : undefined,
             q: searchQuery?.trim() ? searchQuery.trim() : undefined,
             sort: sortOrder === "desc" ? undefined : sortOrder,
+            sortType: sortType === "date" ? undefined : sortType,
             // page intentionally omitted to reset to 1 (implicit)
         };
         // Preserve clipId if present
@@ -213,6 +224,7 @@ export function useClipsUrlSync() {
         JSON.stringify(selectedAuthorIds),
         searchQuery,
         sortOrder,
+        sortType,
     ]);
 
     return {
@@ -235,6 +247,7 @@ export function useClipsUrlSync() {
                         : undefined,
                 q: searchQuery?.trim() ? searchQuery.trim() : undefined,
                 sort: sortOrder === "desc" ? undefined : sortOrder,
+                sortType: sortType === "date" ? undefined : sortType,
                 // Don't include page when setting clipId - let it reset to 1
                 clipId: id || undefined,
             };

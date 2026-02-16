@@ -18,6 +18,7 @@ export function useClipsData(opts: { hydrated: boolean; targetPage?: number }) {
         selectedAuthorIds,
         searchQuery,
         sortOrder,
+        sortType,
     } = useClipFiltersStore();
 
     // Use selectedGuildId immediately if available, but still wait for hydration for other URL params
@@ -52,7 +53,8 @@ export function useClipsData(opts: { hydrated: boolean; targetPage?: number }) {
                 ? selectedAuthorIds
                 : undefined,
         limit: 50,
-        sort: sortOrder,
+        sortOrder: sortOrder,
+        sortType: sortType,
     });
 
     useEffect(() => {
@@ -93,8 +95,11 @@ export function useClipsData(opts: { hydrated: boolean; targetPage?: number }) {
         let clips = allClips;
 
         // Apply author filtering (client-side)
-        if (selectedAuthorIds.length > 0 && selectedAuthorIds.length < authors.length) {
-            clips = clips.filter(clip => 
+        if (
+            selectedAuthorIds.length > 0 &&
+            selectedAuthorIds.length < authors.length
+        ) {
+            clips = clips.filter(clip =>
                 selectedAuthorIds.includes(clip.message.author_id)
             );
         }
@@ -103,7 +108,8 @@ export function useClipsData(opts: { hydrated: boolean; targetPage?: number }) {
         if (searchQuery.trim()) {
             const query = searchQuery.toLowerCase();
             clips = clips.filter(clip => {
-                const messageContent = clip.message.content?.toLowerCase() || "";
+                const messageContent =
+                    clip.message.content?.toLowerCase() || "";
                 const filename = clip.clip.filename.toLowerCase();
                 const author = authorMap.get(clip.message.author_id);
                 const authorName = author?.display_name.toLowerCase() || "";

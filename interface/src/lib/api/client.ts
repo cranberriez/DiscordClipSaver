@@ -23,12 +23,12 @@ import {
     ScanStatus,
     StartScanOptions,
 } from "./scan";
-import { ClipListResponse, FullClip } from "./clip";
+import { ClipListResponse, FullClip, ClipListParams } from "./clip";
 import type { AuthorStatsResponse } from "./author";
-import type { 
-    FavoriteStatusResponse, 
-    FavoriteBulkResponse, 
-    FavoriteToggleRequest 
+import type {
+    FavoriteStatusResponse,
+    FavoriteBulkResponse,
+    FavoriteToggleRequest,
 } from "./favorites";
 
 // ============================================================================
@@ -36,7 +36,11 @@ import type {
 // ============================================================================
 
 export class APIError extends Error {
-    constructor(message: string, public status: number, public data?: unknown) {
+    constructor(
+        message: string,
+        public status: number,
+        public data?: unknown
+    ) {
         super(message);
         this.name = "APIError";
     }
@@ -305,17 +309,9 @@ export const api = {
     clips: {
         /**
          * Get clips for a guild or specific channels/authors with pagination
-         * GET /api/guilds/[guildId]/clips?channelIds=xxx,yyy&authorIds=aaa,bbb&limit=50&offset=0&sort=desc&favorites=true
+         * GET /api/guilds/[guildId]/clips?channelIds=xxx,yyy&authorIds=aaa,bbb&limit=50&offset=0&sortOrder=desc&sortType=date&favorites=true
          */
-        list: (params: {
-            guildId: string;
-            channelIds?: string[];
-            authorIds?: string[];
-            limit?: number;
-            offset?: number;
-            sort?: "asc" | "desc";
-            favorites?: boolean;
-        }) => {
+        list: (params: ClipListParams) => {
             const searchParams = new URLSearchParams();
             if (params.channelIds && params.channelIds.length > 0)
                 searchParams.set("channelIds", params.channelIds.join(","));
@@ -325,7 +321,9 @@ export const api = {
                 searchParams.set("limit", params.limit.toString());
             if (params.offset)
                 searchParams.set("offset", params.offset.toString());
-            if (params.sort) searchParams.set("sort", params.sort);
+            if (params.sortOrder)
+                searchParams.set("sortOrder", params.sortOrder);
+            if (params.sortType) searchParams.set("sortType", params.sortType);
             if (params.favorites) searchParams.set("favorites", "true");
 
             const query = searchParams.toString();
