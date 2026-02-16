@@ -5,7 +5,15 @@ import type { AuthorWithStats } from "@/lib/api/author";
 import { formatClipName } from "../lib/formatClipName";
 import { formatDuration, formatRelativeTime } from "@/lib/utils/time-helpers";
 import { UserAvatar } from "@/components/core/UserAvatar";
-import { Heart, Play, Loader2, AlertCircle } from "lucide-react";
+import {
+    Heart,
+    Play,
+    Loader2,
+    AlertCircle,
+    Lock,
+    Link as LinkIcon,
+    Archive,
+} from "lucide-react";
 import Image from "next/image";
 import { messageTitleOrFilename } from "@/features/clips/lib/discordText";
 import { useImageErrorStore } from "../stores/useImageErrorStore";
@@ -70,6 +78,9 @@ export function ClipCard({
     const isProcessing =
         thumbnailStatus === "processing" || thumbnailStatus === "pending";
     const isFailed = thumbnailStatus === "failed";
+
+    const isArchived = !!clip.clip.deleted_at;
+    const visibility = clip.clip.visibility;
 
     // Temporary onclick wrapper for displaying extra data
     const handleClick = () => {
@@ -136,6 +147,24 @@ export function ClipCard({
                         )}
                     </div>
                 )}
+
+                {/* Visibility & Archive Badges */}
+                {isArchived ? (
+                    <div className="absolute top-2 left-2 bg-black/75 text-white text-xs px-2 py-1 rounded flex items-center gap-1 pointer-events-none">
+                        <Archive className="w-3 h-3" />
+                        <span className="font-medium">Archived</span>
+                    </div>
+                ) : visibility === "PRIVATE" ? (
+                    <div className="absolute top-2 left-2 bg-black/75 text-white text-xs px-2 py-1 rounded flex items-center gap-1 pointer-events-none">
+                        <Lock className="w-3 h-3" />
+                        <span className="font-medium">Private</span>
+                    </div>
+                ) : visibility === "UNLISTED" ? (
+                    <div className="absolute top-2 left-2 bg-black/75 text-white text-xs px-2 py-1 rounded flex items-center gap-1 pointer-events-none">
+                        <LinkIcon className="w-3 h-3" />
+                        <span className="font-medium">Unlisted</span>
+                    </div>
+                ) : null}
 
                 {/* Duration overlay */}
                 {clipData.duration && (
