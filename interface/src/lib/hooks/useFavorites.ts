@@ -178,14 +178,11 @@ export function useToggleFavorite() {
                 queryKey: favoriteKeys.status(clipId),
             });
 
-            // Get current status
-            const currentStatus = queryClient.getQueryData(
-                favoriteKeys.status(clipId)
-            ) as { isFavorited: boolean } | undefined;
-            const currentFavorited = currentStatus?.isFavorited || false;
+            // Get current status from any available source
+            const currentFavorited = getClipFavoriteStatus(queryClient, clipId);
             const newFavorited = !currentFavorited;
 
-            // Optimistically update
+            // Optimistically update status cache
             queryClient.setQueryData(favoriteKeys.status(clipId), {
                 isFavorited: newFavorited,
             });
@@ -193,7 +190,7 @@ export function useToggleFavorite() {
             // Update clip data in lists and detail views
             updateClipFavoriteStatus(queryClient, clipId, newFavorited);
 
-            return { previousStatus: currentStatus };
+            return { previousStatus: { isFavorited: currentFavorited } };
         },
         onError: (err, clipId, context) => {
             // Rollback on error
@@ -358,6 +355,18 @@ function updateClipFavoriteStatus(
     clipId: string,
     isFavorited: boolean
 ) {
+    const getNewCount = (
+        currentCount: number | undefined,
+        currentFavorited: boolean | undefined
+    ) => {
+        const count = currentCount || 0;
+        const isCurrentlyFavorited = !!currentFavorited;
+
+        if (isCurrentlyFavorited === isFavorited) return count;
+
+        return isFavorited ? count + 1 : Math.max(0, count - 1);
+    };
+
     // Update all clip list queries
     queryClient.setQueriesData(
         { queryKey: clipKeys.lists() },
@@ -369,39 +378,99 @@ function updateClipFavoriteStatus(
                 pages: oldData.pages.map((page: any) => ({
                     ...page,
                     clips:
-                        page.clips?.map((clip: FullClip) =>
-                            clip.clip.id === clipId
-                                ? { ...clip, isFavorited }
-                                : clip
-                        ) || page.clips,
+                        page.clips?.map((clip: FullClip) => {
+                            if (clip.clip.id === clipId) {
+                                return {
+                                    ...clip,
+                                    isFavorited,
+                                    favorite_count: getNewCount(
+                                        clip.favorite_count,
+                                        clip.isFavorited
+                                    ),
+                                };
+                            }
+                            return clip;
+                        }) || page.clips,
                 })),
             };
         }
     );
 
     // Update clip detail queries (single clip queries)
-    queryClient.setQueriesData(
-        { queryKey: clipKeys.all },
-        (oldData: any) => {
-            // Skip if no data
-            if (!oldData) return oldData;
-            
-            // Handle paginated list data (infinite queries)
-            if (oldData.pages) {
-                return oldData; // Already handled above in clip lists update
-            }
-            
-            // Handle single clip data (detail queries)
-            if (oldData.clip && oldData.clip.id === clipId) {
-                return { ...oldData, isFavorited };
-            }
-            
-            // Handle direct clip data (if any queries return clip directly)
-            if (oldData.id === clipId) {
-                return { ...oldData, isFavorited };
-            }
-            
-            return oldData;
+    queryClient.setQueriesData({ queryKey: clipKeys.all }, (oldData: any) => {
+        // Skip if no data
+        if (!oldData) return oldData;
+
+        // Handle paginated list data (infinite queries)
+        if (oldData.pages) {
+            return oldData; // Already handled above in clip lists update
         }
+
+        // Handle single clip data (detail queries)
+        if (oldData.clip && oldData.clip.id === clipId) {
+            return {
+                ...oldData,
+                isFavorited,
+                favorite_count: getNewCount(
+                    oldData.favorite_count,
+                    oldData.isFavorited
+                ),
+            };
+        }
+
+        // Handle direct clip data (if any queries return clip directly)
+        if (oldData.id === clipId) {
+            return {
+                ...oldData,
+                isFavorited,
+                favorite_count: getNewCount(
+                    oldData.favorite_count,
+                    oldData.isFavorited
+                ),
+            };
+        }
+
+        return oldData;
+    });
+}
+
+/**
+ * Helper to get the current favorite status from any available cache
+ */
+function getClipFavoriteStatus(
+    queryClient: ReturnType<typeof useQueryClient>,
+    clipId: string
+): boolean {
+    // 1. Check specific status query
+    const statusData = queryClient.getQueryData<{ isFavorited: boolean }>(
+        favoriteKeys.status(clipId)
     );
+    if (statusData !== undefined) {
+        return statusData.isFavorited;
+    }
+
+    // 2. Check clip detail query
+    // Note: clipKeys.detail(clipId) returns ["clips", clipId]
+    const clipData = queryClient.getQueryData<FullClip>(["clips", clipId]);
+    if (clipData?.isFavorited !== undefined) {
+        return clipData.isFavorited;
+    }
+
+    // 3. Check clip lists (expensive but fallback)
+    const listData = queryClient.getQueriesData<any>({
+        queryKey: clipKeys.lists(),
+    });
+    for (const [, data] of listData) {
+        if (!data?.pages) continue;
+        for (const page of data.pages) {
+            const clip = page.clips?.find(
+                (c: FullClip) => c.clip.id === clipId
+            );
+            if (clip?.isFavorited !== undefined) {
+                return clip.isFavorited;
+            }
+        }
+    }
+
+    return false;
 }
