@@ -1,6 +1,6 @@
 // Centralized clip query builder following SOLID principles
 import { getDb } from "../../db";
-import type { SelectQueryBuilder } from "kysely";
+import { type SelectQueryBuilder, sql } from "kysely";
 import type { DB } from "../../schemas/db";
 import type { DbClip, DbMessage, DbThumbnail } from "../../types";
 import { onlyFavorites, getFavoriteStatusForClips } from "./favorites";
@@ -92,6 +92,7 @@ class ClipQueryBuilder {
 
     /**
      * Apply pagination and sorting
+     * Updated to use raw SQL for NULLS LAST sorting
      */
     withPagination(options: ClipQueryOptions): this {
         const {
@@ -103,34 +104,36 @@ class ClipQueryBuilder {
         } = options;
         const fetchLimit = Math.min(limit * fetchMultiplier, 200);
 
-        let orderByColumn: any = "message.timestamp";
-        let orderByDirection: any = sortOrder;
-
         switch (sortType) {
             case "duration":
-                orderByColumn = "clip.duration";
-                // Ensure nulls (failed parses) are always at the bottom, regardless of sort order
-                orderByDirection =
-                    sortOrder === "desc" ? "desc nulls last" : "asc nulls last";
+                // Ensure nulls (failed parses) are always at the bottom
+                this.query = this.query.orderBy(
+                    sql`clip.duration ${sql.raw(
+                        sortOrder === "desc"
+                            ? "desc nulls last"
+                            : "asc nulls last"
+                    )}`
+                );
                 break;
             case "size":
-                orderByColumn = "clip.file_size";
-                orderByDirection =
-                    sortOrder === "desc" ? "desc nulls last" : "asc nulls last";
+                this.query = this.query.orderBy(
+                    sql`clip.file_size ${sql.raw(
+                        sortOrder === "desc"
+                            ? "desc nulls last"
+                            : "asc nulls last"
+                    )}`
+                );
                 break;
             case "likes":
-                orderByColumn = "favorite_count";
+                this.query = this.query.orderBy("favorite_count", sortOrder);
                 break;
             case "date":
             default:
-                orderByColumn = "message.timestamp";
+                this.query = this.query.orderBy("message.timestamp", sortOrder);
                 break;
         }
 
-        this.query = this.query
-            .orderBy(orderByColumn, orderByDirection)
-            .limit(fetchLimit)
-            .offset(offset);
+        this.query = this.query.limit(fetchLimit).offset(offset);
 
         return this;
     }
