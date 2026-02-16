@@ -104,13 +104,19 @@ class ClipQueryBuilder {
         const fetchLimit = Math.min(limit * fetchMultiplier, 200);
 
         let orderByColumn: any = "message.timestamp";
+        let orderByDirection: any = sortOrder;
 
         switch (sortType) {
             case "duration":
                 orderByColumn = "clip.duration";
+                // Ensure nulls (failed parses) are always at the bottom, regardless of sort order
+                orderByDirection =
+                    sortOrder === "desc" ? "desc nulls last" : "asc nulls last";
                 break;
             case "size":
                 orderByColumn = "clip.file_size";
+                orderByDirection =
+                    sortOrder === "desc" ? "desc nulls last" : "asc nulls last";
                 break;
             case "likes":
                 orderByColumn = "favorite_count";
@@ -122,7 +128,7 @@ class ClipQueryBuilder {
         }
 
         this.query = this.query
-            .orderBy(orderByColumn, sortOrder)
+            .orderBy(orderByColumn, orderByDirection)
             .limit(fetchLimit)
             .offset(offset);
 
