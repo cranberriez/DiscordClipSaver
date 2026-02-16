@@ -64,8 +64,13 @@ export function ClipModal({
     useEffect(() => {
         const url = latest.url ?? clip.cdn_url;
         setVideoUrl(url);
-        setHasPlaybackError(false);
-    }, [latest.url, clip.cdn_url, clip.id]);
+        // If we have a refresh error, treat it as a playback error immediately
+        if (latest.isError) {
+            setHasPlaybackError(true);
+        } else {
+            setHasPlaybackError(false);
+        }
+    }, [latest.url, clip.cdn_url, clip.id, latest.isError]);
 
     // Keep a reference to the Vidstack player instance
     const [playerInstance, setPlayerInstance] = useState<any>(null);
@@ -250,7 +255,6 @@ export function ClipModal({
                         {/* Video Player Section - 16:9 aspect ratio, centered */}
                         <VideoSection
                             isRefreshing={latest.isLoading}
-                            shouldRefetch={latest.didRefresh}
                             hasPlaybackError={hasPlaybackError}
                             videoUrl={videoUrl}
                             posterUrl={getThumbnailUrl()}

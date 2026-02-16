@@ -35,7 +35,16 @@ export function useLatestVideoUrl(
     }, [clip, skewMs]);
 
     // Query server for refreshed clip if needed; server will refresh CDN URL if expired.
-    const { data: refreshed, isLoading } = useClip(guildId ?? "", clipId ?? "");
+    const {
+        data: refreshed,
+        isLoading,
+        isFetching,
+        isError,
+        error,
+    } = useClip(guildId ?? "", clipId ?? "", {
+        enabled: needsRefresh,
+        staleTime: 0, // Force fetch if we know it's expired
+    });
 
     const qc = useQueryClient();
     useEffect(() => {
@@ -65,7 +74,9 @@ export function useLatestVideoUrl(
     return {
         url: effectiveUrl,
         clip: effectiveClip,
-        isLoading: needsRefresh && isLoading,
+        isLoading: needsRefresh && (isLoading || isFetching),
         didRefresh: needsRefresh && !!refreshed,
+        isError: needsRefresh && isError,
+        error: needsRefresh ? error : null,
     } as const;
 }
