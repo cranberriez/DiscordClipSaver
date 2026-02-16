@@ -17,7 +17,7 @@ export interface ClipQueryOptions {
     limit?: number;
     offset?: number;
     sortOrder?: "asc" | "desc";
-    sortType?: "date" | "duration" | "size";
+    sortType?: "date" | "duration" | "size" | "likes";
     fetchMultiplier?: number; // For handling deleted message filtering
 }
 
@@ -26,19 +26,31 @@ export interface ClipWithMetadata {
     message: DbMessage;
     thumbnails: DbThumbnail[];
     isFavorited?: boolean;
+    favorite_count: number;
 }
 
 /**
  * Single Responsibility: Build the base clip query with all filters
  */
 class ClipQueryBuilder {
-    private query: SelectQueryBuilder<DB, "clip" | "message", DbClip>;
+    private query: SelectQueryBuilder<
+        DB,
+        "clip" | "message",
+        DbClip & { favorite_count: number | null }
+    >;
 
     constructor() {
         this.query = getDb()
             .selectFrom("clip")
             .innerJoin("message", "message.id", "clip.message_id")
             .selectAll("clip")
+            .select(eb => [
+                eb
+                    .selectFrom("favorite_clip")
+                    .whereRef("favorite_clip.clip_id", "=", "clip.id")
+                    .select(eb.fn.count<number>("id").as("count"))
+                    .as("favorite_count"),
+            ])
             .where("clip.deleted_at", "is", null)
             .where("message.deleted_at", "is", null);
     }
@@ -100,6 +112,9 @@ class ClipQueryBuilder {
             case "size":
                 orderByColumn = "clip.file_size";
                 break;
+            case "likes":
+                orderByColumn = "favorite_count";
+                break;
             case "date":
             default:
                 orderByColumn = "message.timestamp";
@@ -117,7 +132,7 @@ class ClipQueryBuilder {
     /**
      * Execute the query
      */
-    async execute(): Promise<DbClip[]> {
+    async execute(): Promise<(DbClip & { favorite_count: number | null })[]> {
         return await this.query.execute();
     }
 }
@@ -173,7 +188,7 @@ class RelatedDataFetcher {
  */
 class ClipDataCombiner {
     static combine(
-        clips: DbClip[],
+        clips: (DbClip & { favorite_count: number | null })[],
         messages: DbMessage[],
         thumbnails: DbThumbnail[],
         favoritesMap: Map<string, boolean>,
@@ -198,6 +213,7 @@ class ClipDataCombiner {
                 message: messageMap.get(clip.message_id)!,
                 thumbnails: thumbnailMap.get(clip.id) || [],
                 isFavorited: favoritesMap.get(clip.id) || false,
+                favorite_count: Number(clip.favorite_count) || 0,
             }));
 
         // Return exactly the requested limit (API will add +1 for hasMore check)

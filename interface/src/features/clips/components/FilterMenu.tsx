@@ -186,6 +186,22 @@ export function FilterMenu({
                         >
                             Smallest First
                         </DropdownMenuItem>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuLabel className="text-xs text-foreground/50 tracking-wider">
+                            LIKES
+                        </DropdownMenuLabel>
+                        <DropdownMenuItem
+                            onClick={() => setSort("likes", "desc")}
+                            className={`${sortType === "likes" && sortOrder === "desc" ? "bg-accent-foreground! text-accent!" : ""} cursor-pointer`}
+                        >
+                            Most Liked
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                            onClick={() => setSort("likes", "asc")}
+                            className={`${sortType === "likes" && sortOrder === "asc" ? "bg-accent-foreground! text-accent!" : ""} cursor-pointer`}
+                        >
+                            Least Liked
+                        </DropdownMenuItem>
                     </DropdownMenuContent>
                 </DropdownMenu>
             </div>

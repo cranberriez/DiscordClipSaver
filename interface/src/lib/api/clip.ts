@@ -40,6 +40,7 @@ export interface FullClip {
     message: Message;
     thumbnail: Thumbnail[] | null;
     isFavorited?: boolean;
+    favorite_count: number;
 }
 
 export interface ClipListResponse {
@@ -53,7 +54,7 @@ export interface ClipListResponse {
 }
 
 export type SortOrder = "asc" | "desc";
-export type SortType = "date" | "duration" | "size";
+export type SortType = "date" | "duration" | "size" | "likes";
 
 export interface ClipListParams {
     guildId: string;

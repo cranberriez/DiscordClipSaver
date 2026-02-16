@@ -5,17 +5,11 @@ import { ClipQueryOrchestrator } from "./_helpers/clip-query-builder";
 import type {
     ClipQueryFilters,
     ClipQueryOptions,
+    ClipWithMetadata,
 } from "./_helpers/clip-query-builder";
 
 // Re-export types for backwards compatibility
-export type { ClipQueryFilters, ClipQueryOptions };
-
-export interface ClipWithMetadata {
-    clip: DbClip;
-    message: DbMessage;
-    thumbnails: DbThumbnail[];
-    isFavorited?: boolean;
-}
+export type { ClipQueryFilters, ClipQueryOptions, ClipWithMetadata };
 
 /**
  * Get clips by guild ID - DRY implementation using orchestrator
@@ -115,6 +109,13 @@ export async function getFavoriteClips(
         .innerJoin("message", "message.id", "clip.message_id")
         .innerJoin("favorite_clip", "favorite_clip.clip_id", "clip.id")
         .selectAll("clip")
+        .select(eb => [
+            eb
+                .selectFrom("favorite_clip")
+                .whereRef("favorite_clip.clip_id", "=", "clip.id")
+                .select(eb.fn.count<number>("id").as("count"))
+                .as("favorite_count"),
+        ])
         .where("clip.guild_id", "in", guildIds)
         .where("clip.deleted_at", "is", null)
         .where("message.deleted_at", "is", null)
@@ -165,6 +166,7 @@ export async function getFavoriteClips(
             message: messageMap.get(clip.message_id)!,
             thumbnails: thumbnailMap.get(clip.id) || [],
             isFavorited: true,
+            favorite_count: Number(clip.favorite_count) || 0,
         }));
 }
 
@@ -201,6 +203,13 @@ export async function getClipById(
             "message.created_at as message_created_at",
             "message.updated_at as message_updated_at",
             "message.deleted_at as message_deleted_at",
+        ])
+        .select(eb => [
+            eb
+                .selectFrom("favorite_clip")
+                .whereRef("favorite_clip.clip_id", "=", "clip.id")
+                .select(eb.fn.count<number>("id").as("count"))
+                .as("favorite_count"),
         ])
         .select(eb => {
             if (!userId) {
@@ -264,6 +273,7 @@ export async function getClipById(
         message,
         thumbnails,
         isFavorited: (result as any).is_favorited || false,
+        favorite_count: Number((result as any).favorite_count) || 0,
     };
 }
 

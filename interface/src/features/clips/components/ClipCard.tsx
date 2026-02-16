@@ -124,10 +124,17 @@ export function ClipCard({
                     >
                         {vidTitle}
                     </p>
-                    <div>
-                        {clip.isFavorited && (
-                            <Heart className="w-4 h-4 text-red-500" />
-                        )}
+                    <div className="flex items-center gap-1">
+                        <span className="text-xs text-muted-foreground font-medium">
+                            {clip.favorite_count}
+                        </span>
+                        <Heart
+                            className={`w-4 h-4 ${
+                                clip.isFavorited
+                                    ? "text-red-500 fill-red-500"
+                                    : "text-muted-foreground"
+                            }`}
+                        />
                     </div>
                 </div>
 
