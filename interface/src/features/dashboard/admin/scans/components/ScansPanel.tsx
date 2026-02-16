@@ -14,6 +14,8 @@ import { ChannelWithStatus } from "../types";
 import { mergeChannelsWithStatuses } from "../lib/mergeChannelsWithStatuses";
 import { toast } from "sonner";
 import { useScanStatusNotifications } from "../lib/useScanStatusNotifications";
+import { useGuildSettings } from "@/lib/hooks/useSettings";
+import type { DefaultChannelSettings } from "@/lib/schema/guild-settings.schema";
 
 interface ScansPanelProps {
     guildId: string;
@@ -30,6 +32,17 @@ export function ScansPanel({
         error,
         refetch,
     } = useScanStatuses(guildId);
+
+    const { data: guildSettings } = useGuildSettings(guildId);
+
+    // Get limit from settings or default to 1000, capped at 10000
+    const defaultSettings =
+        guildSettings?.default_channel_settings as unknown as DefaultChannelSettings | null;
+    const limit = Math.max(
+        Math.min(defaultSettings?.max_messages_per_pass ?? 1000, 10000),
+        100
+    );
+
     const startBulkScanMutation = useStartBulkScan(guildId);
     // Merge all channels with their scan statuses (channels without statuses will have scanStatus: null)
     const channels: ChannelWithStatus[] = mergeChannelsWithStatuses(
@@ -120,7 +133,7 @@ export function ScansPanel({
                 channelIds,
                 options: {
                     isUpdate: false,
-                    limit: 100,
+                    limit,
                     autoContinue: true,
                     rescan: "stop",
                 },
@@ -152,7 +165,7 @@ export function ScansPanel({
                 channelIds,
                 options: {
                     isUpdate: true,
-                    limit: 100,
+                    limit,
                     autoContinue: true,
                     rescan: "stop",
                 },
@@ -168,7 +181,7 @@ export function ScansPanel({
     };
 
     const handleHistoricalScan = (
-        rescanMode: "stop" | "continue" | "update"
+        scanType: "backfill" | "integrity" | "force"
     ) => {
         // Historical scan: backward from the beginning for all enabled channels
         const toScan = channels.filter(ch => ch.message_scan_enabled);
@@ -181,13 +194,13 @@ export function ScansPanel({
         }
 
         const modeLabels = {
-            stop: "Normal (stops on duplicates)",
-            continue: "Skip Existing (continues past duplicates)",
-            update: "Force Update (reprocesses all messages)",
+            backfill: "Backfill History",
+            integrity: "Deep Integrity Scan",
+            force: "Force Reprocess",
         };
 
         // Confirm for expensive update mode
-        if (rescanMode === "update") {
+        if (scanType === "force") {
             const confirmed = confirm(
                 `⚠️ FORCE UPDATE MODE\n\n` +
                     `This will reprocess ALL messages in ${channelIds.length} channels, ` +
@@ -201,22 +214,38 @@ export function ScansPanel({
             }
         }
 
-        // Start historical scans (backward from beginning with specified rescan mode)
+        // Configure options based on scan type
+        const options = {
+            limit,
+            autoContinue: true,
+            isUpdate: false,
+            // Defaults
+            isHistorical: false,
+            isBackfill: false,
+            rescan: "stop" as "stop" | "continue" | "update",
+        };
+
+        if (scanType === "backfill") {
+            options.isBackfill = true;
+            options.rescan = "stop";
+        } else if (scanType === "integrity") {
+            options.isHistorical = true;
+            options.rescan = "continue";
+        } else if (scanType === "force") {
+            options.isHistorical = true;
+            options.rescan = "update";
+        }
+
+        // Start scans
         startBulkScanMutation.mutate(
             {
                 channelIds,
-                options: {
-                    isUpdate: false,
-                    isHistorical: true,
-                    limit: 100,
-                    autoContinue: true,
-                    rescan: rescanMode,
-                },
+                options,
             },
             {
                 onSuccess: (result: MultiScanResult) => {
                     alert(
-                        `Started ${result.success} historical scans (${modeLabels[rescanMode]}), ${result.failed} failed`
+                        `Started ${result.success} scans (${modeLabels[scanType]}), ${result.failed} failed`
                     );
                 },
             }

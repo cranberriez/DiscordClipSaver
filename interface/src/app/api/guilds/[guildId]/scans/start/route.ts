@@ -38,6 +38,7 @@ export async function POST(
         channelIds,
         isUpdate = false,
         isHistorical = false,
+        isBackfill = false,
         limit = 100,
         autoContinue = true,
         rescan = "stop",
@@ -50,6 +51,9 @@ export async function POST(
             { status: 400 }
         );
     }
+
+    // Enforce limit cap
+    const actualLimit = Math.min(Math.max(1, limit), 10000);
 
     // Validate rescan mode
     if (!["stop", "continue", "update"].includes(rescan)) {
@@ -108,6 +112,12 @@ export async function POST(
                     direction = "backward";
                     beforeMessageId = undefined;
                     afterMessageId = undefined;
+                } else if (isBackfill) {
+                    // Backfill scan: backward from oldest known message
+                    direction = "backward";
+                    beforeMessageId =
+                        existingStatus?.backward_message_id || undefined;
+                    afterMessageId = undefined;
                 } else if (isUpdate) {
                     // Update scan: forward from last position
                     direction = "forward";
@@ -140,7 +150,7 @@ export async function POST(
                     guildId,
                     channelId,
                     direction,
-                    limit,
+                    limit: actualLimit,
                     afterMessageId,
                     beforeMessageId,
                     autoContinue,

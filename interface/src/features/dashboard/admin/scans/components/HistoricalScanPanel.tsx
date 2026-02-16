@@ -12,7 +12,7 @@ interface HistoricalScanPanelProps {
     startingUnscanned: boolean;
     startingUpdate: boolean;
     startingHistorical: boolean;
-    onHistoricalScan: (rescanMode: "stop" | "continue" | "update") => void;
+    onHistoricalScan: (scanType: "backfill" | "integrity" | "force") => void;
 }
 
 export function HistoricalScanPanel({
@@ -28,76 +28,77 @@ export function HistoricalScanPanel({
     return (
         <Card>
             <CardHeader>
-                <CardTitle>Historical Scan</CardTitle>
+                <CardTitle>History & Maintenance</CardTitle>
                 <CardDescription>
-                    Backward scan from the beginning to establish or correct
-                    scan boundaries
+                    Manage history and verify data integrity
                 </CardDescription>
             </CardHeader>
-            <CardContent className="space-y-3">
-                {/* Normal Historical Scan */}
-                <Button
-                    onClick={() => onHistoricalScan("stop")}
-                    disabled={
-                        isAnyOperationRunning || enabledChannelsCount === 0
-                    }
-                    className="w-full"
-                    size="lg"
-                    variant="outline"
-                >
-                    {startingHistorical
-                        ? "Starting..."
-                        : "Normal Scan (Stop on Duplicates)"}
-                </Button>
-                <p className="text-xs text-muted-foreground">
-                    Scans backward from channel start, stops when encountering
-                    already-scanned messages. Most efficient.
-                </p>
+            <CardContent className="space-y-4">
+                {/* Backfill History */}
+                <div>
+                    <Button
+                        onClick={() => onHistoricalScan("backfill")}
+                        disabled={
+                            isAnyOperationRunning || enabledChannelsCount === 0
+                        }
+                        className="w-full mb-1"
+                        size="lg"
+                        variant="outline"
+                    >
+                        {startingHistorical
+                            ? "Starting..."
+                            : "Backfill History"}
+                    </Button>
+                    <p className="text-xs text-muted-foreground text-center">
+                        Scans backward from the oldest known message to fill in
+                        missing history. Stops when it hits already-scanned
+                        messages (or end of channel).
+                    </p>
+                </div>
 
-                {/* Skip Existing Historical Scan */}
-                <Button
-                    onClick={() => onHistoricalScan("continue")}
-                    disabled={
-                        isAnyOperationRunning || enabledChannelsCount === 0
-                    }
-                    className="w-full"
-                    size="lg"
-                    variant="outline"
-                >
-                    {startingHistorical
-                        ? "Starting..."
-                        : "Skip Existing (Continue Past Duplicates)"}
-                </Button>
-                <p className="text-xs text-muted-foreground">
-                    Scans backward from channel start, skips already-scanned
-                    messages but continues scanning. Use to establish correct
-                    boundaries without reprocessing.
-                </p>
+                {/* Deep Integrity Scan */}
+                <div>
+                    <Button
+                        onClick={() => onHistoricalScan("integrity")}
+                        disabled={
+                            isAnyOperationRunning || enabledChannelsCount === 0
+                        }
+                        className="w-full mb-1"
+                        size="lg"
+                        variant="outline"
+                    >
+                        {startingHistorical
+                            ? "Starting..."
+                            : "Deep Integrity Scan (Skip Existing)"}
+                    </Button>
+                    <p className="text-xs text-muted-foreground text-center">
+                        Scans backward from Now to Beginning. Checks every
+                        message but skips processing if we already have it.
+                        Useful for finding gaps.
+                    </p>
+                </div>
 
-                {/* Force Update Historical Scan */}
-                <Button
-                    onClick={() => onHistoricalScan("update")}
-                    disabled={
-                        isAnyOperationRunning || enabledChannelsCount === 0
-                    }
-                    className="w-full"
-                    size="lg"
-                    variant="destructive"
-                >
-                    {startingHistorical
-                        ? "Starting..."
-                        : "⚠️ Force Update (Reprocess All)"}
-                </Button>
-                <p className="text-xs text-muted-foreground">
-                    Scans backward from channel start, reprocesses ALL messages
-                    including existing ones.
-                    <strong className="text-destructive">
-                        {" "}
-                        Expensive operation!
-                    </strong>{" "}
-                    Use only after settings changes. Thumbnails are never
-                    regenerated if they already exist.
-                </p>
+                {/* Force Reprocess */}
+                <div>
+                    <Button
+                        onClick={() => onHistoricalScan("force")}
+                        disabled={
+                            isAnyOperationRunning || enabledChannelsCount === 0
+                        }
+                        className="w-full mb-1"
+                        size="lg"
+                        variant="destructive"
+                    >
+                        {startingHistorical
+                            ? "Starting..."
+                            : "⚠️ Force Reprocess (Update All)"}
+                    </Button>
+                    <p className="text-xs text-muted-foreground text-center">
+                        Scans backward from Now to Beginning. Reprocesses{" "}
+                        <strong>EVERYTHING</strong>. Very expensive. Use only if
+                        you changed parsing rules.
+                    </p>
+                </div>
             </CardContent>
         </Card>
     );

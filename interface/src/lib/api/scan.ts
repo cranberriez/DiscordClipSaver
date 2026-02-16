@@ -34,6 +34,7 @@ export interface ScanStatus {
 export interface StartScanOptions {
     isUpdate?: boolean; // If true, always scan forward from last position
     isHistorical?: boolean; // If true, force backward scan from beginning
+    isBackfill?: boolean; // If true, scan backward from oldest known message
     limit?: number;
     autoContinue?: boolean;
     rescan?: "stop" | "continue" | "update"; // How to handle already-processed messages
