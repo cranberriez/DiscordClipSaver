@@ -34,7 +34,13 @@ export async function GET(
     const favoritesOnly = searchParams.get("favorites") === "true";
     const limit = Math.min(parseInt(searchParams.get("limit") || "50"), 100);
     const offset = parseInt(searchParams.get("offset") || "0");
-    const sort = (searchParams.get("sort") || "desc") as "asc" | "desc";
+    const sortOrder = (searchParams.get("sortOrder") || "desc") as
+        | "asc"
+        | "desc";
+    const sortType = (searchParams.get("sortType") || "date") as
+        | "date"
+        | "duration"
+        | "size";
 
     try {
         // Fetch one extra to determine if there are more results
@@ -44,7 +50,8 @@ export async function GET(
                   channelIds,
                   offset,
                   limit + 1,
-                  sort,
+                  sortOrder,
+                  sortType,
                   authorIds,
                   auth.discordUserId, // User ID for favorites
                   favoritesOnly
@@ -53,7 +60,8 @@ export async function GET(
                   guildId,
                   offset,
                   limit + 1,
-                  sort,
+                  sortOrder,
+                  sortType,
                   authorIds,
                   auth.discordUserId, // User ID for favorites
                   favoritesOnly

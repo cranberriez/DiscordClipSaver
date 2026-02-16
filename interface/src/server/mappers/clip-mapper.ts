@@ -61,6 +61,7 @@ export class ClipMapper {
                     ? dbClipWithMetadata.thumbnails.map(ClipMapper.toThumbnail)
                     : null,
             isFavorited: dbClipWithMetadata.isFavorited || false,
+            favorite_count: Number(dbClipWithMetadata.favorite_count) || 0,
         };
     }
 }

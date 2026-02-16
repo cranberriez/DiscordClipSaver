@@ -137,7 +137,8 @@ export class DataService {
         guildId: string,
         offset: number = 0,
         limit: number = 50,
-        sort: "asc" | "desc" = "desc",
+        sortOrder: "asc" | "desc" = "desc",
+        sortType: "date" | "duration" | "size" = "date",
         authorIds?: string[],
         userId?: string,
         favoritesOnly?: boolean
@@ -146,7 +147,8 @@ export class DataService {
             guildId,
             limit,
             offset,
-            sort,
+            sortOrder,
+            sortType,
             authorIds,
             userId,
             favoritesOnly
@@ -164,7 +166,8 @@ export class DataService {
         channelIds: string[],
         offset: number = 0,
         limit: number = 50,
-        sort: "asc" | "desc" = "desc",
+        sortOrder: "asc" | "desc" = "desc",
+        sortType: "date" | "duration" | "size" = "date",
         authorIds?: string[],
         userId?: string,
         favoritesOnly?: boolean
@@ -173,7 +176,8 @@ export class DataService {
             channelIds,
             limit,
             offset,
-            sort,
+            sortOrder,
+            sortType,
             authorIds,
             userId,
             favoritesOnly
@@ -193,7 +197,8 @@ export class DataService {
         channelId: string,
         offset: number = 0,
         limit: number = 50,
-        sort: "asc" | "desc" = "desc",
+        sortOrder: "asc" | "desc" = "desc",
+        sortType: "date" | "duration" | "size" = "date",
         userId?: string,
         favoritesOnly?: boolean
     ) {
@@ -201,7 +206,8 @@ export class DataService {
             channelId,
             limit,
             offset,
-            sort,
+            sortOrder,
+            sortType,
             userId,
             favoritesOnly
         );
@@ -237,14 +243,14 @@ export class DataService {
         guildIds: string[],
         offset: number = 0,
         limit: number = 50,
-        sort: "asc" | "desc" = "desc"
+        sortOrder: "asc" | "desc" = "desc"
     ) {
         const clips = await db.getFavoriteClips(
             userId,
             guildIds,
             limit,
             offset,
-            sort
+            sortOrder
         );
 
         if (!clips) {
@@ -300,5 +306,4 @@ export class DataService {
 
         return SettingsMapper.toGuildSettings(settings);
     }
-
 }

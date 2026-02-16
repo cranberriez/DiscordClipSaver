@@ -1,7 +1,6 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
-
-export type SortOrder = "desc" | "asc";
+import { SortType, SortOrder } from "@/lib/api/clip";
 
 interface ClipFiltersState {
     // Selected filters
@@ -9,7 +8,9 @@ interface ClipFiltersState {
     selectedChannelIds: string[];
     selectedAuthorIds: string[];
     searchQuery: string;
+    sortType: SortType;
     sortOrder: SortOrder;
+    favoritesOnly: boolean;
 
     // Modal states
     isGuildModalOpen: boolean;
@@ -21,7 +22,9 @@ interface ClipFiltersState {
     setChannelIds: (channelIds: string[]) => void;
     setAuthorIds: (authorIds: string[]) => void;
     setSearchQuery: (query: string) => void;
+    setSortType: (type: SortType) => void;
     setSortOrder: (order: SortOrder) => void;
+    setFavoritesOnly: (favoritesOnly: boolean) => void;
 
     // Modal actions
     openGuildModal: () => void;
@@ -39,11 +42,13 @@ export const useClipFiltersStore = create<ClipFiltersState>()(
     persist(
         set => ({
             // Initial state
-            selectedGuildId: null,
-            selectedChannelIds: [],
-            selectedAuthorIds: [],
+            selectedGuildId: null as string | null,
+            selectedChannelIds: [] as string[],
+            selectedAuthorIds: [] as string[],
             searchQuery: "",
-            sortOrder: "desc",
+            sortType: "date" as SortType,
+            sortOrder: "desc" as SortOrder,
+            favoritesOnly: false,
 
             isGuildModalOpen: false,
             isChannelModalOpen: false,
@@ -65,7 +70,10 @@ export const useClipFiltersStore = create<ClipFiltersState>()(
 
             setSearchQuery: query => set({ searchQuery: query }),
 
+            setSortType: type => set({ sortType: type }),
             setSortOrder: order => set({ sortOrder: order }),
+            setFavoritesOnly: favoritesOnly =>
+                set({ favoritesOnly: favoritesOnly }),
 
             // Modal actions
             openGuildModal: () => set({ isGuildModalOpen: true }),
@@ -82,6 +90,8 @@ export const useClipFiltersStore = create<ClipFiltersState>()(
                     selectedChannelIds: [],
                     selectedAuthorIds: [],
                     searchQuery: "",
+                    sortType: "date",
+                    favoritesOnly: false,
                     sortOrder: "desc",
                 }),
         }),
@@ -93,6 +103,8 @@ export const useClipFiltersStore = create<ClipFiltersState>()(
                 selectedChannelIds: state.selectedChannelIds,
                 selectedAuthorIds: state.selectedAuthorIds,
                 searchQuery: state.searchQuery,
+                sortType: state.sortType,
+                favoritesOnly: state.favoritesOnly,
                 sortOrder: state.sortOrder,
             }),
         }

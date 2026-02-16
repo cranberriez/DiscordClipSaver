@@ -7,7 +7,7 @@ import {
     clipsInfiniteQuery,
     clipQuery,
 } from "@/lib/queries/clip";
-import type { FullClip } from "@/lib/api/clip";
+import type { FullClip, ClipListParams } from "@/lib/api/clip";
 
 // ============================================================================
 // Queries
@@ -27,7 +27,8 @@ import type { FullClip } from "@/lib/api/clip";
  *     channelIds: ['123', '456'],
  *     limit: 50,
  *     offset: 0,
- *     sort: 'desc'
+ *     sortOrder: 'desc',
+ *     sortType: 'date'
  *   });
  *
  *   if (isLoading) return <div>Loading...</div>;
@@ -42,15 +43,7 @@ import type { FullClip } from "@/lib/api/clip";
  * }
  * ```
  */
-export function useChannelClips(params: {
-    guildId: string;
-    channelIds?: string[];
-    authorIds?: string[];
-    limit?: number;
-    offset?: number;
-    sort?: "asc" | "desc";
-    favorites?: boolean;
-}) {
+export function useChannelClips(params: ClipListParams) {
     return useQuery(clipsQuery(params));
 }
 
@@ -88,7 +81,7 @@ export function useClips(params: {
  *     guildId,
  *     channelIds: ['123', '456'],
  *     limit: 50,
- *     sort: 'desc'
+ *     sortOrder: 'desc'
  *   });
  *
  *   const allClips = data?.pages.flatMap(page => page.clips) ?? [];
@@ -112,13 +105,7 @@ export function useClips(params: {
  * }
  * ```
  */
-export function useChannelClipsInfinite(params: {
-    guildId: string;
-    channelIds?: string[];
-    authorIds?: string[];
-    limit?: number;
-    sort?: "asc" | "desc";
-}) {
+export function useChannelClipsInfinite(params: ClipListParams) {
     return useInfiniteQuery(clipsInfiniteQuery(params));
 }
 
@@ -174,7 +161,7 @@ export function useClip(guildId: string, clipId: string) {
  *   const handleScanComplete = () => {
  *     // Invalidate all clips to refetch with new data
  *     queryClient.invalidateQueries({
- *       queryKey: clipKeys.byGuild(guildId)
+ *       queryKey: clipKeys.byGuild({ guildId })
  *     });
  *   };
  *
