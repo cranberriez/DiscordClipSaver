@@ -204,6 +204,40 @@ export async function requireGuildAccess(
 }
 
 // ============================================================================
+// System Admin Middleware
+// ============================================================================
+
+/**
+ * Require authentication and verify user has 'admin' role in database.
+ *
+ * @param req - The request object
+ */
+export async function requireSystemAdmin(
+    req: NextRequest
+): Promise<(AuthContext & { dbUser: any }) | NextResponse> {
+    const authContext = await requireAuth(req);
+    if (authContext instanceof NextResponse) return authContext;
+
+    // Check database user for admin role
+    const { getUserByDiscordId } = await import("@/server/db");
+    const dbUser = await getUserByDiscordId(authContext.discordUserId);
+
+    if (!dbUser || dbUser.roles !== "admin") {
+        return NextResponse.json(
+            {
+                error: "You must be a system administrator to perform this action",
+            },
+            { status: 403 }
+        );
+    }
+
+    return {
+        ...authContext,
+        dbUser,
+    };
+}
+
+// ============================================================================
 // Helper Functions
 // ============================================================================
 

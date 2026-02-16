@@ -13,6 +13,7 @@ export async function upsertUser(params: DbNewUser): Promise<DbUser> {
         username: params.username,
         discriminator: params.discriminator,
         avatar_url: params.avatar_url ?? null,
+        roles: params.roles,
         created_at: now,
         updated_at: now,
     };

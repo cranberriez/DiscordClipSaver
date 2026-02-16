@@ -55,3 +55,6 @@ export {
     usePrefetchAuthorStats,
     authorKeys,
 } from "./useAuthors";
+
+// User hooks
+export { useUser, useIsSystemAdmin, userKeys } from "./useUser";

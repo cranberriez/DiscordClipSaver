@@ -37,6 +37,7 @@ class User(Model):
     username = fields.CharField(max_length=32) # Discord NAME field
     discriminator = fields.CharField(max_length=4) # Discord DISCRIMINATOR field
     avatar_url = fields.TextField(null=True) # Discord AVATAR field
+    roles = fields.CharField(max_length=20, default="user") # user, admin
     created_at = fields.DatetimeField(auto_now_add=True)
     updated_at = fields.DatetimeField(auto_now=True)
 

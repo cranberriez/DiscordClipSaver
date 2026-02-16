@@ -41,6 +41,7 @@ interface DbUser {
     username: string;
     discriminator: string;
     avatar_url: string | null;
+    roles: string | null;
     created_at: string;
     updated_at: string;
 }
@@ -306,6 +307,18 @@ export function UserInfo({ discordUser, dbUser }: UserInfoProps) {
                                     Last Updated:
                                 </span>{" "}
                                 {formatDate(dbUser.updated_at)}
+                            </div>
+                            <div>
+                                <span className="font-medium">Role:</span>{" "}
+                                <Badge
+                                    variant={
+                                        dbUser.roles === "admin"
+                                            ? "destructive"
+                                            : "outline"
+                                    }
+                                >
+                                    {dbUser.roles || "user"}
+                                </Badge>
                             </div>
                         </div>
                     </CardContent>

@@ -9,6 +9,7 @@ export interface UserTable {
         string | null | undefined,
         string | null | undefined
     >;
+    roles: ColumnType<string, string | undefined, string | undefined>;
     created_at: ColumnType<Date, Date | undefined, Date | undefined>;
     updated_at: ColumnType<Date, Date | undefined, Date | undefined>;
 }
