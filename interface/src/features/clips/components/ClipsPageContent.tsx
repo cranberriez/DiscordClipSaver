@@ -14,7 +14,6 @@ import {
     ClipModal,
 } from "@/features/clips/components/modals";
 import { useClipFiltersStore } from "@/features/clips/stores/useClipFiltersStore";
-import { Navbar } from "@/components/composite/navbar";
 import type { FullClip } from "@/lib/api/types";
 import { toast } from "sonner";
 
@@ -180,7 +179,6 @@ export function ClipsPageContent() {
         <>
             {/* Full-screen clips grid background */}
             <div className="flex flex-col h-screen inset-0 bg-background">
-                <Navbar noLines />
                 <div className="flex flex-col h-full relative">
                     <FilterBar
                         guildName={selectedGuild?.name}
