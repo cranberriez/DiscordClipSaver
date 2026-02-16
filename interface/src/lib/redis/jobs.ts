@@ -4,7 +4,13 @@
  */
 import "server-only";
 import { getRedis } from "./client";
-import type { BatchScanJob, MessageScanJob, PurgeChannelJob, PurgeGuildJob } from "./types";
+import type {
+    BatchScanJob,
+    MessageScanJob,
+    PurgeChannelJob,
+    PurgeGuildJob,
+    ThumbnailCleanupJob,
+} from "./types";
 import { randomUUID } from "crypto";
 
 const STREAM_PREFIX = "jobs";
@@ -23,7 +29,7 @@ function buildStreamName(guildId: string, jobType: string): string {
  */
 async function ensureConsumerGroup(streamName: string): Promise<void> {
     const redis = getRedis();
-    
+
     try {
         await redis.xgroup(
             "CREATE",
@@ -43,14 +49,21 @@ async function ensureConsumerGroup(streamName: string): Promise<void> {
 /**
  * Push a job to the Redis stream
  */
-async function pushJob(job: BatchScanJob | MessageScanJob | PurgeChannelJob | PurgeGuildJob): Promise<string> {
+async function pushJob(
+    job:
+        | BatchScanJob
+        | MessageScanJob
+        | PurgeChannelJob
+        | PurgeGuildJob
+        | ThumbnailCleanupJob
+): Promise<string> {
     const redis = getRedis();
-    
+
     const streamName = buildStreamName(job.guild_id, job.type);
-    
+
     // Ensure consumer group exists
     await ensureConsumerGroup(streamName);
-    
+
     // Serialize job data
     const jobData = {
         job: JSON.stringify(job),
@@ -59,10 +72,14 @@ async function pushJob(job: BatchScanJob | MessageScanJob | PurgeChannelJob | Pu
         job_type: job.type,
         job_id: job.job_id,
     };
-    
+
     // Push to stream
-    const messageId = await redis.xadd(streamName, "*", ...Object.entries(jobData).flat());
-    
+    const messageId = await redis.xadd(
+        streamName,
+        "*",
+        ...Object.entries(jobData).flat()
+    );
+
     return messageId as string;
 }
 
@@ -89,7 +106,7 @@ export async function startBatchScan(params: {
         autoContinue = true,
         rescan = "stop",
     } = params;
-    
+
     const job: BatchScanJob = {
         job_id: randomUUID(),
         guild_id: guildId,
@@ -103,9 +120,9 @@ export async function startBatchScan(params: {
         rescan,
         created_at: new Date().toISOString(),
     };
-    
+
     const messageId = await pushJob(job);
-    
+
     return { jobId: job.job_id, messageId };
 }
 
@@ -118,7 +135,7 @@ export async function queueMessageScan(params: {
     messageIds: string[];
 }): Promise<{ jobId: string; messageId: string }> {
     const { guildId, channelId, messageIds } = params;
-    
+
     const job: MessageScanJob = {
         job_id: randomUUID(),
         guild_id: guildId,
@@ -127,9 +144,9 @@ export async function queueMessageScan(params: {
         message_ids: messageIds,
         created_at: new Date().toISOString(),
     };
-    
+
     const messageId = await pushJob(job);
-    
+
     return { jobId: job.job_id, messageId };
 }
 
@@ -141,7 +158,7 @@ export async function queueChannelPurge(params: {
     channelId: string;
 }): Promise<{ jobId: string; messageId: string }> {
     const { guildId, channelId } = params;
-    
+
     const job: PurgeChannelJob = {
         job_id: randomUUID(),
         guild_id: guildId,
@@ -149,9 +166,9 @@ export async function queueChannelPurge(params: {
         type: "purge_channel",
         created_at: new Date().toISOString(),
     };
-    
+
     const messageId = await pushJob(job);
-    
+
     return { jobId: job.job_id, messageId };
 }
 
@@ -162,7 +179,7 @@ export async function queueGuildPurge(params: {
     guildId: string;
 }): Promise<{ jobId: string; messageId: string }> {
     const { guildId } = params;
-    
+
     // Use first channel as placeholder (required by BaseJob schema)
     // Worker will ignore channel_id for guild purge
     const job: PurgeGuildJob = {
@@ -172,28 +189,54 @@ export async function queueGuildPurge(params: {
         type: "purge_guild",
         created_at: new Date().toISOString(),
     };
-    
+
     const messageId = await pushJob(job);
-    
+
+    return { jobId: job.job_id, messageId };
+}
+
+/**
+ * Queue a thumbnail cleanup job
+ */
+export async function queueThumbnailCleanup(params: {
+    timeoutMinutes?: number;
+}): Promise<{ jobId: string; messageId: string }> {
+    const { timeoutMinutes = 30 } = params;
+
+    // Use placeholder guild/channel IDs (required by BaseJob schema but ignored by worker for this job type)
+    const job: ThumbnailCleanupJob = {
+        job_id: randomUUID(),
+        guild_id: "global",
+        channel_id: "global",
+        type: "thumbnail_cleanup",
+        timeout_minutes: timeoutMinutes,
+        created_at: new Date().toISOString(),
+    };
+
+    const messageId = await pushJob(job);
+
     return { jobId: job.job_id, messageId };
 }
 
 /**
  * Get stream info (for monitoring)
  */
-export async function getStreamInfo(guildId: string, jobType: string): Promise<{
+export async function getStreamInfo(
+    guildId: string,
+    jobType: string
+): Promise<{
     length: number;
     exists: boolean;
 }> {
     const redis = getRedis();
     const streamName = buildStreamName(guildId, jobType);
-    
+
     try {
-        const info = await redis.xinfo("STREAM", streamName) as any[];
-        
+        const info = (await redis.xinfo("STREAM", streamName)) as any[];
+
         // Parse Redis response (array format)
         const length = info[1] as number;
-        
+
         return { length, exists: true };
     } catch (error: any) {
         if (error.message?.includes("no such key")) {

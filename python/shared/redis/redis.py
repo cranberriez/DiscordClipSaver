@@ -14,7 +14,7 @@ import uuid
 class BaseJob(BaseModel):
     """Base job model with common fields"""
     job_id: str = Field(default_factory=lambda: str(uuid.uuid4()))
-    type: Literal["batch", "message", "rescan", "thumbnail_retry", "message_deletion", "purge_channel", "purge_guild"]
+    type: Literal["batch", "message", "rescan", "thumbnail_retry", "thumbnail_cleanup", "message_deletion", "purge_channel", "purge_guild"]
     guild_id: str
     channel_id: str
     created_at: datetime = Field(default_factory=utcnow)

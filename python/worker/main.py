@@ -66,6 +66,16 @@ class Worker:
                 timeout_minutes=stale_scan_timeout
             )
         )
+        
+        # Start stale thumbnail cleanup loop
+        stale_thumb_interval = int(os.getenv("STALE_THUMBNAIL_CLEANUP_INTERVAL", "3600"))  # 1 hour default
+        stale_thumb_timeout = int(os.getenv("STALE_THUMBNAIL_TIMEOUT_MINUTES", "60"))  # 60 minutes default
+        self.stale_thumbnail_cleanup_task = asyncio.create_task(
+            self.stale_thumbnail_cleanup_loop(
+                interval_seconds=stale_thumb_interval,
+                timeout_minutes=stale_thumb_timeout
+            )
+        )
     
     async def shutdown(self):
         """Shutdown the worker gracefully"""
@@ -75,6 +85,9 @@ class Worker:
         
         if self.stale_scan_cleanup_task:
             self.stale_scan_cleanup_task.cancel()
+            
+        if hasattr(self, 'stale_thumbnail_cleanup_task') and self.stale_thumbnail_cleanup_task:
+            self.stale_thumbnail_cleanup_task.cancel()
 
         # The bot is stopped via the cancelled bot_task in run()
 
@@ -124,6 +137,41 @@ class Worker:
                 break
             except Exception as e:
                 logger.error(f"Error in stale scan cleanup loop: {e}", exc_info=True)
+                # Continue running despite errors
+
+    async def stale_thumbnail_cleanup_loop(self, interval_seconds: int, timeout_minutes: int):
+        """
+        Periodically check for clips stuck in processing/pending state.
+        
+        Args:
+            interval_seconds: How often to check
+            timeout_minutes: How long before a clip is considered stuck
+        """
+        logger.info(
+            f"Starting stale thumbnail cleanup loop "
+            f"(check every {interval_seconds}s, timeout: {timeout_minutes}m)"
+        )
+        
+        while self.running:
+            try:
+                await asyncio.sleep(interval_seconds)
+                
+                if self.processor and self.processor.thumbnail_handler:
+                    # Clean up stuck clips
+                    cleaned = await self.processor.thumbnail_handler.cleanup_stale_thumbnails(
+                        timeout_minutes=timeout_minutes
+                    )
+                    
+                    # If we found stuck clips, trigger a retry immediately
+                    if cleaned > 0:
+                        logger.info(f"Triggering immediate retry for {cleaned} cleaned up clips")
+                        await self.processor.thumbnail_handler.retry_failed_thumbnails()
+                
+            except asyncio.CancelledError:
+                logger.info("Stale thumbnail cleanup loop cancelled")
+                break
+            except Exception as e:
+                logger.error(f"Error in stale thumbnail cleanup loop: {e}", exc_info=True)
                 # Continue running despite errors
     
     async def process_jobs(self):

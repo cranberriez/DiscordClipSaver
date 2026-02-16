@@ -255,3 +255,53 @@ class ThumbnailHandler:
         
         logger.info(f"Retry batch complete: {success_count}/{len(failed)} successful")
         return success_count
+
+    async def cleanup_stale_thumbnails(self, timeout_minutes: int = 30) -> int:
+        """
+        Find clips stuck in 'processing' or 'pending' state for too long and mark them as failed.
+        This allows the retry logic to pick them up.
+        
+        Args:
+            timeout_minutes: Minutes after which a processing/pending clip is considered stale
+            
+        Returns:
+            Number of clips cleaned up
+        """
+        try:
+            cutoff = datetime.now(timezone.utc) - timedelta(minutes=timeout_minutes)
+            
+            # Find stale processing clips
+            # We look for clips that are 'processing' or 'pending' but haven't been updated recently
+            stale_clips = await Clip.filter(
+                thumbnail_status__in=["processing", "pending"],
+                updated_at__lte=cutoff
+            ).all()
+            
+            if not stale_clips:
+                return 0
+                
+            logger.info(f"Found {len(stale_clips)} stale clips (processing/pending for >{timeout_minutes}m)")
+            
+            count = 0
+            for clip in stale_clips:
+                try:
+                    old_status = clip.thumbnail_status
+                    
+                    # Mark as failed
+                    await clip.update_from_dict({"thumbnail_status": "failed"}).save()
+                    
+                    # Create failure record
+                    error_msg = f"Stuck in {old_status} state for >{timeout_minutes}m (likely worker restart)"
+                    await self._record_failure(clip, error_msg)
+                    
+                    count += 1
+                    logger.info(f"Cleaned up stale clip {clip.id} (was {old_status})")
+                    
+                except Exception as e:
+                    logger.error(f"Failed to cleanup stale clip {clip.id}: {e}")
+            
+            return count
+            
+        except Exception as e:
+            logger.error(f"Error in cleanup_stale_thumbnails: {e}")
+            return 0

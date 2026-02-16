@@ -35,11 +35,17 @@ export interface PurgeGuildJob extends BaseJob {
     type: "purge_guild";
 }
 
+export interface ThumbnailCleanupJob extends BaseJob {
+    type: "thumbnail_cleanup";
+    timeout_minutes: number;
+}
+
 export type Job =
     | BatchScanJob
     | MessageScanJob
     | PurgeChannelJob
-    | PurgeGuildJob;
+    | PurgeGuildJob
+    | ThumbnailCleanupJob;
 
 /**
  * Scan status from database

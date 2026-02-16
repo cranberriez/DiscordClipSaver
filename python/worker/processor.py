@@ -130,6 +130,8 @@ class JobProcessor:
             await self.process_rescan(job_data)
         elif job_type == "thumbnail_retry":
             await self.process_thumbnail_retry(job_data)
+        elif job_type == "thumbnail_cleanup":
+            await self.process_thumbnail_cleanup(job_data)
         elif job_type == "message_deletion":
             await self.process_message_deletion(job_data)
         elif job_type == "purge_channel":
@@ -555,6 +557,29 @@ class JobProcessor:
             logger.info(f"Thumbnail retry complete: {success_count} thumbnails successfully generated")
         except Exception as e:
             logger.error(f"Thumbnail retry job failed: {e}", exc_info=True)
+            raise
+
+    async def process_thumbnail_cleanup(self, job_data: dict):
+        """
+        Process thumbnail cleanup job - find stuck processing/pending clips and mark failed
+        
+        Args:
+            job_data: ThumbnailCleanupJob data
+        """
+        timeout_minutes = job_data.get("timeout_minutes", 30)
+        logger.info(f"Processing thumbnail cleanup job (timeout: {timeout_minutes}m)")
+        
+        try:
+            count = await self.thumbnail_handler.cleanup_stale_thumbnails(timeout_minutes=timeout_minutes)
+            logger.info(f"Thumbnail cleanup complete: {count} stale clips marked as failed")
+            
+            if count > 0:
+                logger.info(f"Triggering immediate retry for {count} cleaned up clips")
+                # Immediate retry for the clips we just cleaned up (and any others due)
+                await self.thumbnail_handler.retry_failed_thumbnails()
+                
+        except Exception as e:
+            logger.error(f"Thumbnail cleanup job failed: {e}", exc_info=True)
             raise
     
     async def process_message_deletion(self, job_data: dict):

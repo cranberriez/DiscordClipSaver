@@ -5,7 +5,7 @@ import type { AuthorWithStats } from "@/lib/api/author";
 import { formatClipName } from "../lib/formatClipName";
 import { formatDuration, formatRelativeTime } from "@/lib/utils/time-helpers";
 import { UserAvatar } from "@/components/core/UserAvatar";
-import { Heart, Play } from "lucide-react";
+import { Heart, Play, Loader2, AlertCircle } from "lucide-react";
 import Image from "next/image";
 import { messageTitleOrFilename } from "@/features/clips/lib/discordText";
 import { useImageErrorStore } from "../stores/useImageErrorStore";
@@ -63,6 +63,11 @@ export function ClipCard({
     const isExpired =
         parseIsoTimestamp(clip.clip.expires_at) < Date.now() / 1000;
 
+    const thumbnailStatus = clip.clip.thumbnail_status;
+    const isProcessing =
+        thumbnailStatus === "processing" || thumbnailStatus === "pending";
+    const isFailed = thumbnailStatus === "failed";
+
     // Temporary onclick wrapper for displaying extra data
     const handleClick = () => {
         // console.log("Clip clicked:", clip);
@@ -79,7 +84,7 @@ export function ClipCard({
             onClick={handleClick}
         >
             {/* Thumbnail - 16:9 aspect ratio */}
-            <div className="aspect-video bg-muted relative overflow-hidden rounded-lg">
+            <div className="aspect-video bg-muted relative overflow-hidden rounded-lg flex items-center justify-center">
                 {showThumbnail ? (
                     <>
                         <Image
@@ -101,8 +106,24 @@ export function ClipCard({
                         </div>
                     </>
                 ) : (
-                    <div className="w-full h-full flex items-center justify-center text-muted-foreground">
-                        <Play className="w-12 h-12" />
+                    <div className="w-full h-full flex flex-col items-center justify-center text-muted-foreground bg-muted/50 p-4 text-center">
+                        {isProcessing ? (
+                            <>
+                                <Loader2 className="w-8 h-8 mb-2 animate-spin text-primary" />
+                                <span className="text-xs font-medium">
+                                    Processing...
+                                </span>
+                            </>
+                        ) : isFailed ? (
+                            <>
+                                <AlertCircle className="w-8 h-8 mb-2 text-destructive" />
+                                <span className="text-xs font-medium text-destructive">
+                                    Thumbnail Failed
+                                </span>
+                            </>
+                        ) : (
+                            <Play className="w-12 h-12 opacity-50" />
+                        )}
                     </div>
                 )}
 
