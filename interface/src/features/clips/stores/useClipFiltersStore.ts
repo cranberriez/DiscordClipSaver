@@ -10,6 +10,7 @@ interface ClipFiltersState {
     searchQuery: string;
     sortType: SortType;
     sortOrder: SortOrder;
+    favoritesOnly: boolean;
 
     // Modal states
     isGuildModalOpen: boolean;
@@ -23,6 +24,7 @@ interface ClipFiltersState {
     setSearchQuery: (query: string) => void;
     setSortType: (type: SortType) => void;
     setSortOrder: (order: SortOrder) => void;
+    setFavoritesOnly: (favoritesOnly: boolean) => void;
 
     // Modal actions
     openGuildModal: () => void;
@@ -46,6 +48,7 @@ export const useClipFiltersStore = create<ClipFiltersState>()(
             searchQuery: "",
             sortType: "date" as SortType,
             sortOrder: "desc" as SortOrder,
+            favoritesOnly: false,
 
             isGuildModalOpen: false,
             isChannelModalOpen: false,
@@ -69,6 +72,8 @@ export const useClipFiltersStore = create<ClipFiltersState>()(
 
             setSortType: type => set({ sortType: type }),
             setSortOrder: order => set({ sortOrder: order }),
+            setFavoritesOnly: favoritesOnly =>
+                set({ favoritesOnly: favoritesOnly }),
 
             // Modal actions
             openGuildModal: () => set({ isGuildModalOpen: true }),
@@ -86,6 +91,7 @@ export const useClipFiltersStore = create<ClipFiltersState>()(
                     selectedAuthorIds: [],
                     searchQuery: "",
                     sortType: "date",
+                    favoritesOnly: false,
                     sortOrder: "desc",
                 }),
         }),
@@ -98,6 +104,7 @@ export const useClipFiltersStore = create<ClipFiltersState>()(
                 selectedAuthorIds: state.selectedAuthorIds,
                 searchQuery: state.searchQuery,
                 sortType: state.sortType,
+                favoritesOnly: state.favoritesOnly,
                 sortOrder: state.sortOrder,
             }),
         }

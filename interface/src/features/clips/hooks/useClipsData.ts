@@ -19,6 +19,7 @@ export function useClipsData(opts: { hydrated: boolean; targetPage?: number }) {
         searchQuery,
         sortOrder,
         sortType,
+        favoritesOnly,
     } = useClipFiltersStore();
 
     // Use selectedGuildId immediately if available, but still wait for hydration for other URL params
@@ -55,6 +56,7 @@ export function useClipsData(opts: { hydrated: boolean; targetPage?: number }) {
         limit: 50,
         sortOrder: sortOrder,
         sortType: sortType,
+        favorites: favoritesOnly,
     });
 
     useEffect(() => {

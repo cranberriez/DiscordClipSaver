@@ -3,7 +3,7 @@
 import { FilterNavButton } from "./FilterButton";
 import { useClipFiltersStore } from "../stores/useClipFiltersStore";
 import { SortType, SortOrder } from "@/lib/api/clip";
-import { ArrowDownUp, Server, Hash, User, Menu, X } from "lucide-react";
+import { ArrowDownUp, Server, Hash, User, Menu, X, Filter } from "lucide-react";
 import { useState } from "react";
 import {
     DropdownMenu,
@@ -34,12 +34,14 @@ export function FilterMenu({
         searchQuery,
         sortType,
         sortOrder,
+        favoritesOnly,
         openGuildModal,
         openChannelModal,
         openAuthorModal,
         setSearchQuery,
         setSortType,
         setSortOrder,
+        setFavoritesOnly,
     } = useClipFiltersStore();
 
     const hasGuildSelected = !!selectedGuildId;
@@ -136,7 +138,7 @@ export function FilterMenu({
                         </div>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent
-                        className="flex flex-col gap-1"
+                        className="flex flex-col gap-1 px-2"
                         align="start"
                     >
                         <DropdownMenuLabel className="text-xs text-foreground/50 tracking-wider">
@@ -170,7 +172,7 @@ export function FilterMenu({
                         >
                             Shortest First
                         </DropdownMenuItem>
-                        <DropdownMenuSeparator />
+                        {/* <DropdownMenuSeparator />
                         <DropdownMenuLabel className="text-xs text-foreground/50 tracking-wider">
                             SIZE
                         </DropdownMenuLabel>
@@ -185,7 +187,7 @@ export function FilterMenu({
                             className={`${sortType === "size" && sortOrder === "asc" ? "bg-accent-foreground! text-accent!" : ""} cursor-pointer`}
                         >
                             Smallest First
-                        </DropdownMenuItem>
+                        </DropdownMenuItem> */}
                         <DropdownMenuSeparator />
                         <DropdownMenuLabel className="text-xs text-foreground/50 tracking-wider">
                             LIKES
@@ -196,11 +198,31 @@ export function FilterMenu({
                         >
                             Most Liked
                         </DropdownMenuItem>
+                    </DropdownMenuContent>
+                </DropdownMenu>
+
+                {/* Filter Selection */}
+                <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                        <div>
+                            <FilterNavButton>
+                                <Filter className="h-5 w-5" />
+                                Filter
+                            </FilterNavButton>
+                        </div>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent
+                        className="flex flex-col gap-1 px-2"
+                        align="start"
+                    >
+                        <DropdownMenuLabel className="text-xs text-foreground/50 tracking-wider">
+                            VIEW
+                        </DropdownMenuLabel>
                         <DropdownMenuItem
-                            onClick={() => setSort("likes", "asc")}
-                            className={`${sortType === "likes" && sortOrder === "asc" ? "bg-accent-foreground! text-accent!" : ""} cursor-pointer`}
+                            onClick={() => setFavoritesOnly(!favoritesOnly)}
+                            className={`${favoritesOnly ? "bg-accent-foreground! text-accent!" : ""} cursor-pointer`}
                         >
-                            Least Liked
+                            Favorites Only
                         </DropdownMenuItem>
                     </DropdownMenuContent>
                 </DropdownMenu>
