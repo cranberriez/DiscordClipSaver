@@ -78,6 +78,7 @@ export function VideoPlayer({
                     poster={poster}
                     playsInline
                     autoPlay
+                    crossOrigin="anonymous"
                     volume={volume}
                     muted={muted}
                     onVolumeChange={detail => {
