@@ -1,9 +1,21 @@
 "use client";
 
 import { FilterNavButton } from "./FilterButton";
-import { useClipFiltersStore } from "../stores/useClipFiltersStore";
+import {
+    useClipFiltersStore,
+    SortType,
+    SortOrder,
+} from "../stores/useClipFiltersStore";
 import { ArrowDownUp, Server, Hash, User, Menu, X } from "lucide-react";
 import { useState } from "react";
+import {
+    DropdownMenu,
+    DropdownMenuTrigger,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuLabel,
+    DropdownMenuSeparator,
+} from "@/components/ui/dropdown-menu";
 
 type FilterMenuprops = {
     guildName: string;
@@ -23,11 +35,13 @@ export function FilterMenu({
         selectedChannelIds,
         selectedAuthorIds,
         searchQuery,
+        sortType,
         sortOrder,
         openGuildModal,
         openChannelModal,
         openAuthorModal,
         setSearchQuery,
+        setSortType,
         setSortOrder,
     } = useClipFiltersStore();
 
@@ -49,6 +63,27 @@ export function FilterMenu({
         return `${selectedAuthorIds.length} Author${
             selectedAuthorIds.length === 1 ? "" : "s"
         }`;
+    };
+
+    const setSort = (type: SortType, order: SortOrder) => {
+        setSortType(type);
+        setSortOrder(order);
+    };
+
+    const getSortText = (type: SortType, order: SortOrder) => {
+        const text = {
+            date: {
+                asc: "Oldest First",
+                desc: "Newest First",
+            },
+            likes: {
+                desc: "Most Liked",
+            },
+            views: {
+                desc: "Most Viewed",
+            },
+        } as Record<SortType, Record<SortOrder, string>>;
+        return text[type][order];
     };
 
     return (
@@ -90,6 +125,54 @@ export function FilterMenu({
                     <User className="h-5 w-5" />
                     {getAuthorButtonText()}
                 </FilterNavButton>
+
+                {/* Order Selection */}
+                <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                        <div>
+                            <FilterNavButton>
+                                <ArrowDownUp className="h-5 w-5" />
+                                {getSortText(sortType, sortOrder)}
+                            </FilterNavButton>
+                        </div>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent
+                        className="flex flex-col gap-1"
+                        align="start"
+                    >
+                        <DropdownMenuLabel className="text-xs text-foreground/50 tracking-wider">
+                            DATE
+                        </DropdownMenuLabel>
+                        <DropdownMenuItem
+                            onClick={() => setSort("date", "desc")}
+                            className={`${sortType === "date" && sortOrder === "desc" ? "bg-accent-foreground! text-accent!" : ""} cursor-pointer`}
+                        >
+                            Newest First
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                            onClick={() => setSort("date", "asc")}
+                            className={`${sortType === "date" && sortOrder === "asc" ? "bg-accent-foreground! text-accent!" : ""} cursor-pointer`}
+                        >
+                            Oldest First
+                        </DropdownMenuItem>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuLabel className="text-xs text-foreground/50 tracking-wider">
+                            POPULARITY
+                        </DropdownMenuLabel>
+                        <DropdownMenuItem
+                            onClick={() => setSort("likes", "desc")}
+                            className={`${sortType === "likes" ? "bg-accent-foreground! text-accent!" : ""} cursor-pointer`}
+                        >
+                            Most Likes
+                        </DropdownMenuItem>
+                        {/* <DropdownMenuItem
+                            onClick={() => setSort("views", "desc")}
+                            className={`${sortType === "views" ? "bg-accent-foreground! text-accent!" : ""} cursor-pointer`}
+                        >
+                            Most Views
+                        </DropdownMenuItem> */}
+                    </DropdownMenuContent>
+                </DropdownMenu>
             </div>
             <MobileFilterMenu />
         </>

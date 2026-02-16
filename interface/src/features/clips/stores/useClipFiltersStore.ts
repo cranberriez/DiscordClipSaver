@@ -2,6 +2,7 @@ import { create } from "zustand";
 import { persist } from "zustand/middleware";
 
 export type SortOrder = "desc" | "asc";
+export type SortType = "date" | "likes" | "views";
 
 interface ClipFiltersState {
     // Selected filters
@@ -9,6 +10,7 @@ interface ClipFiltersState {
     selectedChannelIds: string[];
     selectedAuthorIds: string[];
     searchQuery: string;
+    sortType: SortType;
     sortOrder: SortOrder;
 
     // Modal states
@@ -21,6 +23,7 @@ interface ClipFiltersState {
     setChannelIds: (channelIds: string[]) => void;
     setAuthorIds: (authorIds: string[]) => void;
     setSearchQuery: (query: string) => void;
+    setSortType: (type: SortType) => void;
     setSortOrder: (order: SortOrder) => void;
 
     // Modal actions
@@ -39,11 +42,12 @@ export const useClipFiltersStore = create<ClipFiltersState>()(
     persist(
         set => ({
             // Initial state
-            selectedGuildId: null,
-            selectedChannelIds: [],
-            selectedAuthorIds: [],
+            selectedGuildId: null as string | null,
+            selectedChannelIds: [] as string[],
+            selectedAuthorIds: [] as string[],
             searchQuery: "",
-            sortOrder: "desc",
+            sortType: "date" as SortType,
+            sortOrder: "desc" as SortOrder,
 
             isGuildModalOpen: false,
             isChannelModalOpen: false,
@@ -65,6 +69,7 @@ export const useClipFiltersStore = create<ClipFiltersState>()(
 
             setSearchQuery: query => set({ searchQuery: query }),
 
+            setSortType: type => set({ sortType: type }),
             setSortOrder: order => set({ sortOrder: order }),
 
             // Modal actions
@@ -82,6 +87,7 @@ export const useClipFiltersStore = create<ClipFiltersState>()(
                     selectedChannelIds: [],
                     selectedAuthorIds: [],
                     searchQuery: "",
+                    sortType: "date",
                     sortOrder: "desc",
                 }),
         }),
@@ -93,6 +99,7 @@ export const useClipFiltersStore = create<ClipFiltersState>()(
                 selectedChannelIds: state.selectedChannelIds,
                 selectedAuthorIds: state.selectedAuthorIds,
                 searchQuery: state.searchQuery,
+                sortType: state.sortType,
                 sortOrder: state.sortOrder,
             }),
         }

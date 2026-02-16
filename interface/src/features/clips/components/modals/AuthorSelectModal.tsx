@@ -39,14 +39,14 @@ export function AuthorSelectModal({
         if (!selectedChannelIds || selectedChannelIds.length === 0) {
             return author.clip_count || 0;
         }
-        
+
         // If channels are selected, sum up clips from those specific channels
         if (author.channel_clip_counts) {
             return selectedChannelIds.reduce((total, channelId) => {
                 return total + (author.channel_clip_counts?.[channelId] || 0);
             }, 0);
         }
-        
+
         // Fallback to total if channel_clip_counts is not available
         return author.clip_count || 0;
     };
@@ -140,7 +140,7 @@ export function AuthorSelectModal({
                                 return (
                                     <div
                                         key={author.user_id}
-                                        className={`flex items-center gap-3 p-4 rounded-lg border cursor-pointer transition-colors ${
+                                        className={`flex items-center gap-3 p-2 rounded-lg border cursor-pointer transition-colors ${
                                             isSelected
                                                 ? "bg-primary/10 border-primary"
                                                 : "hover:bg-muted"
@@ -149,18 +149,6 @@ export function AuthorSelectModal({
                                             handleToggleAuthor(author.user_id)
                                         }
                                     >
-                                        <Checkbox
-                                            checked={isSelected}
-                                            onCheckedChange={() =>
-                                                handleToggleAuthor(
-                                                    author.user_id
-                                                )
-                                            }
-                                            onClick={(e: React.MouseEvent) =>
-                                                e.stopPropagation()
-                                            }
-                                        />
-
                                         <div className="flex items-center gap-2 flex-1 min-w-0">
                                             <UserAvatar
                                                 userId={author.user_id}
@@ -177,7 +165,10 @@ export function AuthorSelectModal({
                                                 </p>
                                                 <p className="text-xs text-muted-foreground">
                                                     {(() => {
-                                                        const count = getAuthorClipCount(author);
+                                                        const count =
+                                                            getAuthorClipCount(
+                                                                author
+                                                            );
                                                         return `${count} ${count === 1 ? "clip" : "clips"}`;
                                                     })()}
                                                 </p>

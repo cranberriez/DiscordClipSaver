@@ -203,6 +203,7 @@ export function ClipsPageContent() {
                         fetchNextPage={clipsQuery.fetchNextPage}
                         scrollToClipId={scrollToClipId}
                         highlightClipId={lastHighlightedId}
+                        className="pt-18!"
                     />
                 </div>
             </div>

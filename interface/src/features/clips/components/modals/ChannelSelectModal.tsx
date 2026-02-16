@@ -9,10 +9,10 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
 import { Search, Hash } from "lucide-react";
 import { useClipFiltersStore } from "../../stores/useClipFiltersStore";
 import type { ChannelWithStats } from "@/lib/api/channel";
+import { cn } from "@/lib/utils";
 
 interface ChannelSelectModalProps {
     channels: ChannelWithStats[];
@@ -128,27 +128,24 @@ export function ChannelSelectModal({
                                 return (
                                     <div
                                         key={channel.id}
-                                        className={`flex items-center gap-3 p-4 rounded-lg border cursor-pointer transition-colors ${
+                                        className={cn(
+                                            "flex items-center gap-3 p-2 rounded-lg border cursor-pointer transition-colors",
                                             isSelected
                                                 ? "bg-primary/10 border-primary"
                                                 : "hover:bg-muted"
-                                        }`}
+                                        )}
                                         onClick={() =>
                                             handleToggleChannel(channel.id)
                                         }
                                     >
-                                        <Checkbox
-                                            checked={isSelected}
-                                            onCheckedChange={() =>
-                                                handleToggleChannel(channel.id)
-                                            }
-                                            onClick={(e: React.MouseEvent) =>
-                                                e.stopPropagation()
-                                            }
-                                        />
-
                                         <div className="flex items-center gap-2 flex-1 min-w-0">
-                                            <Hash className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+                                            <Hash
+                                                className={cn(
+                                                    "w-5 h-5 text-muted-foreground flex-shrink-0",
+                                                    isSelected &&
+                                                        "text-blue-400"
+                                                )}
+                                            />
                                             <div className="flex-1 min-w-0">
                                                 <p className="font-medium truncate">
                                                     {channel.name}

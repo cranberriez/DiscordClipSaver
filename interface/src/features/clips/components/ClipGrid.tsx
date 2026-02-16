@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useEffect, useMemo, useState } from "react";
+import { useRef, useEffect } from "react";
 import type { FullClip } from "@/lib/api/clip";
 import { ClipCard } from "./ClipCard";
 import { AuthorWithStats } from "@/lib/api/author";
@@ -16,6 +16,7 @@ interface ClipGridProps {
     fetchNextPage?: () => void;
     scrollToClipId?: string | null;
     highlightClipId?: string | null;
+    className?: string;
 }
 
 export function ClipGrid({
@@ -28,6 +29,7 @@ export function ClipGrid({
     fetchNextPage,
     scrollToClipId,
     highlightClipId,
+    className,
 }: ClipGridProps) {
     const parentRef = useRef<HTMLDivElement>(null);
     const sentinelRef = useRef<HTMLDivElement>(null);
@@ -82,7 +84,7 @@ export function ClipGrid({
     return (
         <PageContainer
             ref={parentRef}
-            className="h-full overflow-auto"
+            className={`h-full overflow-auto ${className || ""}`}
             maxWidth="full"
             noLines
         >

@@ -25,8 +25,8 @@ export function FilterBar({
     authorCount = 0,
 }: FilterBarProps) {
     return (
-        <div className="container mx-auto px-4 py-2 sm:px-8 max-w-full">
-            <div className="flex items-center justify-between bg-background gap-2">
+        <div className="container mx-auto px-3 sm:px-8 max-w-full absolute top-0 z-10">
+            <div className="flex items-center justify-between gap-2 px-1 py-2 rounded-b-xl bg-background/80 backdrop-blur-sm">
                 <FilterMenu
                     guildName={guildName || ""}
                     guildIcon={guildIcon || null}
