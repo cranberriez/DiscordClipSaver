@@ -24,6 +24,7 @@ export class ClipMapper {
             created_at: dbClip.created_at,
             updated_at: dbClip.updated_at,
             deleted_at: dbClip.deleted_at,
+            visibility: dbClip.visibility,
             thumbnail_status: dbClip.thumbnail_status as
                 | "pending"
                 | "processing"
