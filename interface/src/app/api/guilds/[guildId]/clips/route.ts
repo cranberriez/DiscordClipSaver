@@ -54,7 +54,8 @@ export async function GET(
                   sortType,
                   authorIds,
                   auth.discordUserId, // User ID for favorites
-                  favoritesOnly
+                  favoritesOnly,
+                  auth.isOwner // Pass isGuildOwner
               )
             : await DataService.getClipsByGuildId(
                   guildId,
@@ -64,7 +65,8 @@ export async function GET(
                   sortType,
                   authorIds,
                   auth.discordUserId, // User ID for favorites
-                  favoritesOnly
+                  favoritesOnly,
+                  auth.isOwner // Pass isGuildOwner
               );
 
         if (!clips) {

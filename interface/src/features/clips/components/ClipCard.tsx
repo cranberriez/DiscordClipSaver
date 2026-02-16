@@ -11,6 +11,9 @@ import { messageTitleOrFilename } from "@/features/clips/lib/discordText";
 import { useImageErrorStore } from "../stores/useImageErrorStore";
 import { parseIsoTimestamp } from "@/lib/utils/time-helpers";
 import { Thumbnail } from "@/lib/api/clip";
+import { ClipOptionsDropdown } from "./ClipOptionsDropdown";
+import { useToggleFavorite } from "@/lib/hooks/useFavorites";
+import { Button } from "@/components/ui/button";
 
 interface ClipCardProps {
     clip: FullClip;
@@ -72,6 +75,13 @@ export function ClipCard({
     const handleClick = () => {
         // console.log("Clip clicked:", clip);
         onClick(clip);
+    };
+
+    const toggleFavorite = useToggleFavorite();
+
+    const handleFavorite = (e: React.MouseEvent) => {
+        e.stopPropagation();
+        toggleFavorite.mutate(clip.clip.id);
     };
 
     return (
@@ -149,14 +159,22 @@ export function ClipCard({
                         <span className="text-xs text-muted-foreground font-medium">
                             {clip.favorite_count}
                         </span>
-                        <Heart
-                            className={`w-4 h-4 ${
-                                clip.isFavorited
-                                    ? "text-red-500 fill-red-500"
-                                    : "text-muted-foreground"
-                            }`}
-                        />
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={handleFavorite}
+                            className="h-6 w-6 rounded-full hover:bg-muted/50 focus-visible:ring-0 focus-visible:ring-offset-0"
+                        >
+                            <Heart
+                                className={`w-4 h-4 ${
+                                    clip.isFavorited
+                                        ? "text-red-500 fill-red-500"
+                                        : "text-muted-foreground"
+                                }`}
+                            />
+                        </Button>
                     </div>
+                    <ClipOptionsDropdown clip={clip} />
                 </div>
 
                 {/* Author & Time posted */}

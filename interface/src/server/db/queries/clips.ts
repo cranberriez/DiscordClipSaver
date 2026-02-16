@@ -22,7 +22,8 @@ export async function getClipsByGuildId(
     sortType: "date" | "duration" | "size" = "date",
     authorIds?: string[],
     userId?: string,
-    favoritesOnly?: boolean
+    favoritesOnly?: boolean,
+    isGuildOwner?: boolean
 ): Promise<ClipWithMetadata[]> {
     return ClipQueryOrchestrator.getClips(
         {
@@ -30,6 +31,7 @@ export async function getClipsByGuildId(
             authorIds,
             userId,
             favoritesOnly,
+            isGuildOwner,
         },
         {
             limit,
@@ -51,7 +53,8 @@ export async function getClipsByChannelIds(
     sortType: "date" | "duration" | "size" = "date",
     authorIds?: string[],
     userId?: string,
-    favoritesOnly?: boolean
+    favoritesOnly?: boolean,
+    isGuildOwner?: boolean
 ): Promise<ClipWithMetadata[]> {
     return ClipQueryOrchestrator.getClips(
         {
@@ -59,6 +62,7 @@ export async function getClipsByChannelIds(
             authorIds,
             userId,
             favoritesOnly,
+            isGuildOwner,
         },
         {
             limit,
@@ -79,7 +83,8 @@ export async function getClipsByChannelId(
     sortOrder: "asc" | "desc" = "desc",
     sortType: "date" | "duration" | "size" = "date",
     userId?: string,
-    favoritesOnly?: boolean
+    favoritesOnly?: boolean,
+    isGuildOwner?: boolean
 ): Promise<ClipWithMetadata[]> {
     return getClipsByChannelIds(
         [channelId],
@@ -89,7 +94,8 @@ export async function getClipsByChannelId(
         sortType,
         undefined, // no author filter for single channel
         userId,
-        favoritesOnly
+        favoritesOnly,
+        isGuildOwner
     );
 }
 
@@ -175,10 +181,11 @@ export async function getFavoriteClips(
  */
 export async function getClipById(
     clipId: string,
-    userId?: string
+    userId?: string,
+    includeDeleted: boolean = false
 ): Promise<ClipWithMetadata | null> {
     // Single query with optimized JOIN - always join but with proper condition
-    const result = await getDb()
+    let query = getDb()
         .selectFrom("clip")
         .innerJoin("message", "message.id", "clip.message_id")
         .leftJoin("favorite_clip", join => {
@@ -224,19 +231,27 @@ export async function getClipById(
                 .as("is_favorited");
         })
         .where("clip.id", "=", clipId)
-        .where("clip.deleted_at", "is", null)
-        .where("message.deleted_at", "is", null)
-        .executeTakeFirst();
+        .where("message.deleted_at", "is", null);
+
+    if (!includeDeleted) {
+        query = query.where("clip.deleted_at", "is", null);
+    }
+
+    const result = await query.executeTakeFirst();
 
     if (!result) return null;
 
     // Fetch thumbnails separately (usually just 2 records)
-    const thumbnails = await getDb()
+    let thumbnailsQuery = getDb()
         .selectFrom("thumbnail")
         .selectAll()
-        .where("clip_id", "=", clipId)
-        .where("deleted_at", "is", null)
-        .execute();
+        .where("clip_id", "=", clipId);
+
+    if (!includeDeleted) {
+        thumbnailsQuery = thumbnailsQuery.where("deleted_at", "is", null);
+    }
+
+    const thumbnails = await thumbnailsQuery.execute();
 
     // Reconstruct message object
     const message: DbMessage = {
@@ -265,6 +280,7 @@ export async function getClipById(
             settings_hash: result.settings_hash,
             cdn_url: result.cdn_url,
             expires_at: result.expires_at,
+            visibility: result.visibility || "PUBLIC",
             thumbnail_status: result.thumbnail_status,
             deleted_at: result.deleted_at,
             created_at: result.created_at,

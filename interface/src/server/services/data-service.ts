@@ -141,7 +141,8 @@ export class DataService {
         sortType: "date" | "duration" | "size" = "date",
         authorIds?: string[],
         userId?: string,
-        favoritesOnly?: boolean
+        favoritesOnly?: boolean,
+        isGuildOwner?: boolean
     ) {
         const clips = await db.getClipsByGuildId(
             guildId,
@@ -151,7 +152,8 @@ export class DataService {
             sortType,
             authorIds,
             userId,
-            favoritesOnly
+            favoritesOnly,
+            isGuildOwner
         );
 
         if (!clips) {
@@ -170,7 +172,8 @@ export class DataService {
         sortType: "date" | "duration" | "size" = "date",
         authorIds?: string[],
         userId?: string,
-        favoritesOnly?: boolean
+        favoritesOnly?: boolean,
+        isGuildOwner?: boolean
     ) {
         const clips = await db.getClipsByChannelIds(
             channelIds,
@@ -180,7 +183,8 @@ export class DataService {
             sortType,
             authorIds,
             userId,
-            favoritesOnly
+            favoritesOnly,
+            isGuildOwner
         );
 
         if (!clips) {
@@ -200,7 +204,8 @@ export class DataService {
         sortOrder: "asc" | "desc" = "desc",
         sortType: "date" | "duration" | "size" = "date",
         userId?: string,
-        favoritesOnly?: boolean
+        favoritesOnly?: boolean,
+        isGuildOwner?: boolean
     ) {
         const clips = await db.getClipsByChannelId(
             channelId,
@@ -209,7 +214,8 @@ export class DataService {
             sortOrder,
             sortType,
             userId,
-            favoritesOnly
+            favoritesOnly,
+            isGuildOwner
         );
 
         if (!clips) {
@@ -220,8 +226,12 @@ export class DataService {
         return clips.map(clip => ClipMapper.toClipWithMetadata(clip));
     }
 
-    static async getClipById(clipId: string, userId?: string) {
-        const clip = await db.getClipById(clipId, userId);
+    static async getClipById(
+        clipId: string,
+        userId?: string,
+        includeDeleted: boolean = false
+    ) {
+        const clip = await db.getClipById(clipId, userId, includeDeleted);
 
         if (!clip) {
             console.error("Clip not found, clipId: " + clipId);

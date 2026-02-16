@@ -8,6 +8,11 @@ export interface ClipTable {
     filename: string;
     file_size: ColumnType<bigint, bigint | number, bigint | number>;
     mime_type: string;
+    visibility: ColumnType<
+        "PUBLIC" | "UNLISTED" | "PRIVATE",
+        "PUBLIC" | "UNLISTED" | "PRIVATE" | undefined,
+        "PUBLIC" | "UNLISTED" | "PRIVATE" | undefined
+    >;
     duration: ColumnType<
         number | null,
         number | null | undefined,
@@ -25,7 +30,11 @@ export interface ClipTable {
     >;
     cdn_url: string;
     expires_at: Date;
-    thumbnail_status: ColumnType<string, string | undefined, string | undefined>;
+    thumbnail_status: ColumnType<
+        string,
+        string | undefined,
+        string | undefined
+    >;
     deleted_at: ColumnType<
         Date | null,
         Date | null | undefined,

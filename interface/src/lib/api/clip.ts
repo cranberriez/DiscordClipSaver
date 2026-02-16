@@ -11,6 +11,7 @@ export interface Clip {
     settings_hash: string | null;
     cdn_url: string;
     expires_at: Date;
+    visibility: "PUBLIC" | "UNLISTED" | "PRIVATE";
     thumbnail_status: "pending" | "processing" | "completed" | "failed";
     created_at: Date;
     updated_at: Date;

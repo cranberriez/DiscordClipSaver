@@ -11,6 +11,7 @@ export interface ClipQueryFilters {
     authorIds?: string[];
     userId?: string;
     favoritesOnly?: boolean;
+    isGuildOwner?: boolean;
 }
 
 export interface ClipQueryOptions {
@@ -51,7 +52,6 @@ class ClipQueryBuilder {
                     .select(eb.fn.count<number>("id").as("count"))
                     .as("favorite_count"),
             ])
-            .where("clip.deleted_at", "is", null)
             .where("message.deleted_at", "is", null);
     }
 
@@ -59,6 +59,24 @@ class ClipQueryBuilder {
      * Apply all filters in a chainable way
      */
     withFilters(filters: ClipQueryFilters): this {
+        // Filter soft-deleted clips unless user is guild owner
+        if (!filters.isGuildOwner) {
+            this.query = this.query.where("clip.deleted_at", "is", null);
+
+            // Visibility filter: Public or Author's own clips
+            this.query = this.query.where(eb => {
+                const conditions = [eb("clip.visibility", "=", "PUBLIC")];
+
+                if (filters.userId) {
+                    conditions.push(
+                        eb("message.author_id", "=", filters.userId)
+                    );
+                }
+
+                return eb.or(conditions);
+            });
+        }
+
         if (filters.guildId) {
             this.query = this.query.where(
                 "clip.guild_id",
