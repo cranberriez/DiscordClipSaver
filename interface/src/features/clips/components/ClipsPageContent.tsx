@@ -35,6 +35,7 @@ export function ClipsPageContent() {
         channelsLoading,
         authors,
         authorMap,
+        channelMap,
         selectedGuild,
         filteredClips,
         allClipCount,
@@ -302,6 +303,7 @@ export function ClipsPageContent() {
                             ? filteredClips[clipIndex + 1]?.clip.cdn_url
                             : undefined
                     }
+                    channelMap={channelMap}
                     authorMap={authorMap}
                 />
             )}

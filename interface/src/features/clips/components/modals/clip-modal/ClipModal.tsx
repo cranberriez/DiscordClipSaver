@@ -4,6 +4,7 @@ import { useState, useCallback, useEffect, useRef } from "react";
 import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { InfoModal } from "./InfoModal";
 import { useLatestVideoUrl } from "@/features/clips/hooks/useLatestVideoUrl";
+import type { ChannelWithStats } from "@/lib/api/channel";
 import type { FullClip, Thumbnail } from "@/lib/api/clip";
 import type { AuthorWithStats } from "@/lib/api/author";
 import { formatClipName } from "../../../lib/formatClipName";
@@ -18,6 +19,7 @@ interface ClipModalProps {
     onPrevious?: () => void;
     onNext?: () => void;
     authorMap?: Map<string, AuthorWithStats>;
+    channelMap?: Map<string, ChannelWithStats>;
     /** Optional neighbor URLs for direction-aware preloading */
     prevUrl?: string;
     nextUrl?: string;
@@ -39,11 +41,13 @@ export function ClipModal({
     onPrevious,
     onNext,
     authorMap,
+    channelMap,
     prevUrl,
     nextUrl,
 }: ClipModalProps) {
     const { clip: initialClipData, message, thumbnail } = initialClip;
     const author = authorMap?.get(message.author_id);
+    const channel = channelMap?.get(message.channel_id);
     const isFavorited = initialClip.isFavorited;
 
     const latest = useLatestVideoUrl(initialClip);
@@ -268,6 +272,7 @@ export function ClipModal({
                         <InfoBar
                             vidTitle={vidTitle}
                             author={author}
+                            channelName={channel?.name}
                             message={message}
                             isFavoritedInitial={isFavorited || false}
                             clip={clip}

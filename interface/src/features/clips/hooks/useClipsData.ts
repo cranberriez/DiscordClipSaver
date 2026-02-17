@@ -39,6 +39,11 @@ export function useClipsData(opts: { hydrated: boolean; targetPage?: number }) {
         [authors]
     );
 
+    const channelMap = useMemo(
+        () => new Map(channels.map(c => [c.id, c])),
+        [channels]
+    );
+
     usePrefetchAuthorStats();
 
     const clipsQuery = useChannelClipsInfinite({
@@ -135,6 +140,7 @@ export function useClipsData(opts: { hydrated: boolean; targetPage?: number }) {
         channelsLoading,
         authors,
         authorMap,
+        channelMap,
         selectedGuild,
         filteredClips,
         allClipCount: allClips.length,

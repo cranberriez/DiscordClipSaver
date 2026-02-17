@@ -16,6 +16,7 @@ import { cn } from "@/lib/utils";
 interface InfoBarProps {
     vidTitle: string;
     author?: AuthorWithStats;
+    channelName?: string;
     message: FullClip["message"];
     clip: FullClip["clip"];
     isFavoritedInitial: boolean;
@@ -27,6 +28,7 @@ interface InfoBarProps {
 export function InfoBar({
     vidTitle,
     author,
+    channelName,
     message,
     clip,
     isFavoritedInitial,
@@ -59,6 +61,14 @@ export function InfoBar({
                                     showName={true}
                                 />
                                 <span>•</span>
+                                {channelName && (
+                                    <>
+                                        <span className="text-muted-foreground">
+                                            #{channelName}
+                                        </span>
+                                        <span>•</span>
+                                    </>
+                                )}
                                 <span>
                                     Posted{" "}
                                     {formatRelativeTime(message.timestamp)}
@@ -68,9 +78,9 @@ export function InfoBar({
                         <div className="flex items-center gap-2">
                             <Button
                                 variant="ghost"
-                                size="sm"
+                                size="lg"
                                 onClick={onShowInfo}
-                                className="gap-1 text-muted-foreground hover:text-foreground"
+                                className="gap-2 text-muted-foreground hover:text-foreground"
                             >
                                 <Info className="w-4 h-4" />
                                 <span className="text-xs">Info</span>
