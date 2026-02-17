@@ -7,7 +7,7 @@ import {
     clipsInfiniteQuery,
     clipQuery,
 } from "@/lib/queries/clip";
-import type { ClipListParams } from "@/lib/api/clip";
+import type { ClipListParams, FullClip } from "@/lib/api/clip";
 
 // ============================================================================
 // Queries
@@ -148,7 +148,7 @@ export function useClipsInfinite(params: {
 export function useClip(
     guildId: string,
     clipId: string,
-    options?: { staleTime?: number; enabled?: boolean }
+    options?: { staleTime?: number; enabled?: boolean; initialData?: FullClip }
 ) {
     const query = clipQuery(guildId, clipId);
     if (options?.staleTime !== undefined) {
@@ -156,6 +156,9 @@ export function useClip(
     }
     if (options?.enabled !== undefined) {
         query.enabled = options.enabled && query.enabled;
+    }
+    if (options?.initialData) {
+        query.initialData = options.initialData;
     }
     return useQuery(query);
 }

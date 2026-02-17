@@ -14,8 +14,12 @@ export function stripDiscordMentions(input: string): string {
 
 export function messageTitleOrFilename(
     messageContent: string | undefined | null,
-    fallbackFilename: string
+    fallbackFilename: string,
+    titleOverride?: string | null
 ): string {
+    if (titleOverride && titleOverride.trim().length > 0) {
+        return titleOverride.trim();
+    }
     if (messageContent && messageContent.trim().length > 0) {
         const cleaned = stripDiscordMentions(messageContent);
         if (cleaned.length > 0) return cleaned;

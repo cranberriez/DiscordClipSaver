@@ -5,6 +5,11 @@ export interface ClipTable {
     message_id: string;
     guild_id: string;
     channel_id: string;
+    title: ColumnType<
+        string | null,
+        string | null | undefined,
+        string | null | undefined
+    >;
     filename: string;
     file_size: ColumnType<bigint, bigint | number, bigint | number>;
     mime_type: string;

@@ -4,6 +4,7 @@ import { useState, useCallback, useEffect, useRef } from "react";
 import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { InfoModal } from "./InfoModal";
 import { useLatestVideoUrl } from "@/features/clips/hooks/useLatestVideoUrl";
+import { useClip } from "@/lib/hooks/useClips";
 import type { ChannelWithStats } from "@/lib/api/channel";
 import type { FullClip } from "@/lib/api/clip";
 import type { AuthorWithStats } from "@/lib/api/author";
@@ -45,13 +46,26 @@ export function ClipModal({
     prevUrl,
     nextUrl,
 }: ClipModalProps) {
-    const { message, thumbnail } = initialClip;
+    // Fetch fresh clip data to ensure updates (like renaming) are reflected immediately
+    const { data: freshClip } = useClip(
+        initialClip.clip.guild_id,
+        initialClip.clip.id,
+        {
+            initialData: initialClip,
+            // Prevent immediate refetch on mount since we have initial data
+            // invalidation from rename/delete will still trigger updates
+            staleTime: 5 * 60 * 1000,
+        }
+    );
+
+    const effectiveClip = freshClip ?? initialClip;
+    const { message, thumbnail } = effectiveClip;
     const author = authorMap?.get(message.author_id);
     const channel = channelMap?.get(message.channel_id);
 
-    const latest = useLatestVideoUrl(initialClip);
-    const effective = latest.clip ?? initialClip;
-    const clip = effective.clip;
+    const latest = useLatestVideoUrl(effectiveClip);
+    const clip = effectiveClip.clip;
+
     const [videoUrl, setVideoUrl] = useState<string>(
         latest.url ?? clip.cdn_url
     );
@@ -60,7 +74,8 @@ export function ClipModal({
 
     const vidTitle = messageTitleOrFilename(
         message?.content,
-        formatClipName(clip.filename)
+        formatClipName(clip.filename),
+        clip.title
     );
 
     // Update video URL when clip changes (for navigation)
@@ -274,7 +289,7 @@ export function ClipModal({
                             channelName={channel?.name}
                             message={message}
                             clip={clip}
-                            fullClip={effective}
+                            fullClip={effectiveClip}
                             onPrevious={
                                 onPrevious
                                     ? () => {
@@ -305,7 +320,7 @@ export function ClipModal({
                     clip={clip}
                     message={message}
                     thumbnail={thumbnail}
-                    initialClip={initialClip}
+                    initialClip={effectiveClip}
                 />
             )}
 

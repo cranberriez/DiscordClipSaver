@@ -67,7 +67,8 @@ export function ClipCard({
 
     const vidTitle = messageTitleOrFilename(
         message?.content,
-        formatClipName(clipData.filename)
+        formatClipName(clipData.filename),
+        clipData.title
     );
 
     const showThumbnail = thumbnailUrl && !hasTooManyErrors;

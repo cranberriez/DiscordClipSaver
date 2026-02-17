@@ -281,6 +281,7 @@ export async function getClipById(
             cdn_url: result.cdn_url,
             expires_at: result.expires_at,
             visibility: result.visibility || "PUBLIC",
+            title: result.title,
             thumbnail_status: result.thumbnail_status,
             deleted_at: result.deleted_at,
             created_at: result.created_at,

@@ -23,6 +23,7 @@ import {
     Lock,
     Globe,
     Pencil,
+    FileEdit,
 } from "lucide-react";
 import { FullClip } from "@/lib/api/clip";
 import { useUser } from "@/lib/hooks/useUser";
@@ -32,6 +33,7 @@ import {
     useArchiveClip,
     useUnarchiveClip,
     useDeleteClip,
+    useRenameClip,
 } from "@/lib/hooks/useClipActions";
 import { toast } from "sonner";
 import {
@@ -44,6 +46,16 @@ import {
     AlertDialogHeader,
     AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
 
 interface ClipOptionsDropdownProps {
@@ -74,18 +86,23 @@ export function ClipOptionsDropdown({
     const archiveClip = useArchiveClip();
     const unarchiveClip = useUnarchiveClip();
     const deleteClip = useDeleteClip();
+    const renameClip = useRenameClip();
 
     const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+    const [isRenameDialogOpen, setIsRenameDialogOpen] = useState(false);
+    const [newTitle, setNewTitle] = useState(clip.clip.title || "");
 
     // Permissions
     const isClipOwner = user?.id === clip.message.author_id;
     const isGuildOwner = user?.id === guild?.owner_id;
-    const canManageVisibility = isClipOwner || isGuildOwner;
-    const canManageArchive = isGuildOwner; // Only server owner
-    const canDelete = isGuildOwner; // Only server owner
+    const isAdmin = user?.roles === "admin";
+    const canManageVisibility = isClipOwner || isGuildOwner || isAdmin;
+    const canManageArchive = isGuildOwner || isAdmin; // Only server owner or admin
+    const canDelete = isGuildOwner || isAdmin; // Only server owner or admin
+    const canRename = isClipOwner || isGuildOwner || isAdmin;
 
     const hasAnyPermissions =
-        canManageVisibility || canManageArchive || canDelete;
+        canManageVisibility || canManageArchive || canDelete || canRename;
 
     // If on info bar and no permissions, show nothing
     if (isOnInfoBar && !hasAnyPermissions) {
@@ -129,6 +146,38 @@ export function ClipOptionsDropdown({
     const handleDelete = () => {
         deleteClip.mutate(clip.clip.id);
         setIsDeleteDialogOpen(false);
+    };
+
+    const handleRenameClick = (e: React.MouseEvent) => {
+        e.stopPropagation();
+        setNewTitle(clip.clip.title || "");
+        setIsRenameDialogOpen(true);
+    };
+
+    const handleRenameSubmit = (e: React.FormEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
+
+        const title = newTitle.trim();
+
+        if (title.length < 2) {
+            toast.error("Title must be at least 2 characters long");
+            return;
+        }
+
+        if (title.length > 254) {
+            toast.error("Title must be less than 254 characters");
+            return;
+        }
+
+        renameClip.mutate(
+            { clipId: clip.clip.id, title },
+            {
+                onSuccess: () => {
+                    setIsRenameDialogOpen(false);
+                },
+            }
+        );
     };
 
     // Prevent click propagation to card
@@ -177,6 +226,18 @@ export function ClipOptionsDropdown({
                             <DropdownMenuItem onClick={handleViewInDiscord}>
                                 <ExternalLink className="mr-2 h-4 w-4" />
                                 <span>View in Discord</span>
+                            </DropdownMenuItem>
+                        </>
+                    )}
+
+                    {canRename && (
+                        <>
+                            {(!isOnInfoBar || canManageVisibility) && (
+                                <DropdownMenuSeparator />
+                            )}
+                            <DropdownMenuItem onClick={handleRenameClick}>
+                                <FileEdit className="mr-2 h-4 w-4" />
+                                <span>Rename</span>
                             </DropdownMenuItem>
                         </>
                     )}
@@ -295,6 +356,56 @@ export function ClipOptionsDropdown({
                     </AlertDialogFooter>
                 </AlertDialogContent>
             </AlertDialog>
+
+            {/* Rename Dialog */}
+            <Dialog
+                open={isRenameDialogOpen}
+                onOpenChange={setIsRenameDialogOpen}
+            >
+                <DialogContent onClick={e => e.stopPropagation()}>
+                    <form onSubmit={handleRenameSubmit}>
+                        <DialogHeader>
+                            <DialogTitle>Rename Clip</DialogTitle>
+                            <DialogDescription>
+                                Enter a new title for this clip. This will
+                                override the default generated name.
+                            </DialogDescription>
+                        </DialogHeader>
+                        <div className="grid gap-4 py-4">
+                            <div className="grid gap-2">
+                                <Label htmlFor="name">Title</Label>
+                                <Input
+                                    id="name"
+                                    value={newTitle}
+                                    onChange={e => setNewTitle(e.target.value)}
+                                    placeholder="Enter clip title..."
+                                    className="col-span-3"
+                                    autoFocus
+                                    maxLength={254}
+                                    minLength={2}
+                                />
+                            </div>
+                        </div>
+                        <DialogFooter>
+                            <Button
+                                type="button"
+                                variant="outline"
+                                onClick={() => setIsRenameDialogOpen(false)}
+                            >
+                                Cancel
+                            </Button>
+                            <Button
+                                type="submit"
+                                disabled={renameClip.isPending}
+                            >
+                                {renameClip.isPending
+                                    ? "Saving..."
+                                    : "Save Changes"}
+                            </Button>
+                        </DialogFooter>
+                    </form>
+                </DialogContent>
+            </Dialog>
         </>
     );
 }

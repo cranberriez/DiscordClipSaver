@@ -3,6 +3,7 @@ export interface Clip {
     message_id: string;
     guild_id: string;
     channel_id: string;
+    title: string | null;
     filename: string;
     file_size: number;
     mime_type: string;

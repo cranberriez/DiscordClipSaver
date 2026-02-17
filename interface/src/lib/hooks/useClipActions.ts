@@ -27,7 +27,9 @@ export function useUpdateVisibility() {
             return res.json();
         },
         onSuccess: (_, variables) => {
-            toast.success(`Visibility updated to ${variables.visibility.toLowerCase()}`);
+            toast.success(
+                `Visibility updated to ${variables.visibility.toLowerCase()}`
+            );
             // Invalidate specific clip query
             queryClient.invalidateQueries({
                 queryKey: clipKeys.detail(variables.clipId),
@@ -37,7 +39,7 @@ export function useUpdateVisibility() {
                 queryKey: clipKeys.lists(),
             });
         },
-        onError: (error) => {
+        onError: error => {
             toast.error(error.message);
         },
     });
@@ -68,7 +70,7 @@ export function useArchiveClip() {
                 queryKey: clipKeys.lists(),
             });
         },
-        onError: (error) => {
+        onError: error => {
             toast.error(error.message);
         },
     });
@@ -99,7 +101,7 @@ export function useUnarchiveClip() {
                 queryKey: clipKeys.lists(),
             });
         },
-        onError: (error) => {
+        onError: error => {
             toast.error(error.message);
         },
     });
@@ -131,7 +133,46 @@ export function useDeleteClip() {
                 queryKey: clipKeys.lists(),
             });
         },
-        onError: (error) => {
+        onError: error => {
+            toast.error(error.message);
+        },
+    });
+}
+
+export function useRenameClip() {
+    const queryClient = useQueryClient();
+
+    return useMutation({
+        mutationFn: async ({
+            clipId,
+            title,
+        }: {
+            clipId: string;
+            title: string;
+        }) => {
+            const res = await fetch(`/api/clips/${clipId}/title`, {
+                method: "PATCH",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ title }),
+            });
+
+            if (!res.ok) {
+                const error = await res.json();
+                throw new Error(error.error || "Failed to rename clip");
+            }
+
+            return res.json();
+        },
+        onSuccess: (_, variables) => {
+            toast.success("Clip renamed");
+            queryClient.invalidateQueries({
+                queryKey: clipKeys.detail(variables.clipId),
+            });
+            queryClient.invalidateQueries({
+                queryKey: clipKeys.lists(),
+            });
+        },
+        onError: error => {
             toast.error(error.message);
         },
     });
