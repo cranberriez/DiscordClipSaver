@@ -1,7 +1,7 @@
 import { PageContainer } from "@/components/layout";
 import { HomeIcon, LayoutDashboard } from "lucide-react";
 import Link from "next/link";
-import { FilterNavButton } from "./FilterButton";
+import { FilterNavButton } from "./clip-filtering/FilterButton";
 import { UserMenu } from "@/components/composite/UserMenu";
 import { Button } from "@/components/ui/button";
 import { useSession } from "next-auth/react";

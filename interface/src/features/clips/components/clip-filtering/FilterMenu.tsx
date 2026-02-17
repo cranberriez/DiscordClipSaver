@@ -1,30 +1,17 @@
 "use client";
 
-import { FilterNavButton } from "../FilterButton";
 import { useClipFiltersStore } from "../../stores/useClipFiltersStore";
-import { SortType, SortOrder } from "@/lib/api/clip";
-import { useDebounce } from "@/lib/hooks";
+import { useState, useEffect } from "react";
 import {
-    ArrowDownUp,
-    Server,
-    Hash,
-    User,
-    Menu,
-    X,
-    Filter,
-    Search,
-} from "lucide-react";
-import { useState, useRef, useEffect } from "react";
-import {
-    DropdownMenu,
-    DropdownMenuTrigger,
-    DropdownMenuContent,
-    DropdownMenuItem,
-    DropdownMenuLabel,
-    DropdownMenuSeparator,
-} from "@/components/ui/dropdown-menu";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
+    ServerFilter,
+    ChannelFilter,
+    AuthorFilter,
+    SortingFilter,
+    ViewFilter,
+    SearchFilter,
+    ServerIcon,
+} from "./";
+import { MobileFilterMenu } from "./MobileFilterMenu";
 
 type FilterMenuprops = {
     guildName: string;
@@ -39,327 +26,32 @@ export function FilterMenu({
     channelCount,
     authorCount,
 }: FilterMenuprops) {
-    const {
-        selectedGuildId,
-        selectedChannelIds,
-        selectedAuthorIds,
-        searchQuery,
-        sortType,
-        sortOrder,
-        favoritesOnly,
-        openGuildModal,
-        openChannelModal,
-        openAuthorModal,
-        setSearchQuery,
-        setSortType,
-        setSortOrder,
-        setFavoritesOnly,
-    } = useClipFiltersStore();
-
+    const { searchQuery } = useClipFiltersStore();
     const [isSearchOpen, setIsSearchOpen] = useState(!!searchQuery);
-    const [searchValue, setSearchValue] = useState(searchQuery);
-    const debouncedSearchValue = useDebounce(searchValue, 500);
-    const inputRef = useRef<HTMLInputElement>(null);
 
-    // Sync debounced value to store
+    // Keep search open if there is a query (e.g. on initial load)
     useEffect(() => {
-        setSearchQuery(debouncedSearchValue);
-    }, [debouncedSearchValue, setSearchQuery]);
-
-    // Auto-focus input when search opens
-    useEffect(() => {
-        if (isSearchOpen) {
-            // Small timeout to ensure element is mounted
-            const timer = setTimeout(() => {
-                inputRef.current?.focus();
-            }, 50);
-            return () => clearTimeout(timer);
+        if (searchQuery && !isSearchOpen) {
+            setIsSearchOpen(true);
         }
-    }, [isSearchOpen]);
-
-    const hasGuildSelected = !!selectedGuildId;
-
-    const getChannelButtonText = () => {
-        if (!hasGuildSelected) return "Channels";
-        if (selectedChannelIds.length === 0) return "All Channels";
-        if (selectedChannelIds.length === channelCount) return "All Channels";
-        return `${selectedChannelIds.length} Channel${
-            selectedChannelIds.length === 1 ? "" : "s"
-        }`;
-    };
-
-    const getAuthorButtonText = () => {
-        if (!hasGuildSelected) return "Authors";
-        if (selectedAuthorIds.length === 0) return "All Authors";
-        if (selectedAuthorIds.length === authorCount) return "All Authors";
-        return `${selectedAuthorIds.length} Author${
-            selectedAuthorIds.length === 1 ? "" : "s"
-        }`;
-    };
-
-    const setSort = (type: SortType, order: SortOrder) => {
-        setSortType(type);
-        setSortOrder(order);
-    };
-
-    const getSortText = (type: SortType, order: SortOrder) => {
-        const text: Record<string, Record<string, string>> = {
-            date: {
-                asc: "Oldest First",
-                desc: "Newest First",
-            },
-            duration: {
-                asc: "Shortest First",
-                desc: "Longest First",
-            },
-            size: {
-                asc: "Smallest First",
-                desc: "Largest First",
-            },
-        };
-        return text[type]?.[order] || "Sort";
-    };
-
-    const handleCloseSearch = () => {
-        setIsSearchOpen(false);
-    };
-
-    const handleClearSearch = () => {
-        setSearchValue("");
-        setSearchQuery("");
-        inputRef.current?.focus();
-    };
+    }, [searchQuery, isSearchOpen]);
 
     if (isSearchOpen) {
-        return (
-            <div className="hidden sm:flex items-center gap-2 flex-1 animate-in fade-in slide-in-from-left-2 duration-200">
-                <div className="relative flex-1">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                    <Input
-                        ref={inputRef}
-                        value={searchValue}
-                        onChange={e => setSearchValue(e.target.value)}
-                        placeholder="Search by title, filename, author, or content..."
-                        className="pl-9 pr-8 h-10 bg-sidebar border-2 border-sidebar"
-                        onKeyDown={e => {
-                            if (e.key === "Escape") {
-                                handleCloseSearch();
-                            }
-                        }}
-                    />
-                    {searchValue && (
-                        <Button
-                            variant="ghost"
-                            size="icon"
-                            className="absolute right-1 top-1/2 -translate-y-1/2 h-6 w-6 text-muted-foreground hover:text-foreground"
-                            onClick={handleClearSearch}
-                        >
-                            <X className="h-4 w-4" />
-                            <span className="sr-only">Clear search</span>
-                        </Button>
-                    )}
-                </div>
-                <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-10 w-10 shrink-0 text-muted-foreground hover:text-destructive hover:bg-destructive/10 cursor-pointer"
-                    onClick={handleCloseSearch}
-                >
-                    <X className="h-8 w-8" />
-                    <span className="sr-only">Close search</span>
-                </Button>
-            </div>
-        );
+        return <SearchFilter isOpen={true} onToggle={setIsSearchOpen} />;
     }
 
     return (
         <>
             <div className="hidden sm:flex items-center gap-2">
-                {/* Guild Selector */}
-                <FilterNavButton
-                    onClick={openGuildModal}
-                    className="w-64 px-2!"
-                >
-                    <div className="w-8 h-8 rounded overflow-hidden flex-shrink-0">
-                        {guildIcon ? (
-                            <img
-                                src={guildIcon}
-                                alt={guildName || "Guild Icon"}
-                                width={32}
-                                height={32}
-                            />
-                        ) : (
-                            <div className="flex items-center justify-center w-8 h-8 rounded overflow-hidden flex-shrink-0 bg-muted">
-                                <Server className="w-8 h-8 text-background" />
-                            </div>
-                        )}
-                    </div>
-                    <p className="truncate text-muted-foreground group-hover:text-foreground transition-colors">
-                        {guildName || "Select Server"}
-                    </p>
-                    <ArrowDownUp className="ml-auto w-4 h-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
-                </FilterNavButton>
-
-                {/* Channel Selector */}
-                <FilterNavButton onClick={openChannelModal}>
-                    <Hash className="h-5 w-5" />
-                    {getChannelButtonText()}
-                </FilterNavButton>
-
-                {/* Author Selector */}
-                <FilterNavButton onClick={openAuthorModal}>
-                    <User className="h-5 w-5" />
-                    {getAuthorButtonText()}
-                </FilterNavButton>
-
-                {/* Order Selection */}
-                <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                        <div>
-                            <FilterNavButton>
-                                <ArrowDownUp className="h-5 w-5" />
-                                {getSortText(sortType, sortOrder)}
-                            </FilterNavButton>
-                        </div>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent
-                        className="flex flex-col gap-1 px-2"
-                        align="start"
-                    >
-                        <DropdownMenuLabel className="text-xs text-foreground/50 tracking-wider">
-                            DATE
-                        </DropdownMenuLabel>
-                        <DropdownMenuItem
-                            onClick={() => setSort("date", "desc")}
-                            className={`${sortType === "date" && sortOrder === "desc" ? "bg-accent-foreground! text-accent!" : ""} cursor-pointer`}
-                        >
-                            Newest First
-                        </DropdownMenuItem>
-                        <DropdownMenuItem
-                            onClick={() => setSort("date", "asc")}
-                            className={`${sortType === "date" && sortOrder === "asc" ? "bg-accent-foreground! text-accent!" : ""} cursor-pointer`}
-                        >
-                            Oldest First
-                        </DropdownMenuItem>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuLabel className="text-xs text-foreground/50 tracking-wider">
-                            DURATION
-                        </DropdownMenuLabel>
-                        <DropdownMenuItem
-                            onClick={() => setSort("duration", "desc")}
-                            className={`${sortType === "duration" && sortOrder === "desc" ? "bg-accent-foreground! text-accent!" : ""} cursor-pointer`}
-                        >
-                            Longest First
-                        </DropdownMenuItem>
-                        <DropdownMenuItem
-                            onClick={() => setSort("duration", "asc")}
-                            className={`${sortType === "duration" && sortOrder === "asc" ? "bg-accent-foreground! text-accent!" : ""} cursor-pointer`}
-                        >
-                            Shortest First
-                        </DropdownMenuItem>
-                        {/* <DropdownMenuSeparator />
-                        <DropdownMenuLabel className="text-xs text-foreground/50 tracking-wider">
-                            SIZE
-                        </DropdownMenuLabel>
-                        <DropdownMenuItem
-                            onClick={() => setSort("size", "desc")}
-                            className={`${sortType === "size" && sortOrder === "desc" ? "bg-accent-foreground! text-accent!" : ""} cursor-pointer`}
-                        >
-                            Largest First
-                        </DropdownMenuItem>
-                        <DropdownMenuItem
-                            onClick={() => setSort("size", "asc")}
-                            className={`${sortType === "size" && sortOrder === "asc" ? "bg-accent-foreground! text-accent!" : ""} cursor-pointer`}
-                        >
-                            Smallest First
-                        </DropdownMenuItem> */}
-                        <DropdownMenuSeparator />
-                        <DropdownMenuLabel className="text-xs text-foreground/50 tracking-wider">
-                            LIKES
-                        </DropdownMenuLabel>
-                        <DropdownMenuItem
-                            onClick={() => setSort("likes", "desc")}
-                            className={`${sortType === "likes" && sortOrder === "desc" ? "bg-accent-foreground! text-accent!" : ""} cursor-pointer`}
-                        >
-                            Most Liked
-                        </DropdownMenuItem>
-                    </DropdownMenuContent>
-                </DropdownMenu>
-
-                {/* Filter Selection */}
-                <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                        <div>
-                            <FilterNavButton>
-                                <Filter className="h-5 w-5" />
-                                Filter
-                            </FilterNavButton>
-                        </div>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent
-                        className="flex flex-col gap-1 px-2"
-                        align="start"
-                    >
-                        <DropdownMenuLabel className="text-xs text-foreground/50 tracking-wider">
-                            VIEW
-                        </DropdownMenuLabel>
-                        <DropdownMenuItem
-                            onClick={() => setFavoritesOnly(!favoritesOnly)}
-                            className={`${favoritesOnly ? "bg-accent-foreground! text-accent!" : ""} cursor-pointer`}
-                        >
-                            Favorites Only
-                        </DropdownMenuItem>
-                    </DropdownMenuContent>
-                </DropdownMenu>
-
-                {/* Search Toggle */}
-                <FilterNavButton onClick={() => setIsSearchOpen(true)}>
-                    <Search className="h-5 w-5" />
-                    Search
-                </FilterNavButton>
+                <ServerIcon guildIcon={guildIcon} guildName={guildName} />
+                <ServerFilter guildName={guildName} guildIcon={guildIcon} />
+                <ChannelFilter channelCount={channelCount} />
+                <AuthorFilter authorCount={authorCount} />
+                <SortingFilter />
+                <ViewFilter />
+                <SearchFilter isOpen={false} onToggle={setIsSearchOpen} />
             </div>
             <MobileFilterMenu />
         </>
-    );
-}
-
-export function MobileFilterMenu() {
-    const [isOpen, setIsOpen] = useState(false);
-
-    const toggleMenu = () => {
-        console.log(isOpen);
-        setIsOpen(prev => !prev);
-    };
-
-    return (
-        <div className="sm:hidden flex items-center gap-2 p-1 bg-sidebar rounded-xl">
-            <MenuButton onClick={toggleMenu} isOpen={isOpen} />
-        </div>
-    );
-}
-
-function MenuButton({
-    onClick,
-    isOpen,
-}: {
-    onClick: () => void;
-    isOpen: boolean;
-}) {
-    return (
-        <button
-            onClick={onClick}
-            aria-label="Toggle menu"
-            aria-expanded={isOpen}
-            className="relative w-10 h-10 flex items-center justify-center cursor-pointer rounded-lg hover:bg-background/50"
-        >
-            <X
-                className={`absolute opacity-${isOpen ? 100 : 0} transition-opacity`}
-                size={32}
-            />
-            <Menu
-                className={`absolute opacity-${isOpen ? 0 : 100} transition-opacity`}
-                size={32}
-            />
-        </button>
     );
 }

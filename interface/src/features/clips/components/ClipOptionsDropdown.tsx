@@ -198,7 +198,7 @@ export function ClipOptionsDropdown({
                         variant={variant}
                         size={size}
                         className={cn(
-                            "focus-visible:ring-0 focus-visible:ring-offset-0",
+                            "focus-visible:ring-0 focus-visible:ring-offset-0 text-muted-foreground",
                             defaultClasses,
                             triggerClassName
                         )}

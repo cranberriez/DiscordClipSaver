@@ -26,7 +26,7 @@ export function FilterBar({
 }: FilterBarProps) {
     return (
         <div className="container mx-auto px-3 sm:px-8 max-w-full absolute top-0 z-10 bg-popover">
-            <div className="flex items-center justify-between gap-2 px-1 py-2">
+            <div className="flex items-center justify-between gap-2 py-2">
                 <FilterMenu
                     guildName={guildName || ""}
                     guildIcon={guildIcon || null}

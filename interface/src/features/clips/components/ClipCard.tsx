@@ -22,6 +22,7 @@ import { Thumbnail } from "@/lib/api/clip";
 import { ClipOptionsDropdown } from "./ClipOptionsDropdown";
 import { useToggleFavorite } from "@/lib/hooks/useFavorites";
 import { Button } from "@/components/ui/button";
+import { toast } from "sonner";
 
 interface ClipCardProps {
     clip: FullClip;
@@ -93,6 +94,12 @@ export function ClipCard({
 
     const handleFavorite = (e: React.MouseEvent) => {
         e.stopPropagation();
+
+        if (isArchived && !clip.isFavorited) {
+            toast.error("Archived clips cannot be favorited");
+            return;
+        }
+
         toggleFavorite.mutate(clip.clip.id);
     };
 
@@ -199,7 +206,7 @@ export function ClipCard({
                                 className={`w-4 h-4 ${
                                     clip.isFavorited
                                         ? "text-red-500 fill-red-500"
-                                        : "text-muted-foreground"
+                                        : "text-muted-foreground hover:text-foreground"
                                 }`}
                             />
                         </Button>
