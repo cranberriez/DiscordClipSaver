@@ -81,10 +81,11 @@ export function useClipsData(opts: { hydrated: boolean; targetPage?: number }) {
         clipsQuery.data?.pages.length,
         clipsQuery.hasNextPage,
         clipsQuery.isFetchingNextPage,
+        clipsQuery.fetchNextPage,
     ]);
 
     // Flatten and de-duplicate by clip ID to avoid duplicate renders across pages
-    const allClips = (() => {
+    const allClips = useMemo(() => {
         const raw = clipsQuery.data?.pages.flatMap(p => p.clips) ?? [];
         if (raw.length <= 1) return raw;
         const seen = new Set<string>();
@@ -96,7 +97,28 @@ export function useClipsData(opts: { hydrated: boolean; targetPage?: number }) {
             unique.push(c);
         }
         return unique;
-    })();
+    }, [clipsQuery.data?.pages]);
+
+    // Pre-compute search index to avoid re-normalizing on every search
+    const searchIndex = useMemo(() => {
+        const normalize = (str: string) =>
+            str.toLowerCase().replace(/[_-]/g, " ");
+
+        return new Map(
+            allClips.map(clip => [
+                clip.clip.id,
+                {
+                    content: normalize(clip.message.content || ""),
+                    filename: normalize(clip.clip.filename),
+                    title: normalize(clip.clip.title || ""),
+                    authorName: normalize(
+                        authorMap.get(clip.message.author_id)?.display_name ||
+                            ""
+                    ),
+                },
+            ])
+        );
+    }, [allClips, authorMap]);
 
     const filteredClips = useMemo(() => {
         let clips = allClips;
@@ -113,23 +135,25 @@ export function useClipsData(opts: { hydrated: boolean; targetPage?: number }) {
 
         // Apply search query filtering
         if (searchQuery.trim()) {
-            const query = searchQuery.toLowerCase();
+            const normalize = (str: string) =>
+                str.toLowerCase().replace(/[_-]/g, " ");
+            const query = normalize(searchQuery);
+
             clips = clips.filter(clip => {
-                const messageContent =
-                    clip.message.content?.toLowerCase() || "";
-                const filename = clip.clip.filename.toLowerCase();
-                const author = authorMap.get(clip.message.author_id);
-                const authorName = author?.display_name.toLowerCase() || "";
+                const searchData = searchIndex.get(clip.clip.id);
+                if (!searchData) return false;
+
                 return (
-                    messageContent.includes(query) ||
-                    filename.includes(query) ||
-                    authorName.includes(query)
+                    searchData.content.includes(query) ||
+                    searchData.filename.includes(query) ||
+                    searchData.title.includes(query) ||
+                    searchData.authorName.includes(query)
                 );
             });
         }
 
         return clips;
-    }, [allClips, selectedAuthorIds, authors.length, searchQuery, authorMap]);
+    }, [allClips, selectedAuthorIds, authors.length, searchQuery, searchIndex]);
 
     const selectedGuild = guilds.find(g => g.id === selectedGuildId);
 

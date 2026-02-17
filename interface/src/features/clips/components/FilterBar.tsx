@@ -1,4 +1,4 @@
-import { FilterMenu } from "./FilterMenu";
+import { FilterMenu } from "./clip-filtering/FilterMenu";
 import { NavbarCompact } from "@/components/composite/navbarCompact";
 
 interface FilterBarProps {
@@ -25,8 +25,8 @@ export function FilterBar({
     authorCount = 0,
 }: FilterBarProps) {
     return (
-        <div className="container mx-auto px-3 sm:px-8 max-w-full absolute top-0 z-10">
-            <div className="flex items-center justify-between gap-2 px-1 py-2 rounded-b-xl bg-background/80 backdrop-blur-sm">
+        <div className="container mx-auto px-3 sm:px-8 max-w-full absolute top-0 z-10 bg-popover">
+            <div className="flex items-center justify-between gap-2 px-1 py-2">
                 <FilterMenu
                     guildName={guildName || ""}
                     guildIcon={guildIcon || null}

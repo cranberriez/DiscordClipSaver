@@ -12,11 +12,11 @@ export function NavbarCompact() {
 
     return (
         <nav>
-            <div className="flex items-center justify-between h-full gap-2 sm:gap-4 bg-sidebar rounded-xl p-1 pr-2 text-foreground/75">
+            <div className="flex items-center justify-between h-full gap-2 sm:gap-4 text-foreground/75">
                 {/* Logo/Brand */}
                 <Link
                     href="/"
-                    className="text-xl font-bold hover:text-blue-400 transition-colors p-2 rounded-lg hover:bg-background/50"
+                    className="text-lg font-bold hover:text-blue-400 transition-colors p-2 rounded-lg hover:bg-background/50"
                 >
                     <Home />
                 </Link>
