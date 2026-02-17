@@ -3,12 +3,14 @@
 import { AuthorWithStats } from "@/lib/api/author";
 import { FullClip } from "@/lib/api/clip";
 import { UserAvatar } from "@/components/core/UserAvatar";
-import { formatRelativeTime } from "@/lib/utils/time-helpers";
+import { formatRelativeTime, formatDuration } from "@/lib/utils/time-helpers";
+import { formatFileSize } from "@/lib/utils/count-helpers";
 import { Button } from "@/components/ui/button";
 import { Heart, Info } from "lucide-react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { ButtonGroup } from "@/components/ui/button-group";
 import { SharePopover } from "./SharePopover";
+import { ClipOptionsDropdown } from "../../ClipOptionsDropdown";
 import { useToggleFavorite } from "@/lib/hooks/useFavorites";
 import { useFavoriteStatus } from "@/lib/hooks/useFavorites";
 import { cn } from "@/lib/utils";
@@ -19,7 +21,7 @@ interface InfoBarProps {
     channelName?: string;
     message: FullClip["message"];
     clip: FullClip["clip"];
-    isFavoritedInitial: boolean;
+    fullClip: FullClip;
     onPrevious?: () => void;
     onNext?: () => void;
     onShowInfo: () => void;
@@ -31,7 +33,7 @@ export function InfoBar({
     channelName,
     message,
     clip,
-    isFavoritedInitial,
+    fullClip,
     onPrevious,
     onNext,
     onShowInfo,
@@ -52,7 +54,7 @@ export function InfoBar({
                     </h2>
                     <div className="flex items-center justify-between gap-4">
                         <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-3 text-base">
+                            <div className="flex items-center gap-3 text-base flex-wrap">
                                 <UserAvatar
                                     userId={message.author_id}
                                     username={author?.display_name}
@@ -60,19 +62,27 @@ export function InfoBar({
                                     size="md"
                                     showName={true}
                                 />
-                                <span>•</span>
+                                <span className="text-muted-foreground hidden sm:inline">
+                                    •
+                                </span>
                                 {channelName && (
                                     <>
                                         <span className="text-muted-foreground">
                                             #{channelName}
                                         </span>
-                                        <span>•</span>
+                                        <span className="text-muted-foreground">
+                                            •
+                                        </span>
                                     </>
                                 )}
                                 <span>
                                     Posted{" "}
                                     {formatRelativeTime(message.timestamp)}
                                 </span>
+                                <span className="text-muted-foreground">•</span>
+                                <span>{formatDuration(clip.duration)}</span>
+                                <span className="text-muted-foreground">•</span>
+                                <span>{formatFileSize(clip.file_size)}</span>
                             </div>
                         </div>
                         <div className="flex items-center gap-2">
@@ -85,6 +95,12 @@ export function InfoBar({
                                 <Info className="w-4 h-4" />
                                 <span className="text-xs">Info</span>
                             </Button>
+
+                            <ClipOptionsDropdown
+                                clip={fullClip}
+                                size="icon-lg"
+                                isOnInfoBar={true}
+                            />
 
                             <Button
                                 variant="ghost"

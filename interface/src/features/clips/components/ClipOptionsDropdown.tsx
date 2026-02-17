@@ -22,6 +22,7 @@ import {
     Undo2,
     Lock,
     Globe,
+    Pencil,
 } from "lucide-react";
 import { FullClip } from "@/lib/api/clip";
 import { useUser } from "@/lib/hooks/useUser";
@@ -43,12 +44,29 @@ import {
     AlertDialogHeader,
     AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { cn } from "@/lib/utils";
 
 interface ClipOptionsDropdownProps {
     clip: FullClip;
+    triggerClassName?: string;
+    variant?:
+        | "default"
+        | "destructive"
+        | "outline"
+        | "secondary"
+        | "ghost"
+        | "link";
+    size?: "default" | "sm" | "lg" | "icon" | "icon-lg";
+    isOnInfoBar?: boolean;
 }
 
-export function ClipOptionsDropdown({ clip }: ClipOptionsDropdownProps) {
+export function ClipOptionsDropdown({
+    clip,
+    triggerClassName,
+    variant = "ghost",
+    size = "icon",
+    isOnInfoBar = false,
+}: ClipOptionsDropdownProps) {
     const { data: userData } = useUser();
     const user = userData?.database;
     const { data: guild } = useGuild(clip.clip.guild_id);
@@ -65,6 +83,14 @@ export function ClipOptionsDropdown({ clip }: ClipOptionsDropdownProps) {
     const canManageVisibility = isClipOwner || isGuildOwner;
     const canManageArchive = isGuildOwner; // Only server owner
     const canDelete = isGuildOwner; // Only server owner
+
+    const hasAnyPermissions =
+        canManageVisibility || canManageArchive || canDelete;
+
+    // If on info bar and no permissions, show nothing
+    if (isOnInfoBar && !hasAnyPermissions) {
+        return null;
+    }
 
     const isArchived = !!clip.clip.deleted_at;
 
@@ -110,16 +136,29 @@ export function ClipOptionsDropdown({ clip }: ClipOptionsDropdownProps) {
         e.stopPropagation();
     };
 
+    const defaultClasses =
+        size === "icon"
+            ? "h-6 w-6 rounded-full hover:bg-muted/50"
+            : "text-muted-foreground hover:text-foreground";
+
     return (
         <>
             <DropdownMenu>
                 <DropdownMenuTrigger asChild onClick={handleTriggerClick}>
                     <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-6 w-6 rounded-full hover:bg-muted/50 focus-visible:ring-0 focus-visible:ring-offset-0"
+                        variant={variant}
+                        size={size}
+                        className={cn(
+                            "focus-visible:ring-0 focus-visible:ring-offset-0",
+                            defaultClasses,
+                            triggerClassName
+                        )}
                     >
-                        <MoreVertical className="h-4 w-4" />
+                        {isOnInfoBar ? (
+                            <Pencil className="h-4 w-4" />
+                        ) : (
+                            <MoreVertical className="h-4 w-4" />
+                        )}
                         <span className="sr-only">Open options</span>
                     </Button>
                 </DropdownMenuTrigger>
@@ -128,20 +167,24 @@ export function ClipOptionsDropdown({ clip }: ClipOptionsDropdownProps) {
                     className="w-56"
                     onClick={e => e.stopPropagation()}
                 >
-                    {/* Public Options */}
-                    <DropdownMenuItem onClick={handleCopyLink}>
-                        <LinkIcon className="mr-2 h-4 w-4" />
-                        <span>Copy Link</span>
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={handleViewInDiscord}>
-                        <ExternalLink className="mr-2 h-4 w-4" />
-                        <span>View in Discord</span>
-                    </DropdownMenuItem>
+                    {/* Public Options - Hide if on InfoBar */}
+                    {!isOnInfoBar && (
+                        <>
+                            <DropdownMenuItem onClick={handleCopyLink}>
+                                <LinkIcon className="mr-2 h-4 w-4" />
+                                <span>Copy Link</span>
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={handleViewInDiscord}>
+                                <ExternalLink className="mr-2 h-4 w-4" />
+                                <span>View in Discord</span>
+                            </DropdownMenuItem>
+                        </>
+                    )}
 
                     {/* Visibility Options */}
                     {canManageVisibility && (
                         <>
-                            <DropdownMenuSeparator />
+                            {!isOnInfoBar && <DropdownMenuSeparator />}
                             <DropdownMenuSub>
                                 <DropdownMenuSubTrigger>
                                     <Eye className="mr-2 h-4 w-4" />

@@ -5,7 +5,7 @@ import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { InfoModal } from "./InfoModal";
 import { useLatestVideoUrl } from "@/features/clips/hooks/useLatestVideoUrl";
 import type { ChannelWithStats } from "@/lib/api/channel";
-import type { FullClip, Thumbnail } from "@/lib/api/clip";
+import type { FullClip } from "@/lib/api/clip";
 import type { AuthorWithStats } from "@/lib/api/author";
 import { formatClipName } from "../../../lib/formatClipName";
 import { messageTitleOrFilename } from "@/features/clips/lib/discordText";
@@ -45,10 +45,9 @@ export function ClipModal({
     prevUrl,
     nextUrl,
 }: ClipModalProps) {
-    const { clip: initialClipData, message, thumbnail } = initialClip;
+    const { message, thumbnail } = initialClip;
     const author = authorMap?.get(message.author_id);
     const channel = channelMap?.get(message.channel_id);
-    const isFavorited = initialClip.isFavorited;
 
     const latest = useLatestVideoUrl(initialClip);
     const effective = latest.clip ?? initialClip;
@@ -274,8 +273,8 @@ export function ClipModal({
                             author={author}
                             channelName={channel?.name}
                             message={message}
-                            isFavoritedInitial={isFavorited || false}
                             clip={clip}
+                            fullClip={effective}
                             onPrevious={
                                 onPrevious
                                     ? () => {

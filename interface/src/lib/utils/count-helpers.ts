@@ -31,3 +31,15 @@ export function shorthandCount(number: number) {
     }
     return Math.floor(k) + "k";
 }
+
+/**
+ * Format bytes to human readable string (B, KB, MB, GB)
+ */
+export function formatFileSize(bytes: number | bigint): string {
+    const size = Number(bytes);
+    if (size < 1024) return `${size} B`;
+    if (size < 1024 * 1024) return `${(size / 1024).toFixed(1)} KB`;
+    if (size < 1024 * 1024 * 1024)
+        return `${(size / (1024 * 1024)).toFixed(1)} MB`;
+    return `${(size / (1024 * 1024 * 1024)).toFixed(1)} GB`;
+}
