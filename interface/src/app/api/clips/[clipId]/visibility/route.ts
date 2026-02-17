@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAuth } from "@/server/middleware/auth";
-import { DataService } from "@/server/services/data-service";
 import { getDb } from "@/server/db";
+import { PermissionService } from "@/server/services/permission-service";
 
 /**
  * PATCH /api/clips/[clipId]/visibility
@@ -29,31 +29,17 @@ export async function PATCH(
             );
         }
 
-        // Fetch clip to verify ownership
-        const clip = await DataService.getClipById(clipId, auth.discordUserId);
-        if (!clip) {
-            return NextResponse.json(
-                { error: "Clip not found" },
-                { status: 404 }
-            );
-        }
+        // Check Permissions
+        const permResult = await PermissionService.checkClipPermission(
+            clipId,
+            auth.discordUserId,
+            ["clip_owner", "guild_owner"]
+        );
 
-        // Fetch guild to check owner
-        const guild = await DataService.getSingleGuildById(clip.clip.guild_id);
-        if (!guild) {
+        if (!permResult.success) {
             return NextResponse.json(
-                { error: "Guild not found" },
-                { status: 404 }
-            );
-        }
-
-        const isClipOwner = clip.message.author_id === auth.discordUserId;
-        const isGuildOwner = guild.owner_id === auth.discordUserId;
-
-        if (!isClipOwner && !isGuildOwner) {
-            return NextResponse.json(
-                { error: "Permission denied" },
-                { status: 403 }
+                { error: permResult.error },
+                { status: permResult.status || 403 }
             );
         }
 

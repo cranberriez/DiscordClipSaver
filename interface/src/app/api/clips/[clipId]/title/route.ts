@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAuth } from "@/server/middleware/auth";
-import { DataService } from "@/server/services/data-service";
 import { getDb } from "@/server/db";
+import { PermissionService } from "@/server/services/permission-service";
 
 /**
  * PATCH /api/clips/[clipId]/title
@@ -39,45 +39,17 @@ export async function PATCH(
             );
         }
 
-        // Fetch clip to verify ownership
-        const clip = await DataService.getClipById(clipId, auth.discordUserId);
-        if (!clip) {
+        // Check Permissions
+        const permResult = await PermissionService.checkClipPermission(
+            clipId,
+            auth.discordUserId,
+            ["clip_owner", "guild_owner", "system_admin"]
+        );
+
+        if (!permResult.success) {
             return NextResponse.json(
-                { error: "Clip not found" },
-                { status: 404 }
-            );
-        }
-
-        // Fetch guild to check owner
-        const guild = await DataService.getSingleGuildById(clip.clip.guild_id);
-        if (!guild) {
-            return NextResponse.json(
-                { error: "Guild not found" },
-                { status: 404 }
-            );
-        }
-
-        const isClipOwner = clip.message.author_id === auth.discordUserId;
-        const isGuildOwner = guild.owner_id === auth.discordUserId;
-
-        // Check for system admin if not owner
-        let isSystemAdmin = false;
-        if (!isClipOwner && !isGuildOwner) {
-            const user = await getDb()
-                .selectFrom("user")
-                .select("roles")
-                .where("id", "=", auth.discordUserId)
-                .executeTakeFirst();
-            
-            if (user && user.roles === "admin") {
-                isSystemAdmin = true;
-            }
-        }
-
-        if (!isClipOwner && !isGuildOwner && !isSystemAdmin) {
-            return NextResponse.json(
-                { error: "Permission denied" },
-                { status: 403 }
+                { error: permResult.error },
+                { status: permResult.status || 403 }
             );
         }
 

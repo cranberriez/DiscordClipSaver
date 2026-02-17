@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAuth } from "@/server/middleware/auth";
-import { DataService } from "@/server/services/data-service";
 import { getDb } from "@/server/db";
+import { PermissionService } from "@/server/services/permission-service";
 
 /**
  * DELETE /api/clips/[clipId]
@@ -19,39 +19,27 @@ export async function DELETE(
     if (auth instanceof NextResponse) return auth;
 
     try {
-        // Fetch clip info (even if soft deleted) to check permissions
-        const clipResult = await getDb()
-            .selectFrom("clip")
-            .select(["guild_id", "message_id"])
-            .where("id", "=", clipId)
-            .executeTakeFirst();
+        // Check Permissions (include deleted clips as we might be deleting an archived clip)
+        const permResult = await PermissionService.checkClipPermission(
+            clipId,
+            auth.discordUserId,
+            ["guild_owner"],
+            { includeDeleted: true }
+        );
 
-        if (!clipResult) {
-            return NextResponse.json(
-                { error: "Clip not found" },
-                { status: 404 }
-            );
-        }
-
-        // Fetch guild to check owner
-        const guild = await DataService.getSingleGuildById(clipResult.guild_id);
-        if (!guild) {
-            return NextResponse.json(
-                { error: "Guild not found" },
-                { status: 404 }
-            );
-        }
-
-        const isGuildOwner = guild.owner_id === auth.discordUserId;
-
-        if (!isGuildOwner) {
+        if (!permResult.success) {
             return NextResponse.json(
                 {
-                    error: "Permission denied. Only server owner can delete clips permanently.",
+                    error:
+                        permResult.error === "Permission denied"
+                            ? "Permission denied. Only server owner can delete clips permanently."
+                            : permResult.error,
                 },
-                { status: 403 }
+                { status: permResult.status || 403 }
             );
         }
+
+        const clip = permResult.clip!;
 
         // Hard delete the clip
         // Also delete the message? User said "Delete (deletes the clip, and associated message from the database)"
@@ -78,7 +66,7 @@ export async function DELETE(
                 // Ideally we check if message has other clips, but typically it's one clip per message for this app
                 await trx
                     .deleteFrom("message")
-                    .where("id", "=", clipResult.message_id)
+                    .where("id", "=", clip.message.id)
                     .execute();
             });
 

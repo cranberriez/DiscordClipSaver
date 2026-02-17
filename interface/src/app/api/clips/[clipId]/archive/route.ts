@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAuth } from "@/server/middleware/auth";
-import { DataService } from "@/server/services/data-service";
 import { getDb } from "@/server/db";
+import { PermissionService } from "@/server/services/permission-service";
 
 /**
  * POST /api/clips/[clipId]/archive
@@ -19,30 +19,22 @@ export async function POST(
     if (auth instanceof NextResponse) return auth;
 
     try {
-        // Fetch clip
-        const clip = await DataService.getClipById(clipId, auth.discordUserId);
-        if (!clip) {
-            return NextResponse.json(
-                { error: "Clip not found" },
-                { status: 404 }
-            );
-        }
+        // Check Permissions
+        const permResult = await PermissionService.checkClipPermission(
+            clipId,
+            auth.discordUserId,
+            ["guild_owner"]
+        );
 
-        // Fetch guild to check owner
-        const guild = await DataService.getSingleGuildById(clip.clip.guild_id);
-        if (!guild) {
+        if (!permResult.success) {
             return NextResponse.json(
-                { error: "Guild not found" },
-                { status: 404 }
-            );
-        }
-
-        const isGuildOwner = guild.owner_id === auth.discordUserId;
-
-        if (!isGuildOwner) {
-            return NextResponse.json(
-                { error: "Permission denied. Only server owner can archive clips." },
-                { status: 403 }
+                {
+                    error:
+                        permResult.error === "Permission denied"
+                            ? "Permission denied. Only server owner can archive clips."
+                            : permResult.error,
+                },
+                { status: permResult.status || 403 }
             );
         }
 
@@ -79,38 +71,23 @@ export async function DELETE(
     if (auth instanceof NextResponse) return auth;
 
     try {
-         // Fetch clip - we need to fetch even if deleted (DataService might filter deleted, so we use direct DB query or update DataService)
-         // Actually DataService.getClipById filters deleted clips by default.
-         // We need a way to get the clip even if deleted to verify ownership.
-         
-         const clipResult = await getDb()
-            .selectFrom("clip")
-            .select(["guild_id"])
-            .where("id", "=", clipId)
-            .executeTakeFirst();
+        // Check Permissions (include deleted clips since we are unarchiving)
+        const permResult = await PermissionService.checkClipPermission(
+            clipId,
+            auth.discordUserId,
+            ["guild_owner"],
+            { includeDeleted: true }
+        );
 
-        if (!clipResult) {
-             return NextResponse.json(
-                { error: "Clip not found" },
-                { status: 404 }
-            );
-        }
-
-        // Fetch guild to check owner
-        const guild = await DataService.getSingleGuildById(clipResult.guild_id);
-        if (!guild) {
+        if (!permResult.success) {
             return NextResponse.json(
-                { error: "Guild not found" },
-                { status: 404 }
-            );
-        }
-
-        const isGuildOwner = guild.owner_id === auth.discordUserId;
-
-        if (!isGuildOwner) {
-            return NextResponse.json(
-                { error: "Permission denied. Only server owner can unarchive clips." },
-                { status: 403 }
+                {
+                    error:
+                        permResult.error === "Permission denied"
+                            ? "Permission denied. Only server owner can unarchive clips."
+                            : permResult.error,
+                },
+                { status: permResult.status || 403 }
             );
         }
 
