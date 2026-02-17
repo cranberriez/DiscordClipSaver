@@ -79,10 +79,6 @@ export function InfoBar({
                                     Posted{" "}
                                     {formatRelativeTime(message.timestamp)}
                                 </span>
-                                <span className="text-muted-foreground">•</span>
-                                <span>{formatDuration(clip.duration)}</span>
-                                <span className="text-muted-foreground">•</span>
-                                <span>{formatFileSize(clip.file_size)}</span>
                             </div>
                         </div>
                         <div className="flex items-center gap-2">
