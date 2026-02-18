@@ -13,7 +13,7 @@ export function ServerFilter({ guildName }: ServerProps) {
     const { openGuildModal } = useClipFiltersStore();
 
     return (
-        <FilterNavButton onClick={openGuildModal} className="w-64">
+        <FilterNavButton onClick={openGuildModal} className="w-48">
             <p className="truncate text-muted-foreground group-hover:text-foreground transition-colors">
                 {guildName || "Select Server"}
             </p>

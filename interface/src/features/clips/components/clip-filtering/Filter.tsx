@@ -20,7 +20,7 @@ export function ViewFilter() {
                 <div>
                     <FilterNavButton>
                         <Filter className="h-5 w-5" />
-                        Filter
+                        <span>Filter</span>
                     </FilterNavButton>
                 </div>
             </DropdownMenuTrigger>

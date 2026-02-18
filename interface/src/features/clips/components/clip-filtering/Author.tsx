@@ -24,7 +24,7 @@ export function AuthorFilter({ authorCount }: AuthorProps) {
     return (
         <FilterNavButton onClick={openAuthorModal}>
             <User className="h-5 w-5" />
-            {getAuthorButtonText()}
+            <span>{getAuthorButtonText()}</span>
         </FilterNavButton>
     );
 }

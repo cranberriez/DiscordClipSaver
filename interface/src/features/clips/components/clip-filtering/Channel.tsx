@@ -26,7 +26,7 @@ export function ChannelFilter({ channelCount }: ChannelProps) {
     return (
         <FilterNavButton onClick={openChannelModal}>
             <Hash className="h-5 w-5" />
-            {getChannelButtonText()}
+            <span>{getChannelButtonText()}</span>
         </FilterNavButton>
     );
 }

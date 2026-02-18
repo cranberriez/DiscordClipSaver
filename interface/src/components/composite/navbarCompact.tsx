@@ -12,7 +12,7 @@ export function NavbarCompact() {
 
     return (
         <nav>
-            <div className="flex items-center justify-between h-full gap-2 sm:gap-4 text-foreground/75">
+            <div className="flex items-center justify-between h-full gap-2 sm:gap-4 text-muted-foreground">
                 {/* Logo/Brand */}
                 <Link
                     href="/"

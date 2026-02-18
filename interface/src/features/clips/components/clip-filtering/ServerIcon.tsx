@@ -8,7 +8,7 @@ export function ServerIcon({
     guildName: string;
 }) {
     return (
-        <div className="w-10 h-10 rounded overflow-hidden flex-shrink-0 relative">
+        <div className="w-10 h-10 rounded-lg overflow-hidden flex-shrink-0 relative">
             {guildIcon ? (
                 <img
                     src={guildIcon}
@@ -16,7 +16,7 @@ export function ServerIcon({
                     className="w-full h-full object-cover"
                 />
             ) : (
-                <div className="flex items-center justify-center w-10 h-10 rounded overflow-hidden flex-shrink-0 bg-muted">
+                <div className="flex items-center justify-center w-10 h-10 rounded-lg overflow-hidden flex-shrink-0 bg-muted">
                     <Server className="w-8 h-8 text-muted-foreground" />
                 </div>
             )}

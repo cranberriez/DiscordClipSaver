@@ -90,7 +90,7 @@ export function SearchFilter({ isOpen, onToggle }: SearchProps) {
     return (
         <FilterNavButton onClick={() => onToggle(true)}>
             <Search className="h-5 w-5" />
-            Search
+            <span>Search</span>
         </FilterNavButton>
     );
 }

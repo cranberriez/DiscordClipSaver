@@ -46,7 +46,7 @@ export function SortingFilter() {
                 <div>
                     <FilterNavButton>
                         <ArrowDownUp className="h-5 w-5" />
-                        {getSortText(sortType, sortOrder)}
+                        <span>{getSortText(sortType, sortOrder)}</span>
                     </FilterNavButton>
                 </div>
             </DropdownMenuTrigger>
