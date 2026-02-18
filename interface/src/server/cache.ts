@@ -5,6 +5,7 @@ import "server-only";
 
 type Entry<T> = { value: T; expiresAt: number; staleAt: number };
 const store = new Map<string, Entry<any>>();
+const inflightRequests = new Map<string, Promise<any>>();
 
 export function cacheGet<T>(key: string): T | null {
     const hit = store.get(key);
@@ -41,7 +42,12 @@ export function cacheIsStale(key: string): boolean {
     return now >= hit.staleAt && now < hit.expiresAt;
 }
 
-export function cacheSet<T>(key: string, value: T, ttlMs: number, staleTtlMs?: number): void {
+export function cacheSet<T>(
+    key: string,
+    value: T,
+    ttlMs: number,
+    staleTtlMs?: number
+): void {
     const now = Date.now();
     // Default: stale after TTL, hard expire after 10x TTL
     const staleAt = now + ttlMs;
@@ -55,15 +61,38 @@ export function cacheWith<T>(
     fn: () => Promise<T>
 ): Promise<T> {
     const existing = cacheGet<T>(key);
-    if (existing !== null) return Promise.resolve(existing);
-    return fn().then(v => {
-        cacheSet(key, v, ttlMs);
-        return v;
-    });
+    // If we have valid (fresh) data, return it
+    if (existing !== null && !cacheIsStale(key)) {
+        return Promise.resolve(existing);
+    }
+
+    // Check if there's already a request in flight for this key
+    const inflight = inflightRequests.get(key);
+    if (inflight) {
+        return inflight as Promise<T>;
+    }
+
+    // Start a new request
+    const promise = fn()
+        .then(
+            v => {
+                cacheSet(key, v, ttlMs);
+                return v;
+            },
+            err => {
+                throw err;
+            }
+        )
+        .finally(() => {
+            inflightRequests.delete(key);
+        });
+
+    inflightRequests.set(key, promise);
+    return promise;
 }
 
 /**
- * Cache with stale-while-revalidate pattern.
+ * Cache with stale-while-revalidate pattern and deduplication.
  * If fetch fails, returns stale data if available.
  * This is critical for handling rate limits gracefully.
  */
@@ -73,22 +102,67 @@ export async function cacheWithGracefulDegradation<T>(
     staleTtlMs: number,
     fn: () => Promise<T>
 ): Promise<T> {
-    const existing = cacheGet<T>(key);
-    if (existing !== null) return existing;
-    
-    try {
-        const value = await fn();
-        cacheSet(key, value, ttlMs, staleTtlMs);
-        return value;
-    } catch (err: any) {
-        // If fetch failed, try to return stale data
-        const stale = cacheGetStale<T>(key);
-        if (stale !== null) {
-            console.warn(`Returning stale cache for ${key} due to error:`, err.message);
-            return stale;
+    const hit = store.get(key);
+    const now = Date.now();
+
+    // 1. If we have fresh data, return immediately
+    if (hit && now < hit.staleAt) {
+        return hit.value as T;
+    }
+
+    // 2. If data is missing or hard-expired, we MUST fetch (deduplicated)
+    if (!hit || now >= hit.expiresAt) {
+        if (now >= (hit?.expiresAt ?? 0)) store.delete(key); // Cleanup if expired
+
+        // Deduplication
+        let promise = inflightRequests.get(key);
+        if (!promise) {
+            promise = fn()
+                .then(v => {
+                    cacheSet(key, v, ttlMs, staleTtlMs);
+                    return v;
+                })
+                .finally(() => {
+                    inflightRequests.delete(key);
+                });
+            inflightRequests.set(key, promise);
         }
-        // No stale data available, re-throw error
-        throw err;
+        return promise as Promise<T>;
+    }
+
+    // 3. Data is STALE (staleAt <= now < expiresAt)
+    // Try to refresh, but fall back to stale if it fails
+
+    // Check if refresh is already happening
+    let promise = inflightRequests.get(key);
+    if (!promise) {
+        promise = fn()
+            .then(v => {
+                cacheSet(key, v, ttlMs, staleTtlMs);
+                return v;
+            })
+            // If it fails, we swallow the error here because we'll return stale data
+            // But we should log it
+            .catch(err => {
+                console.warn(
+                    `[Cache] Refresh failed for ${key}, using stale data. Error: ${err.message}`
+                );
+                // Throwing here so the awaiter knows it failed
+                throw err;
+            })
+            .finally(() => {
+                inflightRequests.delete(key);
+            });
+        inflightRequests.set(key, promise);
+    }
+
+    try {
+        // Wait for the refresh (optional: could return stale immediately and background refresh,
+        // but for auth/permissions we often want the latest if possible, falling back only on error)
+        return await (promise as Promise<T>);
+    } catch {
+        // Refresh failed, return stale data
+        return hit.value as T;
     }
 }
 
