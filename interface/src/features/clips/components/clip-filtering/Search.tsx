@@ -78,7 +78,7 @@ export function SearchFilter({ isOpen, onToggle }: SearchProps) {
 						<Button
 							variant="destructive"
 							size="sm"
-							className="text-foreground hover:text-foreground right-1rounded! absolute top-1/2"
+							className="text-foreground hover:text-foreground absolute top-1/2 right-1 -translate-y-1/2 rounded!"
 							onClick={handleClearSearch}
 						>
 							<span>Clear</span>
