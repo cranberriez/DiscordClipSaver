@@ -58,17 +58,42 @@ async def execute_with_retry(
             
             retries += 1
             
-            # Calculate delay with exponential backoff and jitter
-            # delay = base * 2^(retries-1)
-            # jitter = random 0-50% of delay
-            calc_delay = min(base_delay * (2 ** (retries - 1)), max_delay)
-            jitter = random.uniform(0, 0.5 * calc_delay)
-            sleep_time = calc_delay + jitter
+            # Check for Retry-After header or attribute
+            retry_after = None
             
-            logger.warning(
-                f"Discord API error {e.status} (attempt {retries}/{max_retries}). "
-                f"Retrying in {sleep_time:.2f}s... Error: {e.text}"
-            )
+            # Check for retry_after attribute (RateLimited exception or similar)
+            if hasattr(e, 'retry_after'):
+                retry_after = float(e.retry_after)
+            
+            # Check response headers if available
+            if retry_after is None and hasattr(e, 'response') and e.response is not None and hasattr(e.response, 'headers'):
+                header_retry = e.response.headers.get('Retry-After')
+                if header_retry:
+                    try:
+                        retry_after = float(header_retry)
+                    except (ValueError, TypeError):
+                        pass
+            
+            # Calculate delay
+            if retry_after is not None:
+                # Add a small buffer to be safe
+                sleep_time = retry_after + 0.5
+                logger.warning(
+                    f"Discord API Rate Limit {e.status} (attempt {retries}/{max_retries}). "
+                    f"Respecting Retry-After: {sleep_time:.2f}s"
+                )
+            else:
+                # Exponential backoff with jitter
+                # delay = base * 2^(retries-1)
+                # jitter = random 0-50% of delay
+                calc_delay = min(base_delay * (2 ** (retries - 1)), max_delay)
+                jitter = random.uniform(0, 0.5 * calc_delay)
+                sleep_time = calc_delay + jitter
+                
+                logger.warning(
+                    f"Discord API error {e.status} (attempt {retries}/{max_retries}). "
+                    f"Retrying in {sleep_time:.2f}s... Error: {e.text}"
+                )
             
             await asyncio.sleep(sleep_time)
             

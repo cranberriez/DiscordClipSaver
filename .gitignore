@@ -17,3 +17,6 @@ python/storage/thumbnails
 
 # Personal notes
 .notes/
+
+# Testing tools (not part of project)
+python/tests/*
