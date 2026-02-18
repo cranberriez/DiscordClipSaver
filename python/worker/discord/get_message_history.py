@@ -2,6 +2,7 @@
 Get message history for specific guild, channel, and various other properties
 """
 import logging
+import asyncio
 from typing import List, Optional
 import discord
 from worker.discord.retry import execute_with_retry
@@ -32,19 +33,38 @@ async def get_message_history(
     
     async def _fetch_history():
         messages = []
-        if direction == "backward":
-            # Fetch messages going backward in time
-            before = discord.Object(id=before_id) if before_id else None
-            async for message in channel.history(limit=limit, before=before, oldest_first=False):
-                messages.append(message)
-                
-        elif direction == "forward":
-            # Fetch messages going forward in time
-            after = discord.Object(id=after_id) if after_id else None
-            async for message in channel.history(limit=limit, after=after, oldest_first=True):
-                messages.append(message)
-        else:
-            raise ValueError(f"Invalid direction: {direction}. Must be 'backward' or 'forward'")
+
+        try:
+            if direction == "backward":
+                # Fetch messages going backward in time
+                before = discord.Object(id=before_id) if before_id else None
+                async for message in channel.history(limit=limit, before=before, oldest_first=False):
+                    messages.append(message)
+                    
+            elif direction == "forward":
+                # Fetch messages going forward in time
+                after = discord.Object(id=after_id) if after_id else None
+                async for message in channel.history(limit=limit, after=after, oldest_first=True):
+                    messages.append(message)
+            else:
+                raise ValueError(f"Invalid direction: {direction}. Must be 'backward' or 'forward'")
+        
+        except discord.HTTPException as e:
+            logger.error(f"HTTP Exception during history fetch: Status={e.status}, Code={e.code}, Text={e.text}")
+            if e.response:
+                logger.error(f"Response Headers: {e.response.headers}")
+            raise
+        except Exception as e:
+            logger.critical(f"Unexpected error during history fetch: {e}", exc_info=True)
+            raise
+
+        # Cumulative wait based on batch size to pace the worker
+        # 0.5s per 100 messages
+        if messages:
+            wait_time = (len(messages) / 100) * 0.5
+            if wait_time > 0:
+                logger.info(f"Batch fetch complete ({len(messages)} msgs). Waiting {wait_time:.2f}s to respect rate limits.")
+                await asyncio.sleep(wait_time)
             
         return messages
 

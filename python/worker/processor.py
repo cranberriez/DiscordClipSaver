@@ -2,6 +2,7 @@
 Job processor for handling different job types
 """
 import logging
+import asyncio
 from typing import Optional
 import discord
 from worker.discord.bot import WorkerBot
@@ -158,7 +159,7 @@ class JobProcessor:
         auto_continue = job_data.get("auto_continue", True)
         rescan = job_data.get("rescan", "stop")  # "stop", "continue", or "update"
         
-        logger.info(f"Processing batch scan: channel={channel_id}, direction={direction}, limit={limit}, rescan={rescan}")
+        logger.info(f"Processing batch scan: channel={channel_id}, direction={direction}, limit={limit}, rescan={rescan}, continue={auto_continue}")
         
         try:
             # Get or create scan status
@@ -184,39 +185,19 @@ class JobProcessor:
                 error_message=None
             )
             
-            # Fetch the Discord channel
-            try:
-                discord_channel = await execute_with_retry(
-                    self.bot.fetch_channel,
-                    int(channel_id),
-                    max_retries=3,
-                    base_delay=1.0
-                )
-            except discord.Forbidden:
-                await self._update_scan_status_with_error(
-                    guild_id=guild_id,
-                    channel_id=channel_id,
-                    status=ScanStatus.FAILED,
-                    error_message="Bot does not have permission to access this channel"
-                )
-                return
-            except discord.NotFound:
-                await self._update_scan_status_with_error(
-                    guild_id=guild_id,
-                    channel_id=channel_id,
-                    status=ScanStatus.FAILED,
-                    error_message="Channel not found or no longer exists"
-                )
-                return
-            except discord.HTTPException as e:
-                await self._update_scan_status_with_error(
-                    guild_id=guild_id,
-                    channel_id=channel_id,
-                    status=ScanStatus.FAILED,
-                    error_message=f"Discord API error: {str(e)}"
-                )
-                return
+            # Get the Discord channel from cache to avoid API call
+            # The user requested that .history is the ONLY API call for batch scans
+            discord_channel = self.bot.get_channel(int(channel_id))
             
+            if not discord_channel:
+                await self._update_scan_status_with_error(
+                    guild_id=guild_id,
+                    channel_id=channel_id,
+                    status=ScanStatus.FAILED,
+                    error_message="Channel not found in bot cache (ensure bot is in the server)"
+                )
+                return
+
             # Validate channel type supports message history
             if not hasattr(discord_channel, 'history'):
                 await self._update_scan_status_with_error(
@@ -468,7 +449,7 @@ class JobProcessor:
             total_clips = 0
             processed_message_ids = []
             
-            for message_id in message_ids:
+            for i, message_id in enumerate(message_ids):
                 try:
                     # Fetch the specific message
                     discord_message = await get_message(discord_channel, int(message_id))
@@ -510,6 +491,165 @@ class JobProcessor:
         except Exception as e:
             logger.error(f"Message scan failed for channel {channel_id}: {e}", exc_info=True)
             raise
+
+async def process_rescan(self, job_data: dict):
+    """
+    Process rescan job - triggered by settings change
+    
+    Args:
+        job_data: RescanJob data
+    """
+    channel_id = job_data["channel_id"]
+    guild_id = job_data["guild_id"]
+    reason = job_data.get("reason", "unknown")
+    reset_scan_status = job_data.get("reset_scan_status", False)
+    
+    logger.info(f"Processing rescan: channel={channel_id}, reason={reason}")
+    
+    # For now, treat rescan as a full backward scan
+    # In the future, this could be optimized to only reprocess affected clips
+    await self.process_batch_scan({
+        "type": "batch",
+        "channel_id": channel_id,
+        "guild_id": guild_id,
+        "direction": "backward",
+        "limit": 1000,  # Larger limit for rescans
+        "before_message_id": None,
+        "after_message_id": None
+    })
+
+async def process_thumbnail_retry(self, job_data: dict):
+    """
+    Process thumbnail retry job - retry failed thumbnail generation
+    
+    Args:
+        job_data: ThumbnailRetryJob data with optional clip_ids for targeted retry
+    """
+    clip_ids = job_data.get('clip_ids')
+    
+    if clip_ids:
+        logger.info(f"Processing thumbnail retry job for {len(clip_ids)} specific clip(s)")
+    else:
+        logger.info("Processing thumbnail retry job (all eligible clips)")
+    
+    try:
+        # Pass clip_ids to handler for targeted retry
+        success_count = await self.thumbnail_handler.retry_failed_thumbnails(clip_ids=clip_ids)
+        logger.info(f"Thumbnail retry complete: {success_count} thumbnails successfully generated")
+    except Exception as e:
+        logger.error(f"Thumbnail retry job failed: {e}", exc_info=True)
+        raise
+
+async def process_thumbnail_cleanup(self, job_data: dict):
+    """
+    Process thumbnail cleanup job - find stuck processing/pending clips and mark failed
+    
+    Args:
+        job_data: ThumbnailCleanupJob data
+    """
+    timeout_minutes = job_data.get("timeout_minutes", 30)
+    logger.info(f"Processing thumbnail cleanup job (timeout: {timeout_minutes}m)")
+    
+    try:
+        count = await self.thumbnail_handler.cleanup_stale_thumbnails(timeout_minutes=timeout_minutes)
+        logger.info(f"Thumbnail cleanup complete: {count} stale clips marked as failed")
+        
+        if count > 0:
+            logger.info(f"Triggering immediate retry for {count} cleaned up clips")
+            # Immediate retry for the clips we just cleaned up (and any others due)
+            await self.thumbnail_handler.retry_failed_thumbnails()
+            
+    except Exception as e:
+        logger.error(f"Thumbnail cleanup job failed: {e}", exc_info=True)
+        raise
+
+async def process_message_deletion(self, job_data: dict):
+    """
+    Process message deletion job - hard delete message, clips, and thumbnails.
+    
+    This handles Discord message deletions by:
+    1. Checking if message exists in database (is it a clip message?)
+    2. Deleting thumbnail files from storage
+    3. Hard deleting thumbnails from database
+    4. Hard deleting clips from database
+    5. Hard deleting message from database
+    
+    Note: deleted_at is for interface archival, not Discord deletions.
+    Discord deletions are permanent (CDN URLs are lost), so we fully remove them.
+    
+    Args:
+        job_data: MessageDeletionJob data
+    """
+    from shared.db.models import Message, Clip, Thumbnail
+    from shared.storage import get_storage_backend
+    
+    message_id = job_data["message_id"]
+    channel_id = job_data["channel_id"]
+    guild_id = job_data["guild_id"]
+    
+    logger.info(f"Processing message deletion: message={message_id}, channel={channel_id}")
+    
+    try:
+        # Check if message exists in database
+        message = await Message.get_or_none(id=message_id).prefetch_related("clips")
+        
+        if not message:
+            logger.debug(f"Message {message_id} not in database (not a clip message), skipping")
+            return
+        
+        # Get all clips associated with this message
+        clips = await Clip.filter(message_id=message_id).prefetch_related("thumbnails")
+        
+        if not clips:
+            logger.debug(f"Message {message_id} has no clips, deleting message only")
+            await message.delete()
+            return
+        
+        logger.info(f"Message {message_id} has {len(clips)} clip(s), deleting all associated data")
+        
+        storage = get_storage_backend()
+        total_thumbnails_deleted = 0
+        total_files_deleted = 0
+        
+        # Process each clip
+        for clip in clips:
+            # Get all thumbnails for this clip
+            thumbnails = await Thumbnail.filter(clip_id=clip.id).all()
+            
+            # Delete thumbnail files from storage
+            for thumbnail in thumbnails:
+                try:
+                    await storage.delete(thumbnail.storage_path)
+                    total_files_deleted += 1
+                    logger.debug(f"Deleted thumbnail file: {thumbnail.storage_path}")
+                except Exception as e:
+                    logger.warning(f"Failed to delete thumbnail file {thumbnail.storage_path}: {e}")
+                    # Continue even if file deletion fails (file might already be gone)
+            
+            # Hard delete thumbnails from database
+            deleted_thumbs = await Thumbnail.filter(clip_id=clip.id).delete()
+            total_thumbnails_deleted += deleted_thumbs
+            # Message IDs are snowflakes - larger = newer
+            newest_message_id = max(processed_message_ids, key=lambda x: int(x))
+            
+            # Get current forward_message_id to compare
+            scan_status = await get_or_create_scan_status(guild_id, channel_id)
+            current_forward_id = scan_status.forward_message_id
+            
+            # Only update if this message is newer than what we have
+            if not current_forward_id or int(newest_message_id) > int(current_forward_id):
+                await update_scan_status(
+                    guild_id=guild_id,
+                    channel_id=channel_id,
+                    forward_message_id=newest_message_id
+                )
+                logger.debug(f"Updated forward_message_id to {newest_message_id} for channel {channel_id}")
+        
+        logger.info(f"Message scan complete: processed {len(message_ids)} messages, found {total_clips} clips")
+        
+    except Exception as e:
+        logger.error(f"Message scan failed for channel {channel_id}: {e}", exc_info=True)
+        raise
     
     async def process_rescan(self, job_data: dict):
         """

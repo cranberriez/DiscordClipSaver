@@ -121,29 +121,37 @@ class BatchMessageProcessor:
         if not author_ids:
             return
 
-        try:
-            guild = self.bot.get_guild(int(context.guild_id))
-            if not guild:
-                logger.warning(f"Could not find guild {context.guild_id} in cache to get member data.")
-                return
+        guild = self.bot.get_guild(int(context.guild_id))
+        if not guild:
+            logger.warning(f"Could not find guild {context.guild_id} in cache to get member data.")
+            return
 
-            # Get members from cache
-            member_map = {author_id: guild.get_member(author_id) for author_id in author_ids}
+        # Get members from cache
+        # Note: get_member is a cache lookup, not an API call
+        member_map = {author_id: guild.get_member(author_id) for author_id in author_ids}
 
-            for author_id in author_ids:
-                member = member_map.get(author_id)
-                if member:
-                    context.add_author(member)
-                else:
-                    # Find a message from this author to get the user object as a fallback
-                    author_message = next((msg for msg in messages if msg.author.id == author_id and str(msg.id) in clip_map), None)
-                    if author_message:
-                        context.add_user(author_message.author)
+        found_in_cache = 0
+        missing_in_cache = 0
 
-        except discord.Forbidden:
-            logger.error(f"Bot does not have permission to fetch members in guild {context.guild_id}.")
-        except discord.HTTPException as e:
-            logger.error(f"Failed to fetch members for guild {context.guild_id}: {e}")
+        for author_id in author_ids:
+            member = member_map.get(author_id)
+            if member:
+                found_in_cache += 1
+                context.add_author(member)
+            else:
+                missing_in_cache += 1
+                # Find a message from this author to get the user object as a fallback
+                author_message = next((msg for msg in messages if msg.author.id == author_id and str(msg.id) in clip_map), None)
+                if author_message:
+                    # Log if we're falling back to User object (limited data) instead of Member
+                    if missing_in_cache <= 5:  # Only log first few to avoid spam
+                        logger.debug(f"Author {author_id} not in guild cache, using message.author fallback (Type: {type(author_message.author)})")
+                    context.add_user(author_message.author)
+        
+        if missing_in_cache > 0:
+            logger.info(f"Author processing: {found_in_cache} found in guild cache, {missing_in_cache} missing (fell back to message data)")
+        else:
+            logger.debug(f"Author processing: All {found_in_cache} authors found in guild cache")
 
     def _collect_message_data(
         self,

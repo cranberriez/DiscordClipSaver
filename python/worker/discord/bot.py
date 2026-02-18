@@ -19,7 +19,7 @@ class WorkerBot(commands.Bot):
         intents.message_content = True
         intents.guilds = True
         intents.members = True
-        super().__init__(command_prefix="!", intents=intents)
+        super().__init__(command_prefix="!", intents=intents, chunk_guilds_at_startup = False)
 
         self.ready_event = asyncio.Event()
         self.start_time = datetime.now(timezone.utc)

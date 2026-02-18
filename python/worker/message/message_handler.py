@@ -76,6 +76,11 @@ class MessageHandler:
     
     async def _upsert_author(self, author: discord.Member, guild_id: str) -> None:
         """Create or update an author record for a specific guild."""
+        # Log if we're dealing with a User instead of a Member (means missing guild-specific data)
+        if not isinstance(author, discord.Member):
+            # This is not critical but good to know for debugging missing nicknames/roles
+            logger.debug(f"Upserting author {author.id} as {type(author).__name__} (missing guild context)")
+        
         await Author.update_or_create(
             user_id=str(author.id),
             guild_id=guild_id,
