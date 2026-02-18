@@ -7,252 +7,249 @@ import { useClipFiltersStore } from "@/features/clips/stores/useClipFiltersStore
 import { SortOrder, SortType } from "@/lib/api/clip";
 
 function parseCsv(value: string | null): string[] | undefined {
-    if (!value) return undefined;
-    const parts = value
-        .split(",")
-        .map(s => s.trim())
-        .filter(Boolean);
-    if (parts.length === 0) return undefined;
-    // De-dupe
-    return Array.from(new Set(parts));
+	if (!value) return undefined;
+	const parts = value
+		.split(",")
+		.map((s) => s.trim())
+		.filter(Boolean);
+	if (parts.length === 0) return undefined;
+	// De-dupe
+	return Array.from(new Set(parts));
 }
 
 function buildQuery(params: Record<string, string | undefined>) {
-    const usp = new URLSearchParams();
-    for (const [k, v] of Object.entries(params)) {
-        if (v != null && v !== "") usp.set(k, v);
-    }
-    return usp.toString();
+	const usp = new URLSearchParams();
+	for (const [k, v] of Object.entries(params)) {
+		if (v != null && v !== "") usp.set(k, v);
+	}
+	return usp.toString();
 }
 
 export function useClipsUrlSync() {
-    const router = useRouter();
-    const pathname = usePathname();
-    const searchParams = useSearchParams();
+	const router = useRouter();
+	const pathname = usePathname();
+	const searchParams = useSearchParams();
 
-    const {
-        selectedGuildId,
-        selectedChannelIds,
-        selectedAuthorIds,
-        searchQuery,
-        sortOrder,
-        sortType,
-        setGuildId,
-        setChannelIds,
-        setAuthorIds,
-        setSearchQuery,
-        setSortOrder,
-        setSortType,
-    } = useClipFiltersStore();
+	const {
+		selectedGuildId,
+		selectedChannelIds,
+		selectedAuthorIds,
+		searchQuery,
+		sortOrder,
+		sortType,
+		setGuildId,
+		setChannelIds,
+		setAuthorIds,
+		setSearchQuery,
+		setSortOrder,
+		setSortType,
+	} = useClipFiltersStore();
 
-    // Track hydration from URL to avoid feedback loop
-    const hydratedRef = useRef(false);
-    const [hydratedState, setHydratedState] = useState(false);
-    const suppressWriteRef = useRef(true);
-    // Track clipId separately from persisted filters
-    const clipIdRef = useRef<string | null>(null);
-    // Track initial clipId from URL (never changes after hydration)
-    const initialClipIdRef = useRef<string | null>(null);
+	// Track hydration from URL to avoid feedback loop
+	const hydratedRef = useRef(false);
+	const [hydratedState, setHydratedState] = useState(false);
+	const suppressWriteRef = useRef(true);
+	// Track clipId separately from persisted filters
+	const clipIdRef = useRef<string | null>(null);
+	// Track initial clipId from URL (never changes after hydration)
+	const initialClipIdRef = useRef<string | null>(null);
 
-    // Debounce writes (especially search typing)
-    const debounceRef = useRef<number | null>(null);
-    const scheduleReplace = useCallback(
-        (qs: string) => {
-            if (debounceRef.current) window.clearTimeout(debounceRef.current);
-            debounceRef.current = window.setTimeout(() => {
-                router.replace(`${pathname}${qs ? `?${qs}` : ""}`);
-            }, 300);
-        },
-        [pathname, router]
-    );
+	// Debounce writes (especially search typing)
+	const debounceRef = useRef<number | null>(null);
+	const scheduleReplace = useCallback(
+		(qs: string) => {
+			if (debounceRef.current) window.clearTimeout(debounceRef.current);
+			debounceRef.current = window.setTimeout(() => {
+				router.replace(`${pathname}${qs ? `?${qs}` : ""}`);
+			}, 300);
+		},
+		[pathname, router]
+	);
 
-    // Read page param as number (>=1)
-    const pageFromUrl = useMemo(() => {
-        const pageStr = searchParams.get("page");
-        const n = pageStr ? parseInt(pageStr, 10) : 1;
-        return Number.isFinite(n) && n > 0 ? n : 1;
-    }, [searchParams]);
+	// Read page param as number (>=1)
+	const pageFromUrl = useMemo(() => {
+		const pageStr = searchParams.get("page");
+		const n = pageStr ? parseInt(pageStr, 10) : 1;
+		return Number.isFinite(n) && n > 0 ? n : 1;
+	}, [searchParams]);
 
-    // Read clipId from URL (but only use for initial hydration)
-    const clipIdFromUrl = useMemo(
-        () => searchParams.get("clipId"),
-        [searchParams]
-    );
+	const channelIdsKey = useMemo(
+		() => (selectedChannelIds?.length ? selectedChannelIds.join(",") : ""),
+		[selectedChannelIds]
+	);
+	const authorIdsKey = useMemo(
+		() => (selectedAuthorIds?.length ? selectedAuthorIds.join(",") : ""),
+		[selectedAuthorIds]
+	);
 
-    // Hydrate store from URL once
-    useEffect(() => {
-        if (hydratedRef.current) return;
-        // Read params
-        const guildId = searchParams.get("guildId");
-        const channelIds = parseCsv(searchParams.get("channelIds"));
-        const authorIds = parseCsv(searchParams.get("authorIds"));
-        const q = searchParams.get("q") || "";
-        const sort = (searchParams.get("sort") as SortOrder | null) || null;
-        const type = (searchParams.get("sortType") as SortType | null) || null;
+	// Hydrate store from URL once
+	useEffect(() => {
+		if (hydratedRef.current) return;
+		// Read params
+		const guildId = searchParams.get("guildId");
+		const channelIds = parseCsv(searchParams.get("channelIds"));
+		const authorIds = parseCsv(searchParams.get("authorIds"));
+		const q = searchParams.get("q") || "";
+		const sort = (searchParams.get("sort") as SortOrder | null) || null;
+		const type = (searchParams.get("sortType") as SortType | null) || null;
 
-        // Apply to store (URL overrides persisted once)
-        // Only override store values if URL params are actually present
-        if (guildId != null) setGuildId(guildId || null);
-        if (channelIds) setChannelIds(channelIds);
-        if (authorIds) setAuthorIds(authorIds);
-        if (q !== "") setSearchQuery(q);
-        if (sort === "asc" || sort === "desc") setSortOrder(sort);
-        if (type === "date" || type === "duration" || type === "size")
-            setSortType(type);
+		// Apply to store (URL overrides persisted once)
+		// Only override store values if URL params are actually present
+		if (guildId != null) setGuildId(guildId || null);
+		if (channelIds) setChannelIds(channelIds);
+		if (authorIds) setAuthorIds(authorIds);
+		if (q !== "") setSearchQuery(q);
+		if (sort === "asc" || sort === "desc") setSortOrder(sort);
+		if (type === "date" || type === "duration" || type === "size")
+			setSortType(type);
 
-        // Track initial clipId (never changes after this)
-        initialClipIdRef.current = searchParams.get("clipId");
-        clipIdRef.current = searchParams.get("clipId");
+		// Track initial clipId (never changes after this)
+		initialClipIdRef.current = searchParams.get("clipId");
+		clipIdRef.current = searchParams.get("clipId");
 
-        hydratedRef.current = true;
-        // Allow writes after a tick to avoid replacing immediately
-        const t = window.setTimeout(() => {
-            suppressWriteRef.current = false;
-            setHydratedState(true);
-        }, 0);
-        return () => window.clearTimeout(t);
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, []);
+		hydratedRef.current = true;
+		// Allow writes after a tick to avoid replacing immediately
+		const t = window.setTimeout(() => {
+			suppressWriteRef.current = false;
+			setHydratedState(true);
+		}, 0);
+		return () => window.clearTimeout(t);
+		// eslint-disable-next-line react-hooks/exhaustive-deps
+	}, []);
 
-    // Write store → URL (skip until hydration completes)
-    useEffect(() => {
-        if (!hydratedRef.current || suppressWriteRef.current) return;
+	// Write store → URL (skip until hydration completes)
+	useEffect(() => {
+		if (!hydratedRef.current || suppressWriteRef.current) return;
 
-        // Build minimal query string
-        const params: Record<string, string | undefined> = {
-            guildId: selectedGuildId || undefined,
-            // Only include channelIds/authorIds if non-empty
-            channelIds:
-                selectedChannelIds && selectedChannelIds.length > 0
-                    ? selectedChannelIds.join(",")
-                    : undefined,
-            authorIds:
-                selectedAuthorIds && selectedAuthorIds.length > 0
-                    ? selectedAuthorIds.join(",")
-                    : undefined,
-            q: searchQuery?.trim() ? searchQuery.trim() : undefined,
-            sort: sortOrder === "desc" ? undefined : sortOrder, // omit default
-            sortType: sortType === "date" ? undefined : sortType, // omit default
-        };
+		// Build minimal query string
+		const params: Record<string, string | undefined> = {
+			guildId: selectedGuildId || undefined,
+			// Only include channelIds/authorIds if non-empty
+			channelIds:
+				selectedChannelIds && selectedChannelIds.length > 0
+					? selectedChannelIds.join(",")
+					: undefined,
+			authorIds:
+				selectedAuthorIds && selectedAuthorIds.length > 0
+					? selectedAuthorIds.join(",")
+					: undefined,
+			// Intentionally do not sync search query to URL to avoid router.replace churn
+			// and main-thread jank while typing.
+			q: undefined,
+			sort: sortOrder === "desc" ? undefined : sortOrder, // omit default
+			sortType: sortType === "date" ? undefined : sortType, // omit default
+		};
 
-        // Preserve page param if present
-        if (pageFromUrl && pageFromUrl > 1) params.page = String(pageFromUrl);
-        // Preserve clipId if present (but don't auto-write clipId changes, only manual ones)
-        const currentClipId = searchParams.get("clipId");
-        if (currentClipId) params.clipId = currentClipId;
+		// Preserve page param if present
+		if (pageFromUrl && pageFromUrl > 1) params.page = String(pageFromUrl);
+		// Preserve clipId if present (but don't auto-write clipId changes, only manual ones)
+		const currentClipId = searchParams.get("clipId");
+		if (currentClipId) params.clipId = currentClipId;
 
-        const qs = buildQuery(params);
-        // Skip if unchanged
-        if (qs === searchParams.toString()) return;
-        scheduleReplace(qs);
-    }, [
-        selectedGuildId,
-        selectedChannelIds,
-        selectedAuthorIds,
-        searchQuery,
-        sortOrder,
-        sortType,
-        pageFromUrl,
-        scheduleReplace,
-        searchParams,
-    ]);
+		const qs = buildQuery(params);
+		// Skip if unchanged
+		if (qs === searchParams.toString()) return;
+		scheduleReplace(qs);
+	}, [
+		selectedGuildId,
+		selectedChannelIds,
+		selectedAuthorIds,
+		sortOrder,
+		sortType,
+		pageFromUrl,
+		scheduleReplace,
+		searchParams,
+	]);
 
-    // setPage API: lets page update URL intentionally
-    const setPage = useCallback(
-        (page: number) => {
-            if (!hydratedRef.current) return; // ignore until hydrated
-            const p = Math.max(1, Math.floor(page));
-            const params: Record<string, string | undefined> = {
-                guildId: selectedGuildId || undefined,
-                channelIds:
-                    selectedChannelIds && selectedChannelIds.length > 0
-                        ? selectedChannelIds.join(",")
-                        : undefined,
-                authorIds:
-                    selectedAuthorIds && selectedAuthorIds.length > 0
-                        ? selectedAuthorIds.join(",")
-                        : undefined,
-                q: searchQuery?.trim() ? searchQuery.trim() : undefined,
-                sort: sortOrder === "desc" ? undefined : sortOrder,
-                sortType: sortType === "date" ? undefined : sortType,
-                page: String(p),
-            };
-            if (clipIdRef.current) params.clipId = clipIdRef.current;
-            const qs = buildQuery(params);
-            router.replace(`${pathname}${qs ? `?${qs}` : ""}`);
-        },
-        [
-            pathname,
-            router,
-            selectedGuildId,
-            selectedChannelIds,
-            selectedAuthorIds,
-            searchQuery,
-            sortOrder,
-            sortType,
-        ]
-    );
+	// setPage API: lets page update URL intentionally
+	const setPage = useCallback(
+		(page: number) => {
+			if (!hydratedRef.current) return; // ignore until hydrated
+			const p = Math.max(1, Math.floor(page));
+			const params: Record<string, string | undefined> = {
+				guildId: selectedGuildId || undefined,
+				channelIds:
+					selectedChannelIds && selectedChannelIds.length > 0
+						? selectedChannelIds.join(",")
+						: undefined,
+				authorIds:
+					selectedAuthorIds && selectedAuthorIds.length > 0
+						? selectedAuthorIds.join(",")
+						: undefined,
+				q: searchQuery?.trim() ? searchQuery.trim() : undefined,
+				sort: sortOrder === "desc" ? undefined : sortOrder,
+				sortType: sortType === "date" ? undefined : sortType,
+				page: String(p),
+			};
+			if (clipIdRef.current) params.clipId = clipIdRef.current;
+			const qs = buildQuery(params);
+			router.replace(`${pathname}${qs ? `?${qs}` : ""}`);
+		},
+		[
+			pathname,
+			router,
+			selectedGuildId,
+			selectedChannelIds,
+			selectedAuthorIds,
+			searchQuery,
+			sortOrder,
+			sortType,
+		]
+	);
 
-    // Reset page when any filter changes (guild, channels, authors, q, sort)
-    useEffect(() => {
-        if (!hydratedRef.current || suppressWriteRef.current) return;
-        const params: Record<string, string | undefined> = {
-            guildId: selectedGuildId || undefined,
-            channelIds:
-                selectedChannelIds && selectedChannelIds.length > 0
-                    ? selectedChannelIds.join(",")
-                    : undefined,
-            authorIds:
-                selectedAuthorIds && selectedAuthorIds.length > 0
-                    ? selectedAuthorIds.join(",")
-                    : undefined,
-            q: searchQuery?.trim() ? searchQuery.trim() : undefined,
-            sort: sortOrder === "desc" ? undefined : sortOrder,
-            sortType: sortType === "date" ? undefined : sortType,
-            // page intentionally omitted to reset to 1 (implicit)
-        };
-        // Preserve clipId if present
-        const currentClipId = searchParams.get("clipId");
-        if (currentClipId) params.clipId = currentClipId;
-        const qs = buildQuery(params);
-        if (qs === searchParams.toString()) return;
-        scheduleReplace(qs);
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [
-        selectedGuildId,
-        JSON.stringify(selectedChannelIds),
-        JSON.stringify(selectedAuthorIds),
-        searchQuery,
-        sortOrder,
-        sortType,
-    ]);
+	// Reset page when any filter changes (guild, channels, authors, q, sort)
+	useEffect(() => {
+		if (!hydratedRef.current || suppressWriteRef.current) return;
+		const params: Record<string, string | undefined> = {
+			guildId: selectedGuildId || undefined,
+			channelIds:
+				selectedChannelIds && selectedChannelIds.length > 0
+					? selectedChannelIds.join(",")
+					: undefined,
+			authorIds:
+				selectedAuthorIds && selectedAuthorIds.length > 0
+					? selectedAuthorIds.join(",")
+					: undefined,
+			q: undefined,
+			sort: sortOrder === "desc" ? undefined : sortOrder,
+			sortType: sortType === "date" ? undefined : sortType,
+			// page intentionally omitted to reset to 1 (implicit)
+		};
+		// Preserve clipId if present
+		const currentClipId = searchParams.get("clipId");
+		if (currentClipId) params.clipId = currentClipId;
+		const qs = buildQuery(params);
+		if (qs === searchParams.toString()) return;
+		scheduleReplace(qs);
+		// eslint-disable-next-line react-hooks/exhaustive-deps
+	}, [selectedGuildId, channelIdsKey, authorIdsKey, sortOrder, sortType]);
 
-    return {
-        hydrated: hydratedState,
-        page: pageFromUrl,
-        setPage,
-        clipId: initialClipIdRef.current, // Return the captured initial clipId, not reactive URL value
-        setClipId: (id: string | null) => {
-            if (!hydratedRef.current) return;
-            clipIdRef.current = id;
-            const params: Record<string, string | undefined> = {
-                guildId: selectedGuildId || undefined,
-                channelIds:
-                    selectedChannelIds && selectedChannelIds.length > 0
-                        ? selectedChannelIds.join(",")
-                        : undefined,
-                authorIds:
-                    selectedAuthorIds && selectedAuthorIds.length > 0
-                        ? selectedAuthorIds.join(",")
-                        : undefined,
-                q: searchQuery?.trim() ? searchQuery.trim() : undefined,
-                sort: sortOrder === "desc" ? undefined : sortOrder,
-                sortType: sortType === "date" ? undefined : sortType,
-                // Don't include page when setting clipId - let it reset to 1
-                clipId: id || undefined,
-            };
-            const qs = buildQuery(params);
-            scheduleReplace(qs);
-        },
-    } as const;
+	return {
+		hydrated: hydratedState,
+		page: pageFromUrl,
+		setPage,
+		clipId: initialClipIdRef.current, // Return the captured initial clipId, not reactive URL value
+		setClipId: (id: string | null) => {
+			if (!hydratedRef.current) return;
+			clipIdRef.current = id;
+			const params: Record<string, string | undefined> = {
+				guildId: selectedGuildId || undefined,
+				channelIds:
+					selectedChannelIds && selectedChannelIds.length > 0
+						? selectedChannelIds.join(",")
+						: undefined,
+				authorIds:
+					selectedAuthorIds && selectedAuthorIds.length > 0
+						? selectedAuthorIds.join(",")
+						: undefined,
+				q: searchQuery?.trim() ? searchQuery.trim() : undefined,
+				sort: sortOrder === "desc" ? undefined : sortOrder,
+				sortType: sortType === "date" ? undefined : sortType,
+				// Don't include page when setting clipId - let it reset to 1
+				clipId: id || undefined,
+			};
+			const qs = buildQuery(params);
+			scheduleReplace(qs);
+		},
+	} as const;
 }
