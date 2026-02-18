@@ -14,7 +14,6 @@ import { discordFetch, DiscordAPIError } from "@/server/discord/discordClient";
 import { getSingleGuildById } from "@/server/db";
 import type { DiscordGuild } from "@/server/discord/types";
 import type { DbGuild } from "@/server/db/types";
-import type { DiscordUser } from "@/server/discord/types";
 
 // ============================================================================
 // Types
@@ -62,12 +61,17 @@ export async function requireAuth(
     let authInfo: AuthInfo;
     try {
         authInfo = await getAuthInfo(req);
-    } catch {
+    } catch (error) {
+        console.error("[requireAuth] getAuthInfo failed:", error);
         return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     const { discordUserId, accessToken } = authInfo;
     if (!accessToken) {
+        console.error(
+            "[requireAuth] Missing accessToken for user:",
+            discordUserId
+        );
         return NextResponse.json(
             { error: "Missing Discord token" },
             { status: 401 }

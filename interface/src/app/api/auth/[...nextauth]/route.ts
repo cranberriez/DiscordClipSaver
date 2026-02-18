@@ -31,6 +31,7 @@ function getAuthUrl(req?: Request): string {
 
 function createAuthOptions(baseUrl?: string): NextAuthOptions {
     return {
+        secret: process.env.NEXTAUTH_SECRET,
         providers: [
             DiscordProvider({
                 clientId: process.env.DISCORD_CLIENT_ID ?? "",
@@ -106,23 +107,16 @@ function createAuthOptions(baseUrl?: string): NextAuthOptions {
                 return session;
             },
             async redirect({ url, baseUrl }) {
-                try {
-                    const target = new URL(url, baseUrl);
-                    const isSameOrigin = target.origin === baseUrl;
-                    if (isSameOrigin) {
-                        if (
-                            target.pathname === "/login" ||
-                            target.pathname === "/"
-                        ) {
-                            return `${baseUrl}/clips`;
-                        }
-                        return target.toString();
-                    }
-                    return baseUrl;
-                } catch {
-                    return baseUrl;
-                }
+                // Allows relative callback URLs
+                if (url.startsWith("/")) return `${baseUrl}${url}`;
+                // Allows callback URLs on the same origin
+                else if (new URL(url).origin === baseUrl) return url;
+                return baseUrl;
             },
+        },
+        pages: {
+            signIn: "/login",
+            error: "/error",
         },
     };
 }

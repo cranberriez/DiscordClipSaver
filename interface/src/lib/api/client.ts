@@ -25,11 +25,7 @@ import {
 } from "./scan";
 import { ClipListResponse, FullClip, ClipListParams } from "./clip";
 import type { AuthorStatsResponse } from "./author";
-import type {
-    FavoriteStatusResponse,
-    FavoriteBulkResponse,
-    FavoriteToggleRequest,
-} from "./favorites";
+import type { FavoriteStatusResponse, FavoriteBulkResponse } from "./favorites";
 
 // ============================================================================
 // Error Handling
@@ -65,8 +61,13 @@ async function apiRequest<T>(
 
     // Handle authentication errors
     if (response.status === 401) {
-        // Session expired or invalid - sign out and redirect
-        await signOut({ callbackUrl: "/dashboard" });
+        // Prevent multiple sign-out triggers
+        if (typeof window !== "undefined" && !(window as any).__isSigningOut) {
+            (window as any).__isSigningOut = true;
+            console.log("[API] 401 Authentication required - signing out...");
+            // Session expired or invalid - sign out and redirect
+            await signOut({ callbackUrl: "/login" });
+        }
         throw new APIError("Authentication required", 401);
     }
 

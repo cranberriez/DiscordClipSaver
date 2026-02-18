@@ -14,8 +14,12 @@ export type AuthInfo = {
 };
 
 export async function getAuthInfo(req?: NextRequest): Promise<AuthInfo> {
+    // console.log("[getAuthInfo] Getting session...");
     const session = await getServerSession(authOptions);
+    // console.log("[getAuthInfo] Session:", session ? "Found" : "Null", "User ID:", session?.user?.id);
+
     if (!session?.user?.id) {
+        console.error("[getAuthInfo] No session or user ID found");
         throw new Error("Unauthorized");
     }
 
@@ -25,8 +29,17 @@ export async function getAuthInfo(req?: NextRequest): Promise<AuthInfo> {
             req,
             secret: process.env.NEXTAUTH_SECRET,
         });
+        // console.log("[getAuthInfo] Token found:", !!token, "Has AccessToken:", !!(token as any)?.accessToken);
         accessToken = (token as typeof token & { accessToken?: string })
             ?.accessToken;
+    } else {
+        console.warn(
+            "[getAuthInfo] No request object passed, cannot retrieve access token from JWT"
+        );
+    }
+
+    if (req && !accessToken) {
+        console.error("[getAuthInfo] Failed to retrieve access token from JWT");
     }
 
     return { session, discordUserId: session.user.id as string, accessToken };

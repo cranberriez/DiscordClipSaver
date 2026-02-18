@@ -15,20 +15,25 @@ import { getToken } from "next-auth/jwt";
 export async function middleware(request: NextRequest) {
     const { pathname } = request.nextUrl;
 
-    // Check if this is an API route that requires authentication
-    if (pathname.startsWith("/api/")) {
-        // Exclude public routes (auth callbacks, webhooks, etc.)
-        const publicRoutes = [
+    // Define protected routes
+    const isApiRoute = pathname.startsWith("/api/");
+    const isProtectedRoute =
+        pathname.startsWith("/clips") ||
+        pathname.startsWith("/dashboard") ||
+        pathname.startsWith("/me") ||
+        isApiRoute;
+
+    if (isProtectedRoute) {
+        // Exclude public API routes (auth callbacks, webhooks, etc.)
+        const publicApiRoutes = [
             "/api/auth/", // NextAuth routes
-            // Add other public routes here if needed
-            // '/api/webhooks/',
             "/api/storage/",
             "/api/discord/bot/claim",
         ];
 
-        const isPublicRoute = publicRoutes.some(route =>
-            pathname.startsWith(route)
-        );
+        const isPublicRoute =
+            isApiRoute &&
+            publicApiRoutes.some(route => pathname.startsWith(route));
 
         if (!isPublicRoute) {
             // Check authentication
@@ -37,12 +42,30 @@ export async function middleware(request: NextRequest) {
                 secret: process.env.NEXTAUTH_SECRET,
             });
 
-            if (!token) {
-                // No valid session - reject immediately
-                return NextResponse.json(
-                    { error: "Unauthorized" },
-                    { status: 401 }
-                );
+            // Check if token exists AND has an accessToken
+            // If the session exists but lacks an accessToken (e.g. lost in JWT callback),
+            // we must treat it as unauthorized to prevent API 401 loops.
+            const hasAccessToken = !!(token as any)?.accessToken;
+
+            if (!token || !hasAccessToken) {
+                if (isApiRoute) {
+                    console.log(
+                        "[Middleware] No valid token/accessToken for API request to:",
+                        pathname
+                    );
+                    return NextResponse.json(
+                        { error: "Unauthorized" },
+                        { status: 401 }
+                    );
+                } else {
+                    console.log(
+                        "[Middleware] No valid token/accessToken for page request to:",
+                        pathname
+                    );
+                    const url = new URL("/login", request.url);
+                    url.searchParams.set("callbackUrl", pathname);
+                    return NextResponse.redirect(url);
+                }
             }
 
             // User is authenticated - continue to route handler
@@ -63,10 +86,13 @@ export const config = {
     matcher: [
         /*
          * Match all API routes except:
-         * - NextAuth routes (/api/auth/*)
+         * - NextAuth routes (/api/auth/*) handled in logic
          * - Static files
          * - _next internal routes
          */
-        "/api/((?!auth).*)",
+        "/api/:path*",
+        "/clips/:path*",
+        "/dashboard/:path*",
+        "/me/:path*",
     ],
 };
