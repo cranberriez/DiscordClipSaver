@@ -30,9 +30,10 @@ export function SearchFilter({ isOpen, onToggle }: SearchProps) {
 
 	// If store value changes externally (URL hydration, reset, etc), sync input
 	useEffect(() => {
+		if (!isOpen) return;
 		lastSyncedQueryRef.current = searchQuery;
 		setSearchValue(searchQuery);
-	}, [searchQuery]);
+	}, [searchQuery, isOpen]);
 
 	// Auto-focus input when search opens
 	useEffect(() => {
@@ -46,6 +47,13 @@ export function SearchFilter({ isOpen, onToggle }: SearchProps) {
 	}, [isOpen]);
 
 	const handleCloseSearch = () => {
+		// Persist current input immediately so the indicator/state reflects it,
+		// but keep debounced filtering behavior unchanged.
+		const immediateValue = searchValue.trim();
+		if (immediateValue !== lastSyncedQueryRef.current) {
+			lastSyncedQueryRef.current = immediateValue;
+			setSearchQuery(immediateValue);
+		}
 		onToggle(false);
 	};
 
@@ -100,7 +108,10 @@ export function SearchFilter({ isOpen, onToggle }: SearchProps) {
 	}
 
 	return (
-		<FilterNavButton onClick={() => onToggle(true)}>
+		<FilterNavButton
+			onClick={() => onToggle(true)}
+			activeState={!!searchQuery}
+		>
 			<Search className="h-5 w-5" />
 			<span>Search</span>
 		</FilterNavButton>
