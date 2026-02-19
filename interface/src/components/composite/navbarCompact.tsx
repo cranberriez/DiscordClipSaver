@@ -5,51 +5,74 @@ import { useSession } from "next-auth/react";
 import { UserMenu } from "./UserMenu";
 import { User } from "next-auth";
 import { Button } from "@/components/ui/button";
-import { Home, TvMinimal, LayoutDashboard } from "lucide-react";
+import { Home, TvMinimal, LayoutDashboard, Settings } from "lucide-react";
+import { useUser } from "@/lib/hooks/useUser";
+import { useGuild } from "@/lib/hooks/useGuilds";
+import { useClipFiltersStore } from "@/features/clips/stores/useClipFiltersStore";
+import { usePathname } from "next/navigation";
 
 export function NavbarCompact() {
-    const { data: session } = useSession();
+	const { data: session } = useSession();
+	const pathname = usePathname();
+	const isClipsPage = pathname === "/clips";
 
-    return (
-        <nav>
-            <div className="flex items-center justify-between h-full gap-2 sm:gap-4 text-muted-foreground">
-                {/* Logo/Brand */}
-                <Link
-                    href="/"
-                    className="text-lg font-bold hover:text-blue-400 transition-colors p-2 rounded-lg hover:bg-background/50"
-                >
-                    <Home />
-                </Link>
+	const { data: userData } = useUser();
+	const user = userData?.database;
 
-                {/* Navigation Links */}
-                <div className="flex items-center gap-2 sm:gap-4">
-                    {session && (
-                        <>
-                            <Link
-                                href="/clips"
-                                className="text-sm font-medium hover:text-blue-400 transition-colors p-2 rounded-lg hover:bg-background/50"
-                            >
-                                <TvMinimal />
-                            </Link>
-                            <Link
-                                href="/dashboard"
-                                className="text-sm font-medium hover:text-blue-400 transition-colors p-2 rounded-lg hover:bg-background/50"
-                            >
-                                <LayoutDashboard />
-                            </Link>
-                        </>
-                    )}
+	const { selectedGuildId } = useClipFiltersStore();
+	const { data: guild } = useGuild(selectedGuildId || "");
+	const isGuildOwner = !!selectedGuildId && user?.id === guild?.owner_id;
 
-                    {/* User Menu */}
-                    {session ? (
-                        <UserMenu user={session.user as User} />
-                    ) : (
-                        <Button asChild>
-                            <Link href="/login">Sign In</Link>
-                        </Button>
-                    )}
-                </div>
-            </div>
-        </nav>
-    );
+	return (
+		<nav>
+			<div className="text-muted-foreground flex h-full items-center justify-between gap-2 sm:gap-4">
+				{/* Logo/Brand */}
+				<Link
+					href="/"
+					className="hover:bg-background/50 rounded-lg p-2 text-lg font-bold transition-colors hover:text-blue-400"
+				>
+					<Home />
+				</Link>
+
+				{/* Navigation Links */}
+				<div className="flex items-center gap-2 sm:gap-4">
+					{session && (
+						<>
+							<Link
+								href="/clips"
+								className="hover:bg-background/50 rounded-lg p-2 text-sm font-medium transition-colors hover:text-blue-400"
+							>
+								<TvMinimal />
+							</Link>
+							<Link
+								href="/dashboard"
+								className="hover:bg-background/50 rounded-lg p-2 text-sm font-medium transition-colors hover:text-blue-400"
+							>
+								<LayoutDashboard />
+							</Link>
+
+							{isClipsPage && isGuildOwner && (
+								<Link
+									href={`/dashboard/${selectedGuildId}`}
+									className="hover:bg-background/50 rounded-lg p-2 text-sm font-medium transition-colors hover:text-blue-400"
+									title="Open server dashboard"
+								>
+									<Settings />
+								</Link>
+							)}
+						</>
+					)}
+
+					{/* User Menu */}
+					{session ? (
+						<UserMenu user={session.user as User} />
+					) : (
+						<Button asChild>
+							<Link href="/login">Sign In</Link>
+						</Button>
+					)}
+				</div>
+			</div>
+		</nav>
+	);
 }
