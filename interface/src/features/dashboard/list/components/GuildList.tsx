@@ -7,6 +7,7 @@ import { GuildItemComponent } from "./GuildItemComponent";
 import type { EnrichedDiscordGuild } from "@/lib/api/guild";
 import { categorizeGuilds } from "../lib";
 import { YourServers } from "./YourServers";
+import { ItemGrid } from "@/components/layout";
 
 export function GuildList() {
 	const { data: session } = useSession();
@@ -46,7 +47,7 @@ export function GuildList() {
 	const categorizedGuilds = categorizeGuilds(guilds, currentUserId);
 
 	return (
-		<div className="space-y-6">
+		<div className="flex flex-col gap-12">
 			{/* <Section
                 title="Installed (owned by you)"
                 relation="owned"
@@ -62,12 +63,14 @@ export function GuildList() {
             /> */}
 
 			<Section
-				title="Invitable (you can add the bot)"
+				title="Ready To Add"
+				subtext="Servers where you can invite the bot"
 				relation="invitable"
 				items={categorizedGuilds.invitable}
 			/>
 			<Section
-				title="Installed (owned by others)"
+				title="Installed By Others"
+				subtext="Servers you can view but are owned by others"
 				relation="other"
 				items={categorizedGuilds.installedOthers}
 			/>
@@ -77,26 +80,26 @@ export function GuildList() {
 
 function Section({
 	title,
+	subtext,
 	items,
 	relation,
 }: {
 	title: string;
+	subtext: string;
 	items: EnrichedDiscordGuild[];
 	relation: GuildRelation;
 }) {
 	if (items.length === 0) {
-		return (
-			<div>
-				<h3 className="mb-2 text-sm font-semibold">{title}</h3>
-				<p className="text-muted-foreground text-sm">None</p>
-			</div>
-		);
+		return null;
 	}
 
 	return (
-		<div>
-			<h3 className="mb-2 text-sm font-semibold">{title}</h3>
-			<ul className="grid w-fit grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+		<div className="flex flex-col gap-4">
+			<div>
+				<h2 className="text-xl font-bold">{title}</h2>
+				<p className="text-muted-foreground">{subtext}</p>
+			</div>
+			<ItemGrid>
 				{items.map((guild) => (
 					<GuildItemComponent
 						guild={guild}
@@ -104,7 +107,7 @@ function Section({
 						key={guild.id}
 					/>
 				))}
-			</ul>
+			</ItemGrid>
 		</div>
 	);
 }

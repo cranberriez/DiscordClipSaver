@@ -3,10 +3,10 @@ import { PageContainer } from "@/components/layout";
 import { InstallBot } from "@/features/dashboard/list";
 
 export default async function DashboardPage() {
-    return (
-        <PageContainer className="space-y-8">
-            <InstallBot />
-            <GuildList />
-        </PageContainer>
-    );
+	return (
+		<PageContainer className="space-y-12">
+			<InstallBot />
+			<GuildList />
+		</PageContainer>
+	);
 }
