@@ -51,11 +51,17 @@ export function NavbarCompact() {
 								<LayoutDashboard />
 							</Link>
 
-							{isClipsPage && isGuildOwner && (
+							{isClipsPage && selectedGuildId && (
 								<Link
 									href={`/dashboard/${selectedGuildId}`}
-									className="hover:bg-background/50 rounded-lg p-2 text-sm font-medium transition-colors hover:text-blue-400"
-									title="Open server dashboard"
+									className={`hover:bg-background/50 rounded-lg p-2 text-sm font-medium transition-colors hover:text-blue-400 ${isGuildOwner ? "" : "pointer-events-none invisible"}`}
+									title={
+										isGuildOwner
+											? "Open server dashboard"
+											: undefined
+									}
+									aria-hidden={!isGuildOwner}
+									tabIndex={isGuildOwner ? 0 : -1}
 								>
 									<Settings />
 								</Link>
