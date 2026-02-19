@@ -113,8 +113,7 @@ function StatusMessage({
 
 function WhatNext({ guild }: { guild: Guild }) {
 	return (
-		<div className="bg-card text-card-foreground relative w-full max-w-2xl overflow-hidden rounded-xl border shadow-sm">
-			<div className="absolute top-0 left-0 h-1 w-full bg-gradient-to-r from-green-500 to-emerald-600" />
+		<div className="bg-card/50 text-card-foreground relative w-full max-w-2xl overflow-hidden rounded-xl border shadow-sm">
 			<div className="flex flex-col gap-6 p-8">
 				<div className="space-y-2">
 					<h2 className="text-2xl font-semibold tracking-tight">
