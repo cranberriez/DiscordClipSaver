@@ -80,6 +80,9 @@ class MessageHandler:
         if not isinstance(author, discord.Member):
             # This is not critical but good to know for debugging missing nicknames/roles
             logger.debug(f"Upserting author {author.id} as {type(author).__name__} (missing guild context)")
+
+        nickname = getattr(author, "nick", None)
+        display_name = getattr(author, "display_name", None) or getattr(author, "global_name", None) or author.name
         
         await Author.update_or_create(
             user_id=str(author.id),
@@ -88,8 +91,8 @@ class MessageHandler:
                 "username": author.name,
                 "discriminator": author.discriminator or "0",
                 "avatar_url": str(author.avatar.url) if author.avatar else None,
-                "nickname": author.nick,
-                "display_name": author.display_name,
+                "nickname": nickname,
+                "display_name": display_name,
                 "guild_avatar_url": str(author.display_avatar.url) if author.display_avatar else None,
             }
         )

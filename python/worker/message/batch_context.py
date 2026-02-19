@@ -110,6 +110,9 @@ class BatchContext:
         """Add author data for batch upsert"""
         user_id = str(author.id)
 
+        nickname = getattr(author, "nick", None)
+        display_name = getattr(author, "display_name", None) or getattr(author, "global_name", None) or author.name
+
         # If it's an update scan, always add/update the author.
         # If it's a normal scan, only add if they are new.
         if self.is_update_scan or user_id not in self.existing_author_ids:
@@ -120,8 +123,8 @@ class BatchContext:
                     username=author.name,
                     discriminator=author.discriminator or "0",
                     avatar_url=str(author.avatar.url) if author.avatar else None,
-                    nickname=author.nick,
-                    display_name=author.display_name,
+                    nickname=nickname,
+                    display_name=display_name,
                     guild_avatar_url=str(author.display_avatar.url) if author.display_avatar else None,
                 )
 
