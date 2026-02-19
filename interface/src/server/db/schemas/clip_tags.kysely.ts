@@ -2,7 +2,7 @@ import type { ColumnType, Selectable, Insertable, Updateable } from "kysely";
 
 export interface ClipTagTable {
 	id: ColumnType<number, number | undefined, never>;
-	server_id: string;
+	guild_id: string;
 	clip_id: string;
 	tag_id: string;
 	applied_by_user_id: string;

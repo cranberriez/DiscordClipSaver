@@ -40,7 +40,7 @@ export interface Thumbnail {
 
 export interface Tag {
 	id: string;
-	server_id: string;
+	guild_id: string;
 	name: string;
 	slug: string;
 	color: string | null;

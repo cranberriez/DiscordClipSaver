@@ -2,7 +2,7 @@
 import { getDb } from "../../db";
 import { type SelectQueryBuilder, sql } from "kysely";
 import type { DB } from "../../schemas/db";
-import type { DbClip, DbMessage, DbThumbnail, DbServerTag } from "../../types";
+import type { DbClip, DbMessage, DbThumbnail } from "../../types";
 import { onlyFavorites, getFavoriteStatusForClips } from "./favorites";
 import { getTagsForClips } from "../tags";
 
@@ -27,7 +27,7 @@ export interface ClipWithMetadata {
 	clip: DbClip;
 	message: DbMessage;
 	thumbnails: DbThumbnail[];
-	tags: DbServerTag[];
+	tags: string[];
 	isFavorited?: boolean;
 	favorite_count: number;
 }
@@ -177,7 +177,7 @@ class RelatedDataFetcher {
 	): Promise<{
 		messages: DbMessage[];
 		thumbnails: DbThumbnail[];
-		tagsMap: Map<string, DbServerTag[]>;
+		tagsMap: Map<string, string[]>;
 		favoritesMap: Map<string, boolean>;
 	}> {
 		if (clipIds.length === 0) {
@@ -226,7 +226,7 @@ class ClipDataCombiner {
 		clips: (DbClip & { favorite_count: number | null })[],
 		messages: DbMessage[],
 		thumbnails: DbThumbnail[],
-		tagsMap: Map<string, DbServerTag[]>,
+		tagsMap: Map<string, string[]>,
 		favoritesMap: Map<string, boolean>,
 		requestedLimit: number
 	): ClipWithMetadata[] {

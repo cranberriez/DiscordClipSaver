@@ -453,6 +453,19 @@ export const api = {
 			),
 
 		/**
+		 * Create a new tag for a guild
+		 * POST /api/guilds/[guildId]/tags
+		 */
+		create: (
+			guildId: string,
+			data: { name: string; color?: string | null }
+		) =>
+			apiRequest<import("./clip").Tag>(`/api/guilds/${guildId}/tags`, {
+				method: "POST",
+				body: JSON.stringify(data),
+			}),
+
+		/**
 		 * Remove tags from a clip
 		 * DELETE /api/clips/[clipId]/tags
 		 */

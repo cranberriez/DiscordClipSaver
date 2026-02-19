@@ -61,7 +61,7 @@ export class ClipMapper {
 	static toTag(dbTag: DbServerTag): Tag {
 		return {
 			id: dbTag.id!,
-			server_id: dbTag.server_id,
+			guild_id: dbTag.guild_id,
 			name: dbTag.name,
 			slug: dbTag.slug,
 			color: dbTag.color || null,
@@ -81,7 +81,7 @@ export class ClipMapper {
 				dbClipWithMetadata.thumbnails.length > 0
 					? dbClipWithMetadata.thumbnails.map(ClipMapper.toThumbnail)
 					: null,
-			tags: dbClipWithMetadata.tags.map((t) => t.slug),
+			tags: dbClipWithMetadata.tags,
 			isFavorited: dbClipWithMetadata.isFavorited || false,
 			favorite_count: Number(dbClipWithMetadata.favorite_count) || 0,
 		};

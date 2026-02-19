@@ -25,6 +25,45 @@ export function useGuildTags(guildId: string) {
 }
 
 /**
+ * Hook to create a new tag for a guild.
+ */
+export function useCreateTag() {
+	const queryClient = useQueryClient();
+
+	return useMutation({
+		mutationFn: async ({
+			guildId,
+			name,
+			color,
+		}: {
+			guildId: string;
+			name: string;
+			color?: string | null;
+		}) => {
+			return api.tags.create(guildId, { name, color });
+		},
+		onSuccess: (newTag, { guildId }) => {
+			// Invalidate guild tags query
+			queryClient.invalidateQueries({
+				queryKey: tagKeys.byGuild(guildId),
+			});
+
+			// Optimistically update list?
+			// We can append the new tag to the cached list
+			queryClient.setQueryData<Tag[]>(
+				tagKeys.byGuild(guildId),
+				(oldTags) => {
+					if (!oldTags) return [newTag];
+					return [...oldTags, newTag].sort((a, b) =>
+						a.name.localeCompare(b.name)
+					);
+				}
+			);
+		},
+	});
+}
+
+/**
  * Hook to add tags to a clip with optimistic updates.
  */
 export function useAddClipTags() {
