@@ -283,11 +283,11 @@ class FavoriteClip(Model):
 class ServerTag(Model):
     """Tags that can be applied to clips within a server"""
     id = fields.UUIDField(pk=True)
-    guild = fields.ForeignKeyField("models.Guild", related_name="server_tags", source_field="server_id")
+    guild = fields.ForeignKeyField("models.Guild", related_name="server_tags")
     name = fields.CharField(max_length=100)
     slug = fields.CharField(max_length=100)
     color = fields.CharField(max_length=7, null=True)  # e.g. #7C3AED
-    created_by_user = fields.ForeignKeyField("models.User", related_name="created_tags", source_field="created_by_user_id")
+    created_by_user = fields.ForeignKeyField("models.User", related_name="created_tags")
     created_at = fields.DatetimeField(auto_now_add=True)
     is_active = fields.BooleanField(default=True)
 
@@ -302,10 +302,10 @@ class ServerTag(Model):
 class ClipTag(Model):
     """Join table between Clip and ServerTag"""
     id = fields.IntField(pk=True)  # Surrogate PK for Tortoise
-    guild = fields.ForeignKeyField("models.Guild", related_name="clip_tags", source_field="server_id")
-    clip = fields.ForeignKeyField("models.Clip", related_name="tags", source_field="clip_id")
-    tag = fields.ForeignKeyField("models.ServerTag", related_name="tagged_clips", source_field="tag_id")
-    applied_by_user = fields.ForeignKeyField("models.User", related_name="applied_tags", source_field="applied_by_user_id")
+    guild = fields.ForeignKeyField("models.Guild", related_name="clip_tags")
+    clip = fields.ForeignKeyField("models.Clip", related_name="tags")
+    tag = fields.ForeignKeyField("models.ServerTag", related_name="tagged_clips")
+    applied_by_user = fields.ForeignKeyField("models.User", related_name="applied_tags")
     applied_at = fields.DatetimeField(auto_now_add=True)
 
     class Meta:
