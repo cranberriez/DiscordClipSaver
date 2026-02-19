@@ -1,177 +1,193 @@
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api/client";
 import {
-    clipKeys,
-    patchClipAcrossLists,
-    patchClipDetail,
+	clipKeys,
+	patchClipAcrossLists,
+	patchClipDetail,
 } from "@/lib/queries/clip";
 import type { Tag, FullClip } from "@/lib/api/clip";
+
+export const tagKeys = {
+	all: ["tags"] as const,
+	byGuild: (guildId: string) => [...tagKeys.all, "guild", guildId] as const,
+};
+
+/**
+ * Hook to fetch all tags for a guild.
+ */
+export function useGuildTags(guildId: string) {
+	return useQuery({
+		queryKey: tagKeys.byGuild(guildId),
+		queryFn: () => api.tags.list(guildId),
+		enabled: !!guildId,
+		staleTime: 5 * 60 * 1000, // 5 minutes
+	});
+}
 
 /**
  * Hook to add tags to a clip with optimistic updates.
  */
 export function useAddClipTags() {
-    const queryClient = useQueryClient();
+	const queryClient = useQueryClient();
 
-    return useMutation({
-        mutationFn: async ({
-            clipId,
-            tags,
-        }: {
-            clipId: string;
-            tags: Tag[];
-        }) => {
-            const tagIds = tags.map(t => t.id);
-            return api.tags.add(clipId, tagIds);
-        },
-        onMutate: async ({ clipId, tags: newTags }) => {
-            // Cancel any outgoing refetches
-            await queryClient.cancelQueries({
-                queryKey: clipKeys.detail(clipId),
-            });
-            await queryClient.cancelQueries({
-                queryKey: clipKeys.lists(),
-            });
+	return useMutation({
+		mutationFn: async ({
+			clipId,
+			tags,
+		}: {
+			clipId: string;
+			tags: Tag[];
+		}) => {
+			const tagIds = tags.map((t) => t.id);
+			return api.tags.add(clipId, tagIds);
+		},
+		onMutate: async ({ clipId, tags: newTags }) => {
+			// Cancel any outgoing refetches
+			await queryClient.cancelQueries({
+				queryKey: clipKeys.detail(clipId),
+			});
+			await queryClient.cancelQueries({
+				queryKey: clipKeys.lists(),
+			});
 
-            // Helper to get current tags from cache
-            const getCurrentTags = (): Tag[] => {
-                const clip = queryClient.getQueryData<FullClip>(
-                    clipKeys.detail(clipId)
-                );
-                if (clip) return clip.tags;
+			// Helper to get current tags from cache
+			const getCurrentTags = (): string[] => {
+				const clip = queryClient.getQueryData<FullClip>(
+					clipKeys.detail(clipId)
+				);
+				if (clip) return clip.tags;
 
-                // Fallback: try to find in list
-                const lists = queryClient.getQueriesData<any>({
-                    queryKey: clipKeys.lists(),
-                });
-                for (const [, data] of lists) {
-                    if (!data?.pages) continue;
-                    for (const page of data.pages) {
-                        const c = page.clips?.find(
-                            (c: FullClip) => c.clip.id === clipId
-                        );
-                        if (c) return c.tags;
-                    }
-                }
-                return [];
-            };
+				// Fallback: try to find in list
+				const lists = queryClient.getQueriesData<any>({
+					queryKey: clipKeys.lists(),
+				});
+				for (const [, data] of lists) {
+					if (!data?.pages) continue;
+					for (const page of data.pages) {
+						const c = page.clips?.find(
+							(c: FullClip) => c.clip.id === clipId
+						);
+						if (c) return c.tags;
+					}
+				}
+				return [];
+			};
 
-            const currentTags = getCurrentTags();
-            
-            // Create a map for deduplication
-            const tagMap = new Map<string, Tag>();
-            currentTags.forEach(t => tagMap.set(t.id, t));
-            newTags.forEach(t => tagMap.set(t.id, t));
-            
-            const updatedTags = Array.from(tagMap.values());
+			const currentTags = getCurrentTags();
 
-            // Optimistically update
-            patchClipDetail(queryClient, clipId, { tags: updatedTags });
-            patchClipAcrossLists(queryClient, clipId, { tags: updatedTags });
+			// Create a set for deduplication
+			const tagSet = new Set(currentTags);
+			newTags.forEach((t) => tagSet.add(t.slug));
 
-            return { previousTags: currentTags };
-        },
-        onError: (err, { clipId }, context) => {
-            // Rollback
-            if (context?.previousTags) {
-                patchClipDetail(queryClient, clipId, {
-                    tags: context.previousTags,
-                });
-                patchClipAcrossLists(queryClient, clipId, {
-                    tags: context.previousTags,
-                });
-            }
-        },
-        onSettled: (data, error, { clipId }) => {
-            // Invalidate to ensure consistency
-            queryClient.invalidateQueries({
-                queryKey: clipKeys.detail(clipId),
-            });
-            queryClient.invalidateQueries({
-                queryKey: clipKeys.lists(),
-            });
-        },
-    });
+			const updatedTags = Array.from(tagSet);
+
+			// Optimistically update
+			patchClipDetail(queryClient, clipId, { tags: updatedTags });
+			patchClipAcrossLists(queryClient, clipId, { tags: updatedTags });
+
+			return { previousTags: currentTags };
+		},
+		onError: (err, { clipId }, context) => {
+			// Rollback
+			if (context?.previousTags) {
+				patchClipDetail(queryClient, clipId, {
+					tags: context.previousTags,
+				});
+				patchClipAcrossLists(queryClient, clipId, {
+					tags: context.previousTags,
+				});
+			}
+		},
+		onSettled: (data, error, { clipId }) => {
+			// Invalidate to ensure consistency
+			queryClient.invalidateQueries({
+				queryKey: clipKeys.detail(clipId),
+			});
+			queryClient.invalidateQueries({
+				queryKey: clipKeys.lists(),
+			});
+		},
+	});
 }
 
 /**
  * Hook to remove tags from a clip with optimistic updates.
  */
 export function useRemoveClipTags() {
-    const queryClient = useQueryClient();
+	const queryClient = useQueryClient();
 
-    return useMutation({
-        mutationFn: async ({
-            clipId,
-            tags,
-        }: {
-            clipId: string;
-            tags: Tag[];
-        }) => {
-            const tagIds = tags.map(t => t.id);
-            return api.tags.remove(clipId, tagIds);
-        },
-        onMutate: async ({ clipId, tags: tagsToRemove }) => {
-            // Cancel any outgoing refetches
-            await queryClient.cancelQueries({
-                queryKey: clipKeys.detail(clipId),
-            });
-            await queryClient.cancelQueries({
-                queryKey: clipKeys.lists(),
-            });
+	return useMutation({
+		mutationFn: async ({
+			clipId,
+			tags,
+		}: {
+			clipId: string;
+			tags: Tag[];
+		}) => {
+			const tagIds = tags.map((t) => t.id);
+			return api.tags.remove(clipId, tagIds);
+		},
+		onMutate: async ({ clipId, tags: tagsToRemove }) => {
+			// Cancel any outgoing refetches
+			await queryClient.cancelQueries({
+				queryKey: clipKeys.detail(clipId),
+			});
+			await queryClient.cancelQueries({
+				queryKey: clipKeys.lists(),
+			});
 
-            // Helper to get current tags from cache
-            const getCurrentTags = (): Tag[] => {
-                const clip = queryClient.getQueryData<FullClip>(
-                    clipKeys.detail(clipId)
-                );
-                if (clip) return clip.tags;
+			// Helper to get current tags from cache
+			const getCurrentTags = (): string[] => {
+				const clip = queryClient.getQueryData<FullClip>(
+					clipKeys.detail(clipId)
+				);
+				if (clip) return clip.tags;
 
-                // Fallback: try to find in list
-                const lists = queryClient.getQueriesData<any>({
-                    queryKey: clipKeys.lists(),
-                });
-                for (const [, data] of lists) {
-                    if (!data?.pages) continue;
-                    for (const page of data.pages) {
-                        const c = page.clips?.find(
-                            (c: FullClip) => c.clip.id === clipId
-                        );
-                        if (c) return c.tags;
-                    }
-                }
-                return [];
-            };
+				// Fallback: try to find in list
+				const lists = queryClient.getQueriesData<any>({
+					queryKey: clipKeys.lists(),
+				});
+				for (const [, data] of lists) {
+					if (!data?.pages) continue;
+					for (const page of data.pages) {
+						const c = page.clips?.find(
+							(c: FullClip) => c.clip.id === clipId
+						);
+						if (c) return c.tags;
+					}
+				}
+				return [];
+			};
 
-            const currentTags = getCurrentTags();
-            const removeIds = new Set(tagsToRemove.map(t => t.id));
-            const updatedTags = currentTags.filter(t => !removeIds.has(t.id));
+			const currentTags = getCurrentTags();
+			const removeSlugs = new Set(tagsToRemove.map((t) => t.slug));
+			const updatedTags = currentTags.filter((t) => !removeSlugs.has(t));
 
-            // Optimistically update
-            patchClipDetail(queryClient, clipId, { tags: updatedTags });
-            patchClipAcrossLists(queryClient, clipId, { tags: updatedTags });
+			// Optimistically update
+			patchClipDetail(queryClient, clipId, { tags: updatedTags });
+			patchClipAcrossLists(queryClient, clipId, { tags: updatedTags });
 
-            return { previousTags: currentTags };
-        },
-        onError: (err, { clipId }, context) => {
-            // Rollback
-            if (context?.previousTags) {
-                patchClipDetail(queryClient, clipId, {
-                    tags: context.previousTags,
-                });
-                patchClipAcrossLists(queryClient, clipId, {
-                    tags: context.previousTags,
-                });
-            }
-        },
-        onSettled: (data, error, { clipId }) => {
-            // Invalidate to ensure consistency
-            queryClient.invalidateQueries({
-                queryKey: clipKeys.detail(clipId),
-            });
-            queryClient.invalidateQueries({
-                queryKey: clipKeys.lists(),
-            });
-        },
-    });
+			return { previousTags: currentTags };
+		},
+		onError: (err, { clipId }, context) => {
+			// Rollback
+			if (context?.previousTags) {
+				patchClipDetail(queryClient, clipId, {
+					tags: context.previousTags,
+				});
+				patchClipAcrossLists(queryClient, clipId, {
+					tags: context.previousTags,
+				});
+			}
+		},
+		onSettled: (data, error, { clipId }) => {
+			// Invalidate to ensure consistency
+			queryClient.invalidateQueries({
+				queryKey: clipKeys.detail(clipId),
+			});
+			queryClient.invalidateQueries({
+				queryKey: clipKeys.lists(),
+			});
+		},
+	});
 }

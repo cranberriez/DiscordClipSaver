@@ -81,7 +81,7 @@ export class ClipMapper {
 				dbClipWithMetadata.thumbnails.length > 0
 					? dbClipWithMetadata.thumbnails.map(ClipMapper.toThumbnail)
 					: null,
-			tags: dbClipWithMetadata.tags.map(ClipMapper.toTag),
+			tags: dbClipWithMetadata.tags.map((t) => t.slug),
 			isFavorited: dbClipWithMetadata.isFavorited || false,
 			favorite_count: Number(dbClipWithMetadata.favorite_count) || 0,
 		};

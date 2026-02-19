@@ -433,6 +433,13 @@ export const api = {
 	// ========================================================================
 	tags: {
 		/**
+		 * Get all tags for a guild
+		 * GET /api/guilds/[guildId]/tags
+		 */
+		list: (guildId: string) =>
+			apiRequest<import("./clip").Tag[]>(`/api/guilds/${guildId}/tags`),
+
+		/**
 		 * Add tags to a clip
 		 * POST /api/clips/[clipId]/tags
 		 */

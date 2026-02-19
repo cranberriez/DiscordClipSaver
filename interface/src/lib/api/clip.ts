@@ -53,7 +53,7 @@ export interface FullClip {
 	clip: Clip;
 	message: Message;
 	thumbnail: Thumbnail[] | null;
-	tags: Tag[];
+	tags: string[]; // slugs
 	isFavorited?: boolean;
 	favorite_count: number;
 }

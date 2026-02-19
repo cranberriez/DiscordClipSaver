@@ -4,12 +4,7 @@ import {
 	type QueryClient,
 } from "@tanstack/react-query";
 import { api } from "@/lib/api/client";
-import {
-	ClipListParams,
-	ClipListResponse,
-	FullClip,
-	Tag,
-} from "@/lib/api/clip";
+import { ClipListParams, ClipListResponse, FullClip } from "@/lib/api/clip";
 
 // ============================================================================
 // Query Keys Factory
@@ -143,7 +138,7 @@ export function isClipExpired(clip: FullClip): boolean {
 export type ClipPatch = {
 	cdn_url?: string;
 	expires_at?: string | Date;
-	tags?: Tag[];
+	tags?: string[];
 };
 
 /** Patch the single-clip detail cache. */
