@@ -7,7 +7,7 @@ import { randomUUID } from "crypto";
 
 // Validation schema for creating a tag
 const createTagSchema = z.object({
-	name: z.string().min(1).max(32),
+	name: z.string().min(1).max(64, "Tag name is too long"),
 	color: z
 		.string()
 		.regex(/^#[0-9A-F]{6}$/i, "Invalid color format")
@@ -97,6 +97,13 @@ export async function POST(
 		if (!slug) {
 			return NextResponse.json(
 				{ error: "Invalid tag name, cannot generate slug" },
+				{ status: 400 }
+			);
+		}
+
+		if (slug.length > 32) {
+			return NextResponse.json(
+				{ error: "Tag name is too long" },
 				{ status: 400 }
 			);
 		}
