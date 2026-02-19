@@ -13,13 +13,8 @@ import {
 	useGuildTags,
 	useAddClipTags,
 	useRemoveClipTags,
-	useCreateTag,
 } from "@/lib/queries/tags";
-import { useUser } from "@/lib/hooks/useUser";
-import { useGuild } from "@/lib/hooks/useGuilds";
 import { TagBadge } from "./TagBadge";
-import { Separator } from "@/components/ui/separator";
-import { toast } from "sonner";
 import type { Tag } from "@/lib/api/clip";
 
 interface TagManagerProps {
@@ -47,20 +42,10 @@ export function TagManager({
 
 	// Queries
 	const { data: guildTags, isLoading: isLoadingTags } = useGuildTags(guildId);
-	const { data: userData } = useUser();
-	const { data: guild } = useGuild(guildId);
 
 	// Mutations
 	const addTags = useAddClipTags();
 	const removeTags = useRemoveClipTags();
-	const createTag = useCreateTag();
-
-	// Permissions
-	const user = userData?.database;
-	const isGuildOwner = user?.id === guild?.owner_id;
-	const isAdmin = user?.roles === "admin";
-	// Only Guild Owner or Admin can CREATE new tags
-	const canCreateTags = isGuildOwner || isAdmin;
 
 	// Derived state
 	const resolvedTags = useMemo(() => {
@@ -108,13 +93,6 @@ export function TagManager({
 			.sort((a, b) => a.slug.localeCompare(b.slug));
 	}, [guildTags, searchQuery]);
 
-	const exactMatch = useMemo(() => {
-		if (!guildTags) return undefined;
-		return guildTags.find(
-			(tag) => tag.name.toLowerCase() === searchQuery.toLowerCase()
-		);
-	}, [guildTags, searchQuery]);
-
 	// Handlers
 	const handleAddTag = (tag: Tag) => {
 		addTags.mutate({ clipId, tags: [tag] });
@@ -123,30 +101,6 @@ export function TagManager({
 
 	const handleRemoveTag = (tag: Tag) => {
 		removeTags.mutate({ clipId, tags: [tag] });
-	};
-
-	const handleCreateTag = () => {
-		if (!searchQuery.trim()) return;
-
-		createTag.mutate(
-			{
-				guildId,
-				name: searchQuery.trim(),
-				color: null,
-			},
-			{
-				onSuccess: (newTag) => {
-					// Auto-add the newly created tag to the clip
-					addTags.mutate({ clipId, tags: [newTag] });
-					setSearchQuery("");
-					toast.success(`Tag "${newTag.name}" created and added`);
-				},
-				onError: (error) => {
-					toast.error(error.message || "Failed to create tag");
-					console.error(error);
-				},
-			}
-		);
 	};
 
 	if (readOnly && resolvedTags.length === 0) {
@@ -236,30 +190,6 @@ export function TagManager({
 								</div>
 							) : (
 								<>
-									{/* Create New Option */}
-									{searchQuery &&
-										!exactMatch &&
-										canCreateTags && (
-											<button
-												onClick={handleCreateTag}
-												disabled={createTag.isPending}
-												className="hover:bg-accent hover:text-accent-foreground text-primary flex w-full cursor-pointer items-center rounded-sm px-2 py-1.5 text-sm"
-											>
-												<Plus className="mr-2 h-3 w-3" />
-												Create &quot;{searchQuery}&quot;
-												{createTag.isPending && (
-													<Loader2 className="ml-auto h-3 w-3 animate-spin" />
-												)}
-											</button>
-										)}
-
-									{searchQuery &&
-										!exactMatch &&
-										canCreateTags &&
-										filteredAvailableTags.length > 0 && (
-											<Separator className="my-1" />
-										)}
-
 									{/* Existing Tags */}
 									{filteredAvailableTags.length > 0 &&
 										!searchQuery && (
@@ -276,8 +206,7 @@ export function TagManager({
 										)}
 
 									{filteredAvailableTags.length === 0 &&
-										searchQuery &&
-										!canCreateTags && (
+										searchQuery && (
 											<div className="text-muted-foreground p-2 text-center text-xs">
 												No tags found
 											</div>

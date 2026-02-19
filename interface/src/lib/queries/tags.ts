@@ -64,6 +64,40 @@ export function useCreateTag() {
 }
 
 /**
+ * Hook to delete a tag from a guild.
+ */
+export function useDeleteGuildTag() {
+	const queryClient = useQueryClient();
+
+	return useMutation({
+		mutationFn: async ({
+			guildId,
+			tagId,
+		}: {
+			guildId: string;
+			tagId: string;
+		}) => {
+			return api.tags.delete(guildId, tagId);
+		},
+		onSuccess: (_, { guildId, tagId }) => {
+			// Invalidate guild tags query
+			queryClient.invalidateQueries({
+				queryKey: tagKeys.byGuild(guildId),
+			});
+
+			// Optimistically update list
+			queryClient.setQueryData<Tag[]>(
+				tagKeys.byGuild(guildId),
+				(oldTags) => {
+					if (!oldTags) return [];
+					return oldTags.filter((t) => t.id !== tagId);
+				}
+			);
+		},
+	});
+}
+
+/**
  * Hook to add tags to a clip with optimistic updates.
  */
 export function useAddClipTags() {

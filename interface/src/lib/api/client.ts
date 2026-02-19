@@ -466,6 +466,18 @@ export const api = {
 			}),
 
 		/**
+		 * Delete a tag from a guild
+		 * DELETE /api/guilds/[guildId]/tags/[tagId]
+		 */
+		delete: (guildId: string, tagId: string) =>
+			apiRequest<{ success: boolean }>(
+				`/api/guilds/${guildId}/tags/${tagId}`,
+				{
+					method: "DELETE",
+				}
+			),
+
+		/**
 		 * Remove tags from a clip
 		 * DELETE /api/clips/[clipId]/tags
 		 */
