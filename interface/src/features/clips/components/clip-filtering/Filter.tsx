@@ -1,6 +1,6 @@
 "use client";
 
-import { Filter } from "lucide-react";
+import { Filter, Tag } from "lucide-react";
 import { FilterNavButton } from "./FilterButton";
 import { useClipFiltersStore } from "../../stores/useClipFiltersStore";
 import {
@@ -9,16 +9,29 @@ import {
 	DropdownMenuContent,
 	DropdownMenuItem,
 	DropdownMenuLabel,
+	DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
 
 export function ViewFilter() {
-	const { favoritesOnly, setFavoritesOnly } = useClipFiltersStore();
+	const {
+		favoritesOnly,
+		setFavoritesOnly,
+		openTagModal,
+		tagsAny,
+		tagsAll,
+		tagsExclude,
+	} = useClipFiltersStore();
+
+	const hasActiveTagFilters =
+		tagsAny.length > 0 || tagsAll.length > 0 || tagsExclude.length > 0;
 
 	return (
 		<DropdownMenu>
 			<DropdownMenuTrigger asChild>
 				<div>
-					<FilterNavButton activeState={!!favoritesOnly}>
+					<FilterNavButton
+						activeState={!!favoritesOnly || hasActiveTagFilters}
+					>
 						<Filter className="h-5 w-5" />
 						<span>Filter</span>
 					</FilterNavButton>
@@ -40,6 +53,23 @@ export function ViewFilter() {
 					} cursor-pointer`}
 				>
 					Favorites Only
+				</DropdownMenuItem>
+
+				<DropdownMenuSeparator />
+
+				<DropdownMenuLabel className="text-foreground/50 text-xs tracking-wider">
+					TAGS
+				</DropdownMenuLabel>
+				<DropdownMenuItem
+					onClick={openTagModal}
+					className={`${
+						hasActiveTagFilters
+							? "bg-accent-foreground! text-accent!"
+							: ""
+					} flex cursor-pointer items-center gap-2`}
+				>
+					<Tag className="h-4 w-4" />
+					Filter by Tags
 				</DropdownMenuItem>
 			</DropdownMenuContent>
 		</DropdownMenu>

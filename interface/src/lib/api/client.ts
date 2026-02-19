@@ -333,6 +333,12 @@ export const api = {
 				searchParams.set("channelIds", params.channelIds.join(","));
 			if (params.authorIds && params.authorIds.length > 0)
 				searchParams.set("authorIds", params.authorIds.join(","));
+			if (params.tagsAny && params.tagsAny.length > 0)
+				searchParams.set("tagsAny", params.tagsAny.join(","));
+			if (params.tagsAll && params.tagsAll.length > 0)
+				searchParams.set("tagsAll", params.tagsAll.join(","));
+			if (params.tagsExclude && params.tagsExclude.length > 0)
+				searchParams.set("tagsExclude", params.tagsExclude.join(","));
 			if (params.limit)
 				searchParams.set("limit", params.limit.toString());
 			if (params.offset)

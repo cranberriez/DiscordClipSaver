@@ -75,6 +75,9 @@ export interface ClipListParams {
 	guildId: string;
 	channelIds?: string[];
 	authorIds?: string[];
+	tagsAny?: string[];
+	tagsAll?: string[];
+	tagsExclude?: string[];
 	limit?: number;
 	offset?: number;
 	sortOrder?: SortOrder;

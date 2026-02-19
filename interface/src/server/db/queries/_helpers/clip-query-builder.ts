@@ -13,6 +13,9 @@ export interface ClipQueryFilters {
 	userId?: string;
 	favoritesOnly?: boolean;
 	isGuildOwner?: boolean;
+	tagsAny?: string[];
+	tagsAll?: string[];
+	tagsExclude?: string[];
 }
 
 export interface ClipQueryOptions {
@@ -105,6 +108,70 @@ class ClipQueryBuilder {
 
 		if (filters.favoritesOnly && filters.userId) {
 			this.query = onlyFavorites(this.query, filters.userId);
+		}
+
+		// Tag Filters
+		if (filters.tagsAny && filters.tagsAny.length > 0) {
+			this.query = this.query.where(({ exists, selectFrom }) =>
+				exists(
+					selectFrom("clip_tags")
+						.innerJoin(
+							"server_tags",
+							"server_tags.id",
+							"clip_tags.tag_id"
+						)
+						.select("clip_tags.id")
+						.whereRef("clip_tags.clip_id", "=", "clip.id")
+						.where("server_tags.slug", "in", filters.tagsAny!)
+						.where("server_tags.is_active", "=", true)
+				)
+			);
+		}
+
+		if (filters.tagsExclude && filters.tagsExclude.length > 0) {
+			this.query = this.query.where(({ not, exists, selectFrom }) =>
+				not(
+					exists(
+						selectFrom("clip_tags")
+							.innerJoin(
+								"server_tags",
+								"server_tags.id",
+								"clip_tags.tag_id"
+							)
+							.select("clip_tags.id")
+							.whereRef("clip_tags.clip_id", "=", "clip.id")
+							.where(
+								"server_tags.slug",
+								"in",
+								filters.tagsExclude!
+							)
+							.where("server_tags.is_active", "=", true)
+					)
+				)
+			);
+		}
+
+		if (filters.tagsAll && filters.tagsAll.length > 0) {
+			const requiredCount = filters.tagsAll.length;
+			this.query = this.query.where((eb) =>
+				eb(
+					eb
+						.selectFrom("clip_tags")
+						.innerJoin(
+							"server_tags",
+							"server_tags.id",
+							"clip_tags.tag_id"
+						)
+						.select((sub) =>
+							sub.fn.count<number>("server_tags.id").as("count")
+						)
+						.whereRef("clip_tags.clip_id", "=", "clip.id")
+						.where("server_tags.slug", "in", filters.tagsAll!)
+						.where("server_tags.is_active", "=", true),
+					"=",
+					requiredCount
+				)
+			);
 		}
 
 		return this;

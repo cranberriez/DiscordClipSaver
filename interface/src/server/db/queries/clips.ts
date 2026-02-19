@@ -24,7 +24,10 @@ export async function getClipsByGuildId(
 	authorIds?: string[],
 	userId?: string,
 	favoritesOnly?: boolean,
-	isGuildOwner?: boolean
+	isGuildOwner?: boolean,
+	tagsAny?: string[],
+	tagsAll?: string[],
+	tagsExclude?: string[]
 ): Promise<ClipWithMetadata[]> {
 	return ClipQueryOrchestrator.getClips(
 		{
@@ -33,6 +36,9 @@ export async function getClipsByGuildId(
 			userId,
 			favoritesOnly,
 			isGuildOwner,
+			tagsAny,
+			tagsAll,
+			tagsExclude,
 		},
 		{
 			limit,
@@ -55,7 +61,10 @@ export async function getClipsByChannelIds(
 	authorIds?: string[],
 	userId?: string,
 	favoritesOnly?: boolean,
-	isGuildOwner?: boolean
+	isGuildOwner?: boolean,
+	tagsAny?: string[],
+	tagsAll?: string[],
+	tagsExclude?: string[]
 ): Promise<ClipWithMetadata[]> {
 	return ClipQueryOrchestrator.getClips(
 		{
@@ -64,6 +73,9 @@ export async function getClipsByChannelIds(
 			userId,
 			favoritesOnly,
 			isGuildOwner,
+			tagsAny,
+			tagsAll,
+			tagsExclude,
 		},
 		{
 			limit,

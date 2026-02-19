@@ -7,3 +7,4 @@ export * from "./Filter";
 export * from "./Server";
 export * from "./Search";
 export * from "./ServerIcon";
+export * from "./TagFilterModal";

@@ -13,6 +13,7 @@ import {
 	AuthorSelectModal,
 	ClipModal,
 } from "@/features/clips/components/modals";
+import { TagFilterModal } from "@/features/clips/components/clip-filtering";
 import { useClipFiltersStore } from "@/features/clips/stores/useClipFiltersStore";
 import type { FullClip } from "@/lib/api/types";
 import { toast } from "sonner";
@@ -22,7 +23,8 @@ import { toast } from "sonner";
  * This component is wrapped in Suspense to handle useSearchParams() properly.
  */
 export function ClipsPageContent() {
-	const { selectedGuildId, openGuildModal } = useClipFiltersStore();
+	const { selectedGuildId, openGuildModal, isTagModalOpen, closeTagModal } =
+		useClipFiltersStore();
 
 	// URL <-> Store synchronization and page param
 	const { hydrated, page, setPage, clipId, setClipId } = useClipsUrlSync();
@@ -226,6 +228,14 @@ export function ClipsPageContent() {
 				isLoading={channelsLoading}
 			/>
 			<AuthorSelectModal authors={authors} isLoading={false} />
+
+			{selectedGuildId && (
+				<TagFilterModal
+					isOpen={isTagModalOpen}
+					onClose={closeTagModal}
+					guildId={selectedGuildId}
+				/>
+			)}
 
 			{/* Clip Modal */}
 			{selectedClip && (

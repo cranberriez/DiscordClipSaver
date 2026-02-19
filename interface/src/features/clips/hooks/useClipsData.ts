@@ -16,6 +16,9 @@ export function useClipsData(opts: { hydrated: boolean; targetPage?: number }) {
 		selectedGuildId,
 		selectedChannelIds,
 		selectedAuthorIds,
+		tagsAny,
+		tagsAll,
+		tagsExclude,
 		searchQuery,
 		sortOrder,
 		sortType,
@@ -60,30 +63,36 @@ export function useClipsData(opts: { hydrated: boolean; targetPage?: number }) {
 			selectedAuthorIds.length < authors.length
 				? selectedAuthorIds
 				: undefined,
+		tagsAny: tagsAny.length > 0 ? tagsAny : undefined,
+		tagsAll: tagsAll.length > 0 ? tagsAll : undefined,
+		tagsExclude: tagsExclude.length > 0 ? tagsExclude : undefined,
 		limit: 50,
 		sortOrder: sortOrder,
 		sortType: sortType,
 		favorites: favoritesOnly,
 	});
 
+	const {
+		data: clipsData,
+		hasNextPage,
+		isFetchingNextPage,
+		fetchNextPage,
+	} = clipsQuery;
+
 	useEffect(() => {
 		if (!hydrated) return;
 		const want = Math.max(1, Math.floor(targetPage));
-		const have = clipsQuery.data?.pages.length ?? 0;
-		if (
-			clipsQuery.hasNextPage &&
-			have < want &&
-			!clipsQuery.isFetchingNextPage
-		) {
-			clipsQuery.fetchNextPage();
+		const have = clipsData?.pages.length ?? 0;
+		if (hasNextPage && have < want && !isFetchingNextPage) {
+			fetchNextPage();
 		}
 	}, [
 		hydrated,
 		targetPage,
-		clipsQuery.data?.pages.length,
-		clipsQuery.hasNextPage,
-		clipsQuery.isFetchingNextPage,
-		clipsQuery.fetchNextPage,
+		clipsData?.pages.length,
+		hasNextPage,
+		isFetchingNextPage,
+		fetchNextPage,
 	]);
 
 	// Flatten and de-duplicate by clip ID to avoid duplicate renders across pages
