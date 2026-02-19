@@ -10,142 +10,161 @@ import { Guild } from "@/lib/api/guild";
 import { MoveRight } from "lucide-react";
 
 const STATUS_MESSAGES = {
-    ok: "Success",
-    denied: "Denied",
-    expired: "Expired",
-    invalid: "Invalid",
-    already_claimed: "Already Claimed",
+	ok: "Success",
+	denied: "Denied",
+	expired: "Expired",
+	invalid: "Invalid",
+	already_claimed: "Already Claimed",
 };
 
 function InstallContent() {
-    const searchParams = useSearchParams();
-    const guildId = searchParams.get("guild");
-    const status = searchParams.get("status");
-    const error = searchParams.get("error");
-    const error_description = searchParams.get("error_description");
+	const searchParams = useSearchParams();
+	const guildId = searchParams.get("guild");
+	const status = searchParams.get("status");
+	const error = searchParams.get("error");
+	const error_description = searchParams.get("error_description");
 
-    const guild = useGuild(guildId ?? "");
+	const guild = useGuild(guildId ?? "");
+	console.log(guild);
 
-    console.log(searchParams);
+	console.log(searchParams);
 
-    return (
-        <div className="flex flex-col items-center justify-center pb-24 h-full">
-            <div className="flex flex-col items-center justify-center gap-24">
-                <StatusDisplay status={status ?? ""} />
-                <StatusMessage
-                    status={status ?? ""}
-                    error={error ?? null}
-                    error_description={error_description ?? null}
-                    guildName={guild.data?.name ?? ""}
-                />
+	return (
+		<div className="flex h-full flex-col items-center justify-center pb-24">
+			<div className="flex flex-col items-center justify-center gap-24">
+				<StatusDisplay status={status ?? ""} />
+				<StatusMessage
+					status={status ?? ""}
+					error={error ?? null}
+					error_description={error_description ?? null}
+					guildName={guild.data?.name ?? ""}
+				/>
 
-                {guild.data && <WhatNext guild={guild.data} />}
-            </div>
-        </div>
-    );
+				{guild.data && <WhatNext guild={guild.data} />}
+			</div>
+		</div>
+	);
 }
 
 function StatusDisplay({ status }: { status: string }) {
-    const STATUS_CLASSES = {
-        ok: "bg-green-500/15 text-green-400 shadow-[0_0_80px_20px_rgba(34,197,94,0.35)]",
-        denied: "bg-red-500/15 text-red-400 shadow-[0_0_80px_20px_rgba(239,68,68,0.35)]",
-        expired:
-            "bg-yellow-500/15 text-yellow-400 shadow-[0_0_80px_20px_rgba(234,179,8,0.35)]",
-        invalid:
-            "bg-red-500/15 text-red-400 shadow-[0_0_80px_20px_rgba(239,68,68,0.35)]",
-        already_claimed:
-            "bg-red-500/15 text-red-400 shadow-[0_0_80px_20px_rgba(239,68,68,0.35)]",
-    };
+	const STATUS_CLASSES = {
+		ok: "bg-green-500/15 text-green-400 shadow-[0_0_80px_20px_rgba(34,197,94,0.35)]",
+		denied: "bg-red-500/15 text-red-400 shadow-[0_0_80px_20px_rgba(239,68,68,0.35)]",
+		expired:
+			"bg-yellow-500/15 text-yellow-400 shadow-[0_0_80px_20px_rgba(234,179,8,0.35)]",
+		invalid:
+			"bg-red-500/15 text-red-400 shadow-[0_0_80px_20px_rgba(239,68,68,0.35)]",
+		already_claimed:
+			"bg-red-500/15 text-red-400 shadow-[0_0_80px_20px_rgba(239,68,68,0.35)]",
+	};
 
-    return (
-        <div
-            className={`flex items-center justify-center w-64 px-4 py-6 rounded-3xl text-xl font-semibold ${
-                STATUS_CLASSES[status as keyof typeof STATUS_CLASSES]
-            }`}
-        >
-            {STATUS_MESSAGES[status as keyof typeof STATUS_MESSAGES] ?? status}
-        </div>
-    );
+	return (
+		<div
+			className={`flex w-64 items-center justify-center rounded-3xl px-4 py-6 text-xl font-semibold ${
+				STATUS_CLASSES[status as keyof typeof STATUS_CLASSES]
+			}`}
+		>
+			{STATUS_MESSAGES[status as keyof typeof STATUS_MESSAGES] ?? status}
+		</div>
+	);
 }
 
 function StatusMessage({
-    status,
-    error,
-    error_description,
-    guildName,
+	status,
+	error,
+	error_description,
+	guildName,
 }: {
-    status: string;
-    error: string | null;
-    error_description: string | null;
-    guildName: string;
+	status: string;
+	error: string | null;
+	error_description: string | null;
+	guildName: string;
 }) {
-    const ERORR_MESSAGES = {
-        access_denied: "Something went wrong, please try again.",
-        already_claimed: "This guild has already been claimed!",
-    };
+	const ERORR_MESSAGES = {
+		access_denied: "Something went wrong, please try again.",
+		already_claimed: "This guild has already been claimed!",
+	};
 
-    console.log(status);
-
-    if (status === "ok") {
-        <div className="flex flex-col gap-2">
-            <p className="text-xl text-center">
-                You have successfully claimed {guildName}
-            </p>
-            <p className="text-center text-muted-foreground">
-                The bot is now ready to start scanning and saving clips!
-            </p>
-        </div>;
-    } else if (status === "already_claimed") {
-        return (
-            <p className="text-xl text-center">
-                {ERORR_MESSAGES[status as keyof typeof ERORR_MESSAGES]}
-            </p>
-        );
-    } else {
-        return (
-            <p className="text-xl text-center">
-                {ERORR_MESSAGES[error as keyof typeof ERORR_MESSAGES]}
-            </p>
-        );
-    }
+	if (status === "ok") {
+		return (
+			<div className="flex flex-col gap-2">
+				<p className="text-center text-xl">
+					You have successfully claimed {guildName}
+				</p>
+				<p className="text-muted-foreground text-center">
+					The bot is now ready to start scanning and saving clips!
+				</p>
+			</div>
+		);
+	} else if (status === "already_claimed") {
+		return (
+			<p className="text-center text-xl">
+				{ERORR_MESSAGES[status as keyof typeof ERORR_MESSAGES]}
+			</p>
+		);
+	} else {
+		return (
+			<p className="text-center text-xl">
+				{ERORR_MESSAGES[error as keyof typeof ERORR_MESSAGES]}
+			</p>
+		);
+	}
 }
 
 function WhatNext({ guild }: { guild: Guild }) {
-    return (
-        <div className="flex flex-col px-8 py-4 bg-primary-foreground text-primary rounded-lg gap-6">
-            <h2 className="text-xl font-semibold">What Next?</h2>
-            <p>
-                Use the First Start setup to enable scanning, start your first
-                scan, and see your clips in minutes.
-            </p>
-            <div className="flex justify-center gap-4">
-                <Button asChild className="flex-1">
-                    <a href={`/setup/${guild.id}`} className="font-semibold">
-                        Start Setup
-                    </a>
-                </Button>
-                <Button asChild variant="outline">
-                    <a href={`/dashboard/${guild.id}`}>
-                        View Dashboard
-                        <MoveRight />
-                    </a>
-                </Button>
-            </div>
-        </div>
-    );
+	return (
+		<div className="bg-card text-card-foreground relative w-full max-w-2xl overflow-hidden rounded-xl border shadow-sm">
+			<div className="absolute top-0 left-0 h-1 w-full bg-gradient-to-r from-green-500 to-emerald-600" />
+			<div className="flex flex-col gap-6 p-8">
+				<div className="space-y-2">
+					<h2 className="text-2xl font-semibold tracking-tight">
+						What Next?
+					</h2>
+					<p className="text-muted-foreground text-lg">
+						Use the First Start setup to enable scanning, start your
+						first scan, and see your clips in minutes.
+					</p>
+				</div>
+
+				<div className="flex flex-col gap-4 pt-2 sm:flex-row">
+					<Button
+						asChild
+						size="lg"
+						className="w-full shadow-sm transition-all hover:shadow-md sm:w-auto"
+					>
+						<a
+							href={`/setup/${guild.id}`}
+							className="font-semibold"
+						>
+							Start Setup
+							<MoveRight className="ml-2 h-4 w-4" />
+						</a>
+					</Button>
+					<Button
+						asChild
+						variant="outline"
+						size="lg"
+						className="w-full sm:w-auto"
+					>
+						<a href={`/dashboard/${guild.id}`}>View Dashboard</a>
+					</Button>
+				</div>
+			</div>
+		</div>
+	);
 }
 
 export default function InstallPage() {
-    return (
-        <div className="flex flex-col h-screen">
-            <Navbar />
-            <PageContainer className="flex-1">
-                <Suspense fallback={<div>Loading...</div>}>
-                    <InstallContent />
-                </Suspense>
-            </PageContainer>
-        </div>
-    );
+	return (
+		<div className="flex h-screen flex-col">
+			<Navbar />
+			<PageContainer className="flex-1">
+				<Suspense fallback={<div>Loading...</div>}>
+					<InstallContent />
+				</Suspense>
+			</PageContainer>
+		</div>
+	);
 }
 
 // SUCCESS
