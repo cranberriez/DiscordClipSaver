@@ -215,18 +215,6 @@ export function ClipCard({
 					<ClipOptionsDropdown clip={clip} />
 				</div>
 
-				{/* Tags (Read Only) */}
-				<div className="mb-1">
-					<TagManager
-						clipId={clipData.id}
-						guildId={clipData.guild_id}
-						currentTagSlugs={clip.tags || []}
-						readOnly={true}
-						maxTags={5}
-						maxChars={50}
-					/>
-				</div>
-
 				{/* Author & Time posted */}
 				<div className="text-muted-foreground flex items-center justify-between gap-2 text-xs">
 					<UserAvatar
@@ -239,6 +227,18 @@ export function ClipCard({
 					<p className="text-muted-foreground text-xs">
 						{formatRelativeTime(message.timestamp)}
 					</p>
+				</div>
+
+				{/* Tags (Read Only) */}
+				<div className="mb-1">
+					<TagManager
+						clipId={clipData.id}
+						guildId={clipData.guild_id}
+						currentTagSlugs={clip.tags || []}
+						readOnly={true}
+						maxTags={5}
+						maxChars={50}
+					/>
 				</div>
 			</div>
 
