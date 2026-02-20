@@ -53,7 +53,7 @@ export function SortingFilter() {
 				</div>
 			</DropdownMenuTrigger>
 			<DropdownMenuContent
-				className="flex flex-col gap-1 px-2"
+				className="flex flex-col gap-1 p-2"
 				align="start"
 			>
 				<DropdownMenuLabel className="text-foreground/50 text-xs tracking-wider">
@@ -116,6 +116,20 @@ export function SortingFilter() {
 					} cursor-pointer`}
 				>
 					Most Liked
+				</DropdownMenuItem>
+				<DropdownMenuSeparator />
+				<DropdownMenuLabel className="text-foreground/50 text-xs tracking-wider">
+					OTHER
+				</DropdownMenuLabel>
+				<DropdownMenuItem
+					onClick={() => setSort("random", "desc")}
+					className={`${
+						sortType === "random"
+							? "bg-accent-foreground! text-accent!"
+							: ""
+					} cursor-pointer`}
+				>
+					Randomize
 				</DropdownMenuItem>
 			</DropdownMenuContent>
 		</DropdownMenu>

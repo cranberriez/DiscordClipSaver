@@ -69,7 +69,7 @@ export interface ClipListResponse {
 }
 
 export type SortOrder = "asc" | "desc";
-export type SortType = "date" | "duration" | "size" | "likes";
+export type SortType = "date" | "duration" | "size" | "likes" | "random";
 
 export interface ClipListParams {
 	guildId: string;

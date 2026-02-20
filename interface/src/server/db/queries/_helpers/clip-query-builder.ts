@@ -22,7 +22,7 @@ export interface ClipQueryOptions {
 	limit?: number;
 	offset?: number;
 	sortOrder?: "asc" | "desc";
-	sortType?: "date" | "duration" | "size" | "likes";
+	sortType?: "date" | "duration" | "size" | "likes" | "random";
 	fetchMultiplier?: number; // For handling deleted message filtering
 }
 
@@ -213,6 +213,9 @@ class ClipQueryBuilder {
 				break;
 			case "likes":
 				this.query = this.query.orderBy("favorite_count", sortOrder);
+				break;
+			case "random":
+				this.query = this.query.orderBy(sql`RANDOM()`);
 				break;
 			case "date":
 			default:

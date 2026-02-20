@@ -52,7 +52,9 @@ export async function GET(
 	const sortType = (searchParams.get("sortType") || "date") as
 		| "date"
 		| "duration"
-		| "size";
+		| "size"
+		| "likes"
+		| "random";
 
 	try {
 		// Fetch one extra to determine if there are more results
