@@ -11,8 +11,8 @@ import type { GuildSettingsResponse } from "../api/setting";
  * This ensures consistent cache keys across the app.
  */
 export const settingsKeys = {
-    all: ["settings"] as const,
-    guild: (guildId: string) => [...settingsKeys.all, guildId] as const,
+	all: ["settings"] as const,
+	guild: (guildId: string) => [...settingsKeys.all, guildId] as const,
 };
 
 // ============================================================================
@@ -23,9 +23,9 @@ export const settingsKeys = {
  * Query options for fetching guild settings
  */
 export const guildSettingsQuery = (guildId: string) =>
-    queryOptions<GuildSettingsResponse>({
-        queryKey: settingsKeys.guild(guildId),
-        queryFn: () => getGuildSettings(guildId),
-        enabled: !!guildId,
-        staleTime: 60_000,
-    });
+	queryOptions<GuildSettingsResponse>({
+		queryKey: settingsKeys.guild(guildId),
+		queryFn: () => getGuildSettings(guildId),
+		enabled: !!guildId,
+		staleTime: 60_000,
+	});

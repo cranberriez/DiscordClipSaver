@@ -9,27 +9,27 @@ import { DataService } from "@/server/services/data-service";
 // GET /api/guilds/[guildId]/channels/[channelId]/scan-status
 // Returns the scan status for a specific channel
 export async function GET(
-    req: NextRequest,
-    { params }: { params: Promise<{ guildId: string; channelId: string }> }
+	req: NextRequest,
+	{ params }: { params: Promise<{ guildId: string; channelId: string }> }
 ) {
-    const { guildId, channelId } = await params;
+	const { guildId, channelId } = await params;
 
-    // Verify authentication and ownership
-    const auth = await requireGuildAccess(req, guildId, true);
-    if (auth instanceof NextResponse) return auth;
+	// Verify authentication and ownership
+	const auth = await requireGuildAccess(req, guildId, true);
+	if (auth instanceof NextResponse) return auth;
 
-    try {
-        const status = await DataService.getScanStatusByChannelId(
-            guildId,
-            channelId
-        );
+	try {
+		const status = await DataService.getScanStatusByChannelId(
+			guildId,
+			channelId
+		);
 
-        return NextResponse.json({ status });
-    } catch (error) {
-        console.error("Failed to fetch scan status:", error);
-        return NextResponse.json(
-            { error: "Failed to fetch scan status" },
-            { status: 500 }
-        );
-    }
+		return NextResponse.json({ status });
+	} catch (error) {
+		console.error("Failed to fetch scan status:", error);
+		return NextResponse.json(
+			{ error: "Failed to fetch scan status" },
+			{ status: 500 }
+		);
+	}
 }

@@ -11,26 +11,25 @@ import { DataService } from "@/server/services/data-service";
  * Requires guild access (not necessarily ownership for read).
  */
 export async function GET(
-    req: NextRequest,
-    { params }: { params: Promise<{ guildId: string }> }
+	req: NextRequest,
+	{ params }: { params: Promise<{ guildId: string }> }
 ) {
-    const { guildId } = await params;
+	const { guildId } = await params;
 
-    // Verify authentication and guild access
-    const auth = await requireGuildAccess(req, guildId);
-    if (auth instanceof NextResponse) return auth;
+	// Verify authentication and guild access
+	const auth = await requireGuildAccess(req, guildId);
+	if (auth instanceof NextResponse) return auth;
 
-    const channels = await DataService.getChannelsByGuildIdWithClipCount(
-        guildId
-    );
+	const channels =
+		await DataService.getChannelsByGuildIdWithClipCount(guildId);
 
-    if (!channels) {
-        console.error("Channels not found, guildId: " + guildId);
-        return NextResponse.json(
-            { error: "Channels not found" },
-            { status: 404 }
-        );
-    }
+	if (!channels) {
+		console.error("Channels not found, guildId: " + guildId);
+		return NextResponse.json(
+			{ error: "Channels not found" },
+			{ status: 404 }
+		);
+	}
 
-    return NextResponse.json(channels);
+	return NextResponse.json(channels);
 }

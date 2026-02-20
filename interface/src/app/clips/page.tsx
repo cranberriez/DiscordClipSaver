@@ -18,9 +18,9 @@ import { ClipsPageLoader } from "@/features/clips/components/ClipsPageLoader";
  * and delegates the main functionality to ClipsPageContent.
  */
 export default function ClipsPage() {
-    return (
-        <Suspense fallback={<ClipsPageLoader />}>
-            <ClipsPageContent />
-        </Suspense>
-    );
+	return (
+		<Suspense fallback={<ClipsPageLoader />}>
+			<ClipsPageContent />
+		</Suspense>
+	);
 }

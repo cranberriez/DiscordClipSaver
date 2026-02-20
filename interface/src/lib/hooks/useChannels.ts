@@ -3,11 +3,11 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api/client";
 import {
-    channelKeys,
-    channelStatsByGuildQuery,
-    guildChannelsQuery,
-    optimisticBulkUpdateChannels,
-    optimisticToggleChannel,
+	channelKeys,
+	channelStatsByGuildQuery,
+	guildChannelsQuery,
+	optimisticBulkUpdateChannels,
+	optimisticToggleChannel,
 } from "../queries/channel";
 
 // ============================================================================
@@ -38,7 +38,7 @@ import {
  * ```
  */
 export function useChannels(guildId: string) {
-    return useQuery(guildChannelsQuery(guildId));
+	return useQuery(guildChannelsQuery(guildId));
 }
 
 /**
@@ -72,7 +72,7 @@ export function useChannels(guildId: string) {
  * ```
  */
 export function useChannelStats(guildId: string) {
-    return useQuery(channelStatsByGuildQuery(guildId));
+	return useQuery(channelStatsByGuildQuery(guildId));
 }
 
 /**
@@ -83,8 +83,8 @@ export function useChannelStats(guildId: string) {
  * @returns Total clip count across all channels
  */
 export function useTotalClipCount(guildId: string): number {
-    const { data: channels } = useChannelStats(guildId);
-    return channels?.reduce((sum, ch) => sum + ch.clip_count, 0) ?? 0;
+	const { data: channels } = useChannelStats(guildId);
+	return channels?.reduce((sum, ch) => sum + ch.clip_count, 0) ?? 0;
 }
 
 // ============================================================================
@@ -115,41 +115,51 @@ export function useTotalClipCount(guildId: string): number {
  * ```
  */
 export function useToggleChannel(guildId: string) {
-    const qc = useQueryClient();
+	const qc = useQueryClient();
 
-    return useMutation({
-        mutationFn: ({ channelId, enabled }: { channelId: string; enabled: boolean }) =>
-            api.channels.toggleChannel(guildId, channelId, enabled),
+	return useMutation({
+		mutationFn: ({
+			channelId,
+			enabled,
+		}: {
+			channelId: string;
+			enabled: boolean;
+		}) => api.channels.toggleChannel(guildId, channelId, enabled),
 
-        onMutate: async ({ channelId, enabled }) => {
-            // Stop any in-flight refetches of the channels list
-            await qc.cancelQueries({
-                queryKey: channelKeys.byGuild(guildId),
-            });
+		onMutate: async ({ channelId, enabled }) => {
+			// Stop any in-flight refetches of the channels list
+			await qc.cancelQueries({
+				queryKey: channelKeys.byGuild(guildId),
+			});
 
-            // Optimistically update the specific channel
-            const snapshot = optimisticToggleChannel(qc, guildId, channelId, enabled);
+			// Optimistically update the specific channel
+			const snapshot = optimisticToggleChannel(
+				qc,
+				guildId,
+				channelId,
+				enabled
+			);
 
-            return { snapshot };
-        },
+			return { snapshot };
+		},
 
-        onError: (_err, _vars, ctx) => {
-            // Roll back if we had a snapshot
-            const prev = ctx?.snapshot?.prev;
-            if (prev) qc.setQueryData(channelKeys.byGuild(guildId), prev);
-        },
+		onError: (_err, _vars, ctx) => {
+			// Roll back if we had a snapshot
+			const prev = ctx?.snapshot?.prev;
+			if (prev) qc.setQueryData(channelKeys.byGuild(guildId), prev);
+		},
 
-        onSettled: () => {
-            // Revalidate canonical data
-            qc.invalidateQueries({
-                queryKey: channelKeys.byGuild(guildId),
-            });
-            // If other views depend on the same flag (e.g. stats), also:
-            qc.invalidateQueries({
-                queryKey: channelKeys.statsByGuild(guildId),
-            });
-        },
-    });
+		onSettled: () => {
+			// Revalidate canonical data
+			qc.invalidateQueries({
+				queryKey: channelKeys.byGuild(guildId),
+			});
+			// If other views depend on the same flag (e.g. stats), also:
+			qc.invalidateQueries({
+				queryKey: channelKeys.statsByGuild(guildId),
+			});
+		},
+	});
 }
 
 /**
@@ -176,39 +186,39 @@ export function useToggleChannel(guildId: string) {
  * ```
  */
 export function useBulkUpdateChannels(guildId: string) {
-    const qc = useQueryClient();
+	const qc = useQueryClient();
 
-    return useMutation({
-        mutationFn: (enabled: boolean) =>
-            api.channels.bulkUpdate(guildId, enabled),
+	return useMutation({
+		mutationFn: (enabled: boolean) =>
+			api.channels.bulkUpdate(guildId, enabled),
 
-        onMutate: async enabled => {
-            // Stop any in-flight refetches of the channels list
-            await qc.cancelQueries({
-                queryKey: channelKeys.byGuild(guildId),
-            });
+		onMutate: async (enabled) => {
+			// Stop any in-flight refetches of the channels list
+			await qc.cancelQueries({
+				queryKey: channelKeys.byGuild(guildId),
+			});
 
-            // Optimistically patch cache (choose A or B)
-            const snapshot = optimisticBulkUpdateChannels(qc, guildId, enabled);
+			// Optimistically patch cache (choose A or B)
+			const snapshot = optimisticBulkUpdateChannels(qc, guildId, enabled);
 
-            return { snapshot };
-        },
+			return { snapshot };
+		},
 
-        onError: (_err, _enabled, ctx) => {
-            // Roll back if we had a snapshot
-            const prev = ctx?.snapshot?.prev;
-            if (prev) qc.setQueryData(channelKeys.byGuild(guildId), prev);
-        },
+		onError: (_err, _enabled, ctx) => {
+			// Roll back if we had a snapshot
+			const prev = ctx?.snapshot?.prev;
+			if (prev) qc.setQueryData(channelKeys.byGuild(guildId), prev);
+		},
 
-        onSettled: () => {
-            // Revalidate canonical data
-            qc.invalidateQueries({
-                queryKey: channelKeys.byGuild(guildId),
-            });
-            // If other views depend on the same flag (e.g. stats), also:
-            qc.invalidateQueries({
-                queryKey: channelKeys.statsByGuild(guildId),
-            });
-        },
-    });
+		onSettled: () => {
+			// Revalidate canonical data
+			qc.invalidateQueries({
+				queryKey: channelKeys.byGuild(guildId),
+			});
+			// If other views depend on the same flag (e.g. stats), also:
+			qc.invalidateQueries({
+				queryKey: channelKeys.statsByGuild(guildId),
+			});
+		},
+	});
 }

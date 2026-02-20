@@ -8,36 +8,36 @@ import { useSession } from "next-auth/react";
 import type { User } from "next-auth";
 
 export function ClipNavbar({ children }: { children: React.ReactNode }) {
-    const { data: session } = useSession();
-    return (
-        <div className="flex items-center z-10 w-full border-b h-16 min-h-16">
-            <PageContainer
-                className="p-0! flex h-full items-center gap-2"
-                noLines
-            >
-                <FilterNavButton>
-                    <Link href="/">
-                        <HomeIcon className="h-5 w-5" />
-                    </Link>
-                </FilterNavButton>
+	const { data: session } = useSession();
+	return (
+		<div className="z-10 flex h-16 min-h-16 w-full items-center border-b">
+			<PageContainer
+				className="flex h-full items-center gap-2 p-0!"
+				noLines
+			>
+				<FilterNavButton>
+					<Link href="/">
+						<HomeIcon className="h-5 w-5" />
+					</Link>
+				</FilterNavButton>
 
-                {children}
+				{children}
 
-                <FilterNavButton className="ml-auto">
-                    <Link href="/dashboard">
-                        <LayoutDashboard className="h-5 w-5" />
-                    </Link>
-                </FilterNavButton>
+				<FilterNavButton className="ml-auto">
+					<Link href="/dashboard">
+						<LayoutDashboard className="h-5 w-5" />
+					</Link>
+				</FilterNavButton>
 
-                {/* User Menu */}
-                {session ? (
-                    <UserMenu user={session.user as User} />
-                ) : (
-                    <Button asChild>
-                        <Link href="/login">Sign In</Link>
-                    </Button>
-                )}
-            </PageContainer>
-        </div>
-    );
+				{/* User Menu */}
+				{session ? (
+					<UserMenu user={session.user as User} />
+				) : (
+					<Button asChild>
+						<Link href="/login">Sign In</Link>
+					</Button>
+				)}
+			</PageContainer>
+		</div>
+	);
 }

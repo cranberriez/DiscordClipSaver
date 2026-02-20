@@ -7,11 +7,11 @@ import { ScanStatus } from "../api/scan";
 import { getScanStatuses, getScanStatus } from "../api/scan";
 
 export const scanKeys = {
-    all: ["scans"] as const,
-    statuses: (guildId: string) =>
-        [...scanKeys.all, "scanStatuses", guildId] as const,
-    status: (guildId: string, channelId: string) =>
-        [...scanKeys.all, "scanStatus", guildId, channelId] as const,
+	all: ["scans"] as const,
+	statuses: (guildId: string) =>
+		[...scanKeys.all, "scanStatuses", guildId] as const,
+	status: (guildId: string, channelId: string) =>
+		[...scanKeys.all, "scanStatus", guildId, channelId] as const,
 };
 
 // ============================================================================
@@ -19,39 +19,39 @@ export const scanKeys = {
 // ============================================================================
 
 export const scanStatusesQuery = (guildId: string) =>
-    queryOptions<ScanStatus[]>({
-        queryKey: scanKeys.statuses(guildId),
-        queryFn: () => getScanStatuses(guildId),
-        enabled: !!guildId,
-        staleTime: 60_000,
+	queryOptions<ScanStatus[]>({
+		queryKey: scanKeys.statuses(guildId),
+		queryFn: () => getScanStatuses(guildId),
+		enabled: !!guildId,
+		staleTime: 60_000,
 
-        refetchInterval: query => {
-            const data = query.state.data as ScanStatus[] | undefined;
-            // Check if any scans are running or queued
-            const hasActiveScans = data?.some(
-                status =>
-                    status.status === "RUNNING" || status.status === "QUEUED"
-            );
-            // Poll every 6 seconds if any scans are active, otherwise don't poll
-            return hasActiveScans ? 6000 : false;
-        },
-    });
+		refetchInterval: (query) => {
+			const data = query.state.data as ScanStatus[] | undefined;
+			// Check if any scans are running or queued
+			const hasActiveScans = data?.some(
+				(status) =>
+					status.status === "RUNNING" || status.status === "QUEUED"
+			);
+			// Poll every 6 seconds if any scans are active, otherwise don't poll
+			return hasActiveScans ? 6000 : false;
+		},
+	});
 
 export const scanStatusQuery = (guildId: string, channelId: string) =>
-    queryOptions<ScanStatus | null>({
-        queryKey: scanKeys.status(guildId, channelId),
-        queryFn: () => getScanStatus(guildId, channelId),
-        enabled: !!guildId && !!channelId,
-        staleTime: 60_000,
+	queryOptions<ScanStatus | null>({
+		queryKey: scanKeys.status(guildId, channelId),
+		queryFn: () => getScanStatus(guildId, channelId),
+		enabled: !!guildId && !!channelId,
+		staleTime: 60_000,
 
-        refetchInterval: query => {
-            const data = query.state.data as ScanStatus | null;
-            const status = data?.status;
-            const hasRunningScans = status === "RUNNING" || status === "QUEUED";
-            // Poll every 6 seconds if scans are running, otherwise don't poll
-            return hasRunningScans ? 6000 : false;
-        },
-    });
+		refetchInterval: (query) => {
+			const data = query.state.data as ScanStatus | null;
+			const status = data?.status;
+			const hasRunningScans = status === "RUNNING" || status === "QUEUED";
+			// Poll every 6 seconds if scans are running, otherwise don't poll
+			return hasRunningScans ? 6000 : false;
+		},
+	});
 
 // ============================================================================
 // Optimistic Updates
@@ -62,56 +62,56 @@ export const scanStatusQuery = (guildId: string, channelId: string) =>
  * Returns snapshot for rollback on error.
  */
 export function optimisticStartScan(
-    qc: QueryClient,
-    guildId: string,
-    channelId: string
+	qc: QueryClient,
+	guildId: string,
+	channelId: string
 ) {
-    const key = scanKeys.statuses(guildId);
-    const prev = qc.getQueryData<ScanStatus[]>(key);
-    if (!prev) return { prev };
+	const key = scanKeys.statuses(guildId);
+	const prev = qc.getQueryData<ScanStatus[]>(key);
+	if (!prev) return { prev };
 
-    const statuses = prev;
-    const existingIndex = statuses.findIndex(s => s.channel_id === channelId);
+	const statuses = prev;
+	const existingIndex = statuses.findIndex((s) => s.channel_id === channelId);
 
-    const optimisticStatus: ScanStatus = {
-        channel_id: channelId,
-        guild_id: guildId,
-        status: "QUEUED",
-        message_count:
-            existingIndex >= 0 ? statuses[existingIndex].message_count : 0,
-        total_messages_scanned:
-            existingIndex >= 0
-                ? statuses[existingIndex].total_messages_scanned
-                : 0,
-        forward_message_id:
-            existingIndex >= 0
-                ? statuses[existingIndex].forward_message_id
-                : null,
-        backward_message_id:
-            existingIndex >= 0
-                ? statuses[existingIndex].backward_message_id
-                : null,
-        created_at:
-            existingIndex >= 0
-                ? statuses[existingIndex].created_at
-                : new Date(),
-        updated_at: new Date(),
-        error_message: null,
-        deleted_at: null,
-    };
+	const optimisticStatus: ScanStatus = {
+		channel_id: channelId,
+		guild_id: guildId,
+		status: "QUEUED",
+		message_count:
+			existingIndex >= 0 ? statuses[existingIndex].message_count : 0,
+		total_messages_scanned:
+			existingIndex >= 0
+				? statuses[existingIndex].total_messages_scanned
+				: 0,
+		forward_message_id:
+			existingIndex >= 0
+				? statuses[existingIndex].forward_message_id
+				: null,
+		backward_message_id:
+			existingIndex >= 0
+				? statuses[existingIndex].backward_message_id
+				: null,
+		created_at:
+			existingIndex >= 0
+				? statuses[existingIndex].created_at
+				: new Date(),
+		updated_at: new Date(),
+		error_message: null,
+		deleted_at: null,
+	};
 
-    const optimistic: ScanStatus[] =
-        existingIndex >= 0
-            ? [
-                  ...statuses.slice(0, existingIndex),
-                  optimisticStatus,
-                  ...statuses.slice(existingIndex + 1),
-              ]
-            : [...statuses, optimisticStatus];
+	const optimistic: ScanStatus[] =
+		existingIndex >= 0
+			? [
+					...statuses.slice(0, existingIndex),
+					optimisticStatus,
+					...statuses.slice(existingIndex + 1),
+				]
+			: [...statuses, optimisticStatus];
 
-    qc.setQueryData(key, optimistic);
+	qc.setQueryData(key, optimistic);
 
-    return { prev };
+	return { prev };
 }
 
 /**
@@ -119,59 +119,59 @@ export function optimisticStartScan(
  * Returns snapshot for rollback on error.
  */
 export function optimisticStartBulkScan(
-    qc: QueryClient,
-    guildId: string,
-    channelIds: string[]
+	qc: QueryClient,
+	guildId: string,
+	channelIds: string[]
 ) {
-    const key = scanKeys.statuses(guildId);
-    const prev = qc.getQueryData<ScanStatus[]>(key);
-    if (!prev) return { prev };
+	const key = scanKeys.statuses(guildId);
+	const prev = qc.getQueryData<ScanStatus[]>(key);
+	if (!prev) return { prev };
 
-    const optimistic = [...prev];
+	const optimistic = [...prev];
 
-    // Update or add QUEUED status for each channel
-    channelIds.forEach(channelId => {
-        const existingIndex = optimistic.findIndex(
-            s => s.channel_id === channelId
-        );
+	// Update or add QUEUED status for each channel
+	channelIds.forEach((channelId) => {
+		const existingIndex = optimistic.findIndex(
+			(s) => s.channel_id === channelId
+		);
 
-        const optimisticStatus: ScanStatus = {
-            channel_id: channelId,
-            guild_id: guildId,
-            status: "QUEUED",
-            message_count:
-                existingIndex >= 0
-                    ? optimistic[existingIndex].message_count
-                    : 0,
-            total_messages_scanned:
-                existingIndex >= 0
-                    ? optimistic[existingIndex].total_messages_scanned
-                    : 0,
-            forward_message_id:
-                existingIndex >= 0
-                    ? optimistic[existingIndex].forward_message_id
-                    : null,
-            backward_message_id:
-                existingIndex >= 0
-                    ? optimistic[existingIndex].backward_message_id
-                    : null,
-            created_at:
-                existingIndex >= 0
-                    ? optimistic[existingIndex].created_at
-                    : new Date(),
-            updated_at: new Date(),
-            error_message: null,
-            deleted_at: null,
-        };
+		const optimisticStatus: ScanStatus = {
+			channel_id: channelId,
+			guild_id: guildId,
+			status: "QUEUED",
+			message_count:
+				existingIndex >= 0
+					? optimistic[existingIndex].message_count
+					: 0,
+			total_messages_scanned:
+				existingIndex >= 0
+					? optimistic[existingIndex].total_messages_scanned
+					: 0,
+			forward_message_id:
+				existingIndex >= 0
+					? optimistic[existingIndex].forward_message_id
+					: null,
+			backward_message_id:
+				existingIndex >= 0
+					? optimistic[existingIndex].backward_message_id
+					: null,
+			created_at:
+				existingIndex >= 0
+					? optimistic[existingIndex].created_at
+					: new Date(),
+			updated_at: new Date(),
+			error_message: null,
+			deleted_at: null,
+		};
 
-        if (existingIndex >= 0) {
-            optimistic[existingIndex] = optimisticStatus;
-        } else {
-            optimistic.push(optimisticStatus);
-        }
-    });
+		if (existingIndex >= 0) {
+			optimistic[existingIndex] = optimisticStatus;
+		} else {
+			optimistic.push(optimisticStatus);
+		}
+	});
 
-    qc.setQueryData(key, optimistic);
+	qc.setQueryData(key, optimistic);
 
-    return { prev };
+	return { prev };
 }

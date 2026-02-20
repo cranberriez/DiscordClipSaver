@@ -2,10 +2,10 @@
 
 import { useQuery, useInfiniteQuery } from "@tanstack/react-query";
 import {
-    clipKeys,
-    clipsQuery,
-    clipsInfiniteQuery,
-    clipQuery,
+	clipKeys,
+	clipsQuery,
+	clipsInfiniteQuery,
+	clipQuery,
 } from "@/lib/queries/clip";
 import type { ClipListParams, FullClip } from "@/lib/api/clip";
 
@@ -44,22 +44,22 @@ import type { ClipListParams, FullClip } from "@/lib/api/clip";
  * ```
  */
 export function useChannelClips(params: ClipListParams) {
-    return useQuery(clipsQuery(params));
+	return useQuery(clipsQuery(params));
 }
 
 /**
  * @deprecated Use useChannelClips instead
  */
 export function useClips(params: {
-    guildId: string;
-    channelId?: string;
-    limit?: number;
-    offset?: number;
+	guildId: string;
+	channelId?: string;
+	limit?: number;
+	offset?: number;
 }) {
-    return useChannelClips({
-        ...params,
-        channelIds: params.channelId ? [params.channelId] : undefined,
-    });
+	return useChannelClips({
+		...params,
+		channelIds: params.channelId ? [params.channelId] : undefined,
+	});
 }
 
 /**
@@ -106,21 +106,21 @@ export function useClips(params: {
  * ```
  */
 export function useChannelClipsInfinite(params: ClipListParams) {
-    return useInfiniteQuery(clipsInfiniteQuery(params));
+	return useInfiniteQuery(clipsInfiniteQuery(params));
 }
 
 /**
  * @deprecated Use useChannelClipsInfinite instead
  */
 export function useClipsInfinite(params: {
-    guildId: string;
-    channelId?: string;
-    limit?: number;
+	guildId: string;
+	channelId?: string;
+	limit?: number;
 }) {
-    return useChannelClipsInfinite({
-        ...params,
-        channelIds: params.channelId ? [params.channelId] : undefined,
-    });
+	return useChannelClipsInfinite({
+		...params,
+		channelIds: params.channelId ? [params.channelId] : undefined,
+	});
 }
 
 /**
@@ -146,21 +146,21 @@ export function useClipsInfinite(params: {
  * ```
  */
 export function useClip(
-    guildId: string,
-    clipId: string,
-    options?: { staleTime?: number; enabled?: boolean; initialData?: FullClip }
+	guildId: string,
+	clipId: string,
+	options?: { staleTime?: number; enabled?: boolean; initialData?: FullClip }
 ) {
-    const query = clipQuery(guildId, clipId);
-    if (options?.staleTime !== undefined) {
-        query.staleTime = options.staleTime;
-    }
-    if (options?.enabled !== undefined) {
-        query.enabled = options.enabled && query.enabled;
-    }
-    if (options?.initialData) {
-        query.initialData = options.initialData;
-    }
-    return useQuery(query);
+	const query = clipQuery(guildId, clipId);
+	if (options?.staleTime !== undefined) {
+		query.staleTime = options.staleTime;
+	}
+	if (options?.enabled !== undefined) {
+		query.enabled = options.enabled && query.enabled;
+	}
+	if (options?.initialData) {
+		query.initialData = options.initialData;
+	}
+	return useQuery(query);
 }
 
 /**

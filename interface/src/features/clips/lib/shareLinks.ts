@@ -1,17 +1,17 @@
 export function getDiscordWebUrl(
-    guildId: string,
-    channelId: string,
-    messageId: string
+	guildId: string,
+	channelId: string,
+	messageId: string
 ) {
-    return `https://discord.com/channels/${guildId}/${channelId}/${messageId}`;
+	return `https://discord.com/channels/${guildId}/${channelId}/${messageId}`;
 }
 
 export function getDiscordAppUrl(
-    guildId: string,
-    channelId: string,
-    messageId: string
+	guildId: string,
+	channelId: string,
+	messageId: string
 ) {
-    return `discord://-/channels/${guildId}/${channelId}/${messageId}`;
+	return `discord://-/channels/${guildId}/${channelId}/${messageId}`;
 }
 
 /**
@@ -20,22 +20,22 @@ export function getDiscordAppUrl(
  * Returns empty string when not in a browser and origin not provided (SSR-safe).
  */
 export function getSiteClipUrl(params: {
-    guildId: string;
-    channelId: string;
-    clipId: string;
-    origin?: string;
+	guildId: string;
+	channelId: string;
+	clipId: string;
+	origin?: string;
 }) {
-    const { guildId, channelId, clipId, origin } = params;
-    const base =
-        origin ?? (typeof window !== "undefined" ? window.location.origin : "");
-    if (!base) return "";
-    const url = new URL("/clips", base);
-    const qs = new URLSearchParams();
-    if (guildId) qs.set("guildId", guildId);
-    if (channelId) qs.set("channelIds", channelId); // single or comma-separated supported by reader
-    if (clipId) qs.set("clipId", clipId); // reserved for future deep-link to modal
-    url.search = qs.toString();
-    return url.toString();
+	const { guildId, channelId, clipId, origin } = params;
+	const base =
+		origin ?? (typeof window !== "undefined" ? window.location.origin : "");
+	if (!base) return "";
+	const url = new URL("/clips", base);
+	const qs = new URLSearchParams();
+	if (guildId) qs.set("guildId", guildId);
+	if (channelId) qs.set("channelIds", channelId); // single or comma-separated supported by reader
+	if (clipId) qs.set("clipId", clipId); // reserved for future deep-link to modal
+	url.search = qs.toString();
+	return url.toString();
 }
 
 /**
@@ -44,44 +44,44 @@ export function getSiteClipUrl(params: {
  * - openTarget controls the web fallback target (default "_blank").
  */
 export function openInDiscord(
-    guildId: string,
-    channelId: string,
-    messageId: string,
-    options?: { fallbackDelayMs?: number; openTarget?: "_blank" | "_self" }
+	guildId: string,
+	channelId: string,
+	messageId: string,
+	options?: { fallbackDelayMs?: number; openTarget?: "_blank" | "_self" }
 ) {
-    const delay = options?.fallbackDelayMs ?? 800; // Increased delay for visibility check
-    const target = options?.openTarget ?? "_blank";
+	const delay = options?.fallbackDelayMs ?? 800; // Increased delay for visibility check
+	const target = options?.openTarget ?? "_blank";
 
-    const appUrl = getDiscordAppUrl(guildId, channelId, messageId);
-    const webUrl = getDiscordWebUrl(guildId, channelId, messageId);
+	const appUrl = getDiscordAppUrl(guildId, channelId, messageId);
+	const webUrl = getDiscordWebUrl(guildId, channelId, messageId);
 
-    const cleanup = () => {
-        document.removeEventListener(
-            "visibilitychange",
-            handleVisibilityChange
-        );
-        clearTimeout(fallbackTimer);
-    };
+	const cleanup = () => {
+		document.removeEventListener(
+			"visibilitychange",
+			handleVisibilityChange
+		);
+		clearTimeout(fallbackTimer);
+	};
 
-    const handleVisibilityChange = () => {
-        if (document.hidden) {
-            // Page became hidden, assume app opened successfully.
-            cleanup();
-        }
-    };
+	const handleVisibilityChange = () => {
+		if (document.hidden) {
+			// Page became hidden, assume app opened successfully.
+			cleanup();
+		}
+	};
 
-    document.addEventListener("visibilitychange", handleVisibilityChange);
+	document.addEventListener("visibilitychange", handleVisibilityChange);
 
-    // Set a timer to fallback to the web URL.
-    const fallbackTimer = setTimeout(() => {
-        // If this timer runs, the page was likely not hidden, so the app didn't open.
-        window.open(webUrl, target);
-        cleanup();
-    }, delay);
+	// Set a timer to fallback to the web URL.
+	const fallbackTimer = setTimeout(() => {
+		// If this timer runs, the page was likely not hidden, so the app didn't open.
+		window.open(webUrl, target);
+		cleanup();
+	}, delay);
 
-    // Attempt to navigate to the Discord app.
-    window.location.href = appUrl;
+	// Attempt to navigate to the Discord app.
+	window.location.href = appUrl;
 
-    // Return a cleanup function that can be called manually if needed.
-    return cleanup;
+	// Return a cleanup function that can be called manually if needed.
+	return cleanup;
 }

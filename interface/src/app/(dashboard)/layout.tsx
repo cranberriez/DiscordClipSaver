@@ -5,21 +5,21 @@ import { RootLayout } from "@/components/layout";
 import { Toaster } from "sonner";
 
 export default async function DashboardLayout({
-    children,
+	children,
 }: {
-    children: React.ReactNode;
+	children: React.ReactNode;
 }) {
-    // Protect all dashboard routes - require authentication
-    const session = await getServerSession(authOptions);
+	// Protect all dashboard routes - require authentication
+	const session = await getServerSession(authOptions);
 
-    if (!session) {
-        redirect("/login");
-    }
+	if (!session) {
+		redirect("/login");
+	}
 
-    return (
-        <RootLayout>
-            {children}
-            <Toaster duration={5000} theme="dark" richColors closeButton />
-        </RootLayout>
-    );
+	return (
+		<RootLayout>
+			{children}
+			<Toaster duration={5000} theme="dark" richColors closeButton />
+		</RootLayout>
+	);
 }

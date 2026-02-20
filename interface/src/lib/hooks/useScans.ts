@@ -2,18 +2,18 @@
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
-    scanStatusesQuery,
-    scanStatusQuery,
-    scanKeys,
-    optimisticStartScan,
-    optimisticStartBulkScan,
+	scanStatusesQuery,
+	scanStatusQuery,
+	scanKeys,
+	optimisticStartScan,
+	optimisticStartBulkScan,
 } from "../queries/scan";
 import {
-    startSingleScan,
-    startBulkScan,
-    type StartScanOptions,
-    MultiScanResult,
-    ScanResult,
+	startSingleScan,
+	startBulkScan,
+	type StartScanOptions,
+	MultiScanResult,
+	ScanResult,
 } from "../api/scan";
 
 // ============================================================================
@@ -50,7 +50,7 @@ import {
  * ```
  */
 export function useScanStatuses(guildId: string) {
-    return useQuery(scanStatusesQuery(guildId));
+	return useQuery(scanStatusesQuery(guildId));
 }
 
 /**
@@ -72,7 +72,7 @@ export function useScanStatuses(guildId: string) {
  * ```
  */
 export function useChannelScanStatus(guildId: string, channelId: string) {
-    return useQuery(scanStatusQuery(guildId, channelId));
+	return useQuery(scanStatusQuery(guildId, channelId));
 }
 
 // ============================================================================
@@ -110,44 +110,44 @@ export function useChannelScanStatus(guildId: string, channelId: string) {
  * ```
  */
 export function useStartScan(guildId: string) {
-    const qc = useQueryClient();
+	const qc = useQueryClient();
 
-    return useMutation({
-        mutationFn: ({
-            channelId,
-            options,
-        }: {
-            channelId: string;
-            options?: StartScanOptions;
-        }) => startSingleScan(guildId, channelId, options),
+	return useMutation({
+		mutationFn: ({
+			channelId,
+			options,
+		}: {
+			channelId: string;
+			options?: StartScanOptions;
+		}) => startSingleScan(guildId, channelId, options),
 
-        onMutate: async ({ channelId }) => {
-            // Stop any in-flight refetches of scan statuses
-            await qc.cancelQueries({
-                queryKey: scanKeys.statuses(guildId),
-            });
+		onMutate: async ({ channelId }) => {
+			// Stop any in-flight refetches of scan statuses
+			await qc.cancelQueries({
+				queryKey: scanKeys.statuses(guildId),
+			});
 
-            // Optimistically update to QUEUED status
-            const snapshot = optimisticStartScan(qc, guildId, channelId);
+			// Optimistically update to QUEUED status
+			const snapshot = optimisticStartScan(qc, guildId, channelId);
 
-            return { snapshot };
-        },
+			return { snapshot };
+		},
 
-        onError: (_err, _payload, ctx) => {
-            console.error("Failed to start scan:", _err);
+		onError: (_err, _payload, ctx) => {
+			console.error("Failed to start scan:", _err);
 
-            // Roll back if we had a snapshot
-            const prev = ctx?.snapshot?.prev;
-            if (prev) qc.setQueryData(scanKeys.statuses(guildId), prev);
-        },
+			// Roll back if we had a snapshot
+			const prev = ctx?.snapshot?.prev;
+			if (prev) qc.setQueryData(scanKeys.statuses(guildId), prev);
+		},
 
-        onSettled: () => {
-            // Revalidate canonical data
-            qc.invalidateQueries({
-                queryKey: scanKeys.statuses(guildId),
-            });
-        },
-    });
+		onSettled: () => {
+			// Revalidate canonical data
+			qc.invalidateQueries({
+				queryKey: scanKeys.statuses(guildId),
+			});
+		},
+	});
 }
 
 /**
@@ -181,76 +181,76 @@ export function useStartScan(guildId: string) {
  * ```
  */
 export function useStartBulkScan(guildId: string) {
-    const qc = useQueryClient();
+	const qc = useQueryClient();
 
-    return useMutation({
-        mutationFn: ({
-            channelIds,
-            options,
-        }: {
-            channelIds: string[];
-            options?: StartScanOptions;
-        }) => startBulkScan(guildId, channelIds, options),
+	return useMutation({
+		mutationFn: ({
+			channelIds,
+			options,
+		}: {
+			channelIds: string[];
+			options?: StartScanOptions;
+		}) => startBulkScan(guildId, channelIds, options),
 
-        onMutate: async ({ channelIds }) => {
-            // Stop any in-flight refetches of scan statuses
-            await qc.cancelQueries({
-                queryKey: scanKeys.statuses(guildId),
-            });
+		onMutate: async ({ channelIds }) => {
+			// Stop any in-flight refetches of scan statuses
+			await qc.cancelQueries({
+				queryKey: scanKeys.statuses(guildId),
+			});
 
-            // Optimistically update all channels to QUEUED status
-            const snapshot = optimisticStartBulkScan(qc, guildId, channelIds);
+			// Optimistically update all channels to QUEUED status
+			const snapshot = optimisticStartBulkScan(qc, guildId, channelIds);
 
-            return { snapshot };
-        },
+			return { snapshot };
+		},
 
-        onError: (_err, _payload, ctx) => {
-            console.error("Failed to start bulk scan:", _err);
+		onError: (_err, _payload, ctx) => {
+			console.error("Failed to start bulk scan:", _err);
 
-            // Roll back if we had a snapshot
-            const prev = ctx?.snapshot?.prev;
-            if (prev) qc.setQueryData(scanKeys.statuses(guildId), prev);
-        },
+			// Roll back if we had a snapshot
+			const prev = ctx?.snapshot?.prev;
+			if (prev) qc.setQueryData(scanKeys.statuses(guildId), prev);
+		},
 
-        onSettled: () => {
-            // Revalidate canonical data
-            qc.invalidateQueries({
-                queryKey: scanKeys.statuses(guildId),
-            });
-        },
-    });
+		onSettled: () => {
+			// Revalidate canonical data
+			qc.invalidateQueries({
+				queryKey: scanKeys.statuses(guildId),
+			});
+		},
+	});
 }
 
 export function useStartCustomScan(guildId: string) {
-    const startScanMutation = useStartScan(guildId);
+	const startScanMutation = useStartScan(guildId);
 
-    const DEFAULTS: StartScanOptions = {
-        isUpdate: true,
-        isHistorical: false,
-        limit: 1000,
-        autoContinue: true,
-        rescan: "stop",
-    };
+	const DEFAULTS: StartScanOptions = {
+		isUpdate: true,
+		isHistorical: false,
+		limit: 1000,
+		autoContinue: true,
+		rescan: "stop",
+	};
 
-    function start(
-        channelId: string,
-        options?: Partial<StartScanOptions>,
-        callbacks?: {
-            onSuccess?: (result: ScanResult) => void;
-            onError?: (err: unknown) => void;
-            onSettled?: () => void;
-        }
-    ) {
-        const merged = { ...DEFAULTS, ...(options ?? {}) };
+	function start(
+		channelId: string,
+		options?: Partial<StartScanOptions>,
+		callbacks?: {
+			onSuccess?: (result: ScanResult) => void;
+			onError?: (err: unknown) => void;
+			onSettled?: () => void;
+		}
+	) {
+		const merged = { ...DEFAULTS, ...(options ?? {}) };
 
-        startScanMutation.mutate(
-            {
-                channelId,
-                options: merged,
-            },
-            callbacks
-        );
-    }
+		startScanMutation.mutate(
+			{
+				channelId,
+				options: merged,
+			},
+			callbacks
+		);
+	}
 
-    return { start, isPending: startScanMutation.isPending };
+	return { start, isPending: startScanMutation.isPending };
 }

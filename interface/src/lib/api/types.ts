@@ -12,8 +12,8 @@
  * Standard error response from API routes
  */
 export interface APIErrorResponse {
-    error: string;
-    details?: unknown;
+	error: string;
+	details?: unknown;
 }
 
 // ============================================================================

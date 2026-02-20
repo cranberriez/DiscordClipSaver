@@ -9,13 +9,13 @@
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
-    favoriteKeys,
-    favoriteStatusQuery,
-    addFavoriteMutation,
-    addMultipleFavoritesMutation,
-    removeFavoriteMutation,
-    removeMultipleFavoritesMutation,
-    toggleFavoriteMutation,
+	favoriteKeys,
+	favoriteStatusQuery,
+	addFavoriteMutation,
+	addMultipleFavoritesMutation,
+	removeFavoriteMutation,
+	removeMultipleFavoritesMutation,
+	toggleFavoriteMutation,
 } from "@/lib/queries/favorites";
 import { clipKeys } from "@/lib/queries/clip";
 import type { FullClip } from "@/lib/api/clip";
@@ -41,10 +41,10 @@ import type { FullClip } from "@/lib/api/clip";
  * ```
  */
 export function useFavoriteStatus(clipId: string) {
-    return useQuery({
-        ...favoriteStatusQuery(clipId),
-        select: data => data.isFavorited,
-    });
+	return useQuery({
+		...favoriteStatusQuery(clipId),
+		select: (data) => data.isFavorited,
+	});
 }
 
 // ============================================================================
@@ -55,96 +55,96 @@ export function useFavoriteStatus(clipId: string) {
  * Add a single clip to favorites with optimistic updates
  */
 export function useAddFavorite() {
-    const queryClient = useQueryClient();
+	const queryClient = useQueryClient();
 
-    return useMutation({
-        ...addFavoriteMutation,
-        onMutate: async (clipId: string) => {
-            // Cancel outgoing refetches
-            await queryClient.cancelQueries({
-                queryKey: favoriteKeys.status(clipId),
-            });
+	return useMutation({
+		...addFavoriteMutation,
+		onMutate: async (clipId: string) => {
+			// Cancel outgoing refetches
+			await queryClient.cancelQueries({
+				queryKey: favoriteKeys.status(clipId),
+			});
 
-            // Snapshot previous value
-            const previousStatus = queryClient.getQueryData(
-                favoriteKeys.status(clipId)
-            );
+			// Snapshot previous value
+			const previousStatus = queryClient.getQueryData(
+				favoriteKeys.status(clipId)
+			);
 
-            // Optimistically update to favorited
-            queryClient.setQueryData(favoriteKeys.status(clipId), {
-                isFavorited: true,
-            });
+			// Optimistically update to favorited
+			queryClient.setQueryData(favoriteKeys.status(clipId), {
+				isFavorited: true,
+			});
 
-            // Update clip data in lists and detail views
-            updateClipFavoriteStatus(queryClient, clipId, true);
+			// Update clip data in lists and detail views
+			updateClipFavoriteStatus(queryClient, clipId, true);
 
-            return { previousStatus };
-        },
-        onError: (err, clipId, context) => {
-            // Rollback on error
-            if (context?.previousStatus) {
-                queryClient.setQueryData(
-                    favoriteKeys.status(clipId),
-                    context.previousStatus
-                );
-                updateClipFavoriteStatus(queryClient, clipId, false);
-            }
-        },
-        onSettled: (data, error, clipId) => {
-            // Refetch to ensure consistency
-            queryClient.invalidateQueries({
-                queryKey: favoriteKeys.status(clipId),
-            });
-        },
-    });
+			return { previousStatus };
+		},
+		onError: (err, clipId, context) => {
+			// Rollback on error
+			if (context?.previousStatus) {
+				queryClient.setQueryData(
+					favoriteKeys.status(clipId),
+					context.previousStatus
+				);
+				updateClipFavoriteStatus(queryClient, clipId, false);
+			}
+		},
+		onSettled: (data, error, clipId) => {
+			// Refetch to ensure consistency
+			queryClient.invalidateQueries({
+				queryKey: favoriteKeys.status(clipId),
+			});
+		},
+	});
 }
 
 /**
  * Remove a single clip from favorites with optimistic updates
  */
 export function useRemoveFavorite() {
-    const queryClient = useQueryClient();
+	const queryClient = useQueryClient();
 
-    return useMutation({
-        ...removeFavoriteMutation,
-        onMutate: async (clipId: string) => {
-            // Cancel outgoing refetches
-            await queryClient.cancelQueries({
-                queryKey: favoriteKeys.status(clipId),
-            });
+	return useMutation({
+		...removeFavoriteMutation,
+		onMutate: async (clipId: string) => {
+			// Cancel outgoing refetches
+			await queryClient.cancelQueries({
+				queryKey: favoriteKeys.status(clipId),
+			});
 
-            // Snapshot previous value
-            const previousStatus = queryClient.getQueryData(
-                favoriteKeys.status(clipId)
-            );
+			// Snapshot previous value
+			const previousStatus = queryClient.getQueryData(
+				favoriteKeys.status(clipId)
+			);
 
-            // Optimistically update to not favorited
-            queryClient.setQueryData(favoriteKeys.status(clipId), {
-                isFavorited: false,
-            });
+			// Optimistically update to not favorited
+			queryClient.setQueryData(favoriteKeys.status(clipId), {
+				isFavorited: false,
+			});
 
-            // Update clip data in lists and detail views
-            updateClipFavoriteStatus(queryClient, clipId, false);
+			// Update clip data in lists and detail views
+			updateClipFavoriteStatus(queryClient, clipId, false);
 
-            return { previousStatus };
-        },
-        onError: (err, clipId, context) => {
-            // Rollback on error
-            if (context?.previousStatus) {
-                queryClient.setQueryData(
-                    favoriteKeys.status(clipId),
-                    context.previousStatus
-                );
-                updateClipFavoriteStatus(queryClient, clipId, true);
-            }
-        },
-        onSettled: (data, error, clipId) => {
-            // Refetch to ensure consistency
-            queryClient.invalidateQueries({
-                queryKey: favoriteKeys.status(clipId),
-            });
-        },
-    });
+			return { previousStatus };
+		},
+		onError: (err, clipId, context) => {
+			// Rollback on error
+			if (context?.previousStatus) {
+				queryClient.setQueryData(
+					favoriteKeys.status(clipId),
+					context.previousStatus
+				);
+				updateClipFavoriteStatus(queryClient, clipId, true);
+			}
+		},
+		onSettled: (data, error, clipId) => {
+			// Refetch to ensure consistency
+			queryClient.invalidateQueries({
+				queryKey: favoriteKeys.status(clipId),
+			});
+		},
+	});
 }
 
 /**
@@ -168,178 +168,178 @@ export function useRemoveFavorite() {
  * ```
  */
 export function useToggleFavorite() {
-    const queryClient = useQueryClient();
+	const queryClient = useQueryClient();
 
-    return useMutation({
-        ...toggleFavoriteMutation,
-        onMutate: async (clipId: string) => {
-            // Cancel outgoing refetches
-            await queryClient.cancelQueries({
-                queryKey: favoriteKeys.status(clipId),
-            });
+	return useMutation({
+		...toggleFavoriteMutation,
+		onMutate: async (clipId: string) => {
+			// Cancel outgoing refetches
+			await queryClient.cancelQueries({
+				queryKey: favoriteKeys.status(clipId),
+			});
 
-            // Get current status from any available source
-            const currentFavorited = getClipFavoriteStatus(queryClient, clipId);
-            const newFavorited = !currentFavorited;
+			// Get current status from any available source
+			const currentFavorited = getClipFavoriteStatus(queryClient, clipId);
+			const newFavorited = !currentFavorited;
 
-            // Optimistically update status cache
-            queryClient.setQueryData(favoriteKeys.status(clipId), {
-                isFavorited: newFavorited,
-            });
+			// Optimistically update status cache
+			queryClient.setQueryData(favoriteKeys.status(clipId), {
+				isFavorited: newFavorited,
+			});
 
-            // Update clip data in lists and detail views
-            updateClipFavoriteStatus(queryClient, clipId, newFavorited);
+			// Update clip data in lists and detail views
+			updateClipFavoriteStatus(queryClient, clipId, newFavorited);
 
-            return { previousStatus: { isFavorited: currentFavorited } };
-        },
-        onError: (err, clipId, context) => {
-            // Rollback on error
-            if (context?.previousStatus) {
-                queryClient.setQueryData(
-                    favoriteKeys.status(clipId),
-                    context.previousStatus
-                );
-                const wasFavorited = context.previousStatus.isFavorited;
-                updateClipFavoriteStatus(queryClient, clipId, wasFavorited);
-            }
-        },
-        onSettled: (data, error, clipId) => {
-            // Refetch to ensure consistency
-            queryClient.invalidateQueries({
-                queryKey: favoriteKeys.status(clipId),
-            });
-        },
-    });
+			return { previousStatus: { isFavorited: currentFavorited } };
+		},
+		onError: (err, clipId, context) => {
+			// Rollback on error
+			if (context?.previousStatus) {
+				queryClient.setQueryData(
+					favoriteKeys.status(clipId),
+					context.previousStatus
+				);
+				const wasFavorited = context.previousStatus.isFavorited;
+				updateClipFavoriteStatus(queryClient, clipId, wasFavorited);
+			}
+		},
+		onSettled: (data, error, clipId) => {
+			// Refetch to ensure consistency
+			queryClient.invalidateQueries({
+				queryKey: favoriteKeys.status(clipId),
+			});
+		},
+	});
 }
 
 /**
  * Add multiple clips to favorites with bulk operation
  */
 export function useAddMultipleFavorites() {
-    const queryClient = useQueryClient();
+	const queryClient = useQueryClient();
 
-    return useMutation({
-        ...addMultipleFavoritesMutation,
-        onMutate: async (clipIds: string[]) => {
-            // Cancel outgoing refetches for all clips
-            await Promise.all(
-                clipIds.map(clipId =>
-                    queryClient.cancelQueries({
-                        queryKey: favoriteKeys.status(clipId),
-                    })
-                )
-            );
+	return useMutation({
+		...addMultipleFavoritesMutation,
+		onMutate: async (clipIds: string[]) => {
+			// Cancel outgoing refetches for all clips
+			await Promise.all(
+				clipIds.map((clipId) =>
+					queryClient.cancelQueries({
+						queryKey: favoriteKeys.status(clipId),
+					})
+				)
+			);
 
-            // Snapshot previous values
-            const previousStatuses = clipIds.map(clipId => ({
-                clipId,
-                status: queryClient.getQueryData(favoriteKeys.status(clipId)),
-            }));
+			// Snapshot previous values
+			const previousStatuses = clipIds.map((clipId) => ({
+				clipId,
+				status: queryClient.getQueryData(favoriteKeys.status(clipId)),
+			}));
 
-            // Optimistically update all to favorited
-            clipIds.forEach(clipId => {
-                queryClient.setQueryData(favoriteKeys.status(clipId), {
-                    isFavorited: true,
-                });
-                updateClipFavoriteStatus(queryClient, clipId, true);
-            });
+			// Optimistically update all to favorited
+			clipIds.forEach((clipId) => {
+				queryClient.setQueryData(favoriteKeys.status(clipId), {
+					isFavorited: true,
+				});
+				updateClipFavoriteStatus(queryClient, clipId, true);
+			});
 
-            return { previousStatuses };
-        },
-        onError: (err, clipIds, context) => {
-            // Rollback on error
-            if (context?.previousStatuses) {
-                context.previousStatuses.forEach(({ clipId, status }) => {
-                    if (status) {
-                        queryClient.setQueryData(
-                            favoriteKeys.status(clipId),
-                            status
-                        );
-                        const wasFavorited =
-                            (status as any)?.isFavorited || false;
-                        updateClipFavoriteStatus(
-                            queryClient,
-                            clipId,
-                            wasFavorited
-                        );
-                    }
-                });
-            }
-        },
-        onSettled: (data, error, clipIds) => {
-            // Refetch to ensure consistency
-            clipIds.forEach(clipId => {
-                queryClient.invalidateQueries({
-                    queryKey: favoriteKeys.status(clipId),
-                });
-            });
-        },
-    });
+			return { previousStatuses };
+		},
+		onError: (err, clipIds, context) => {
+			// Rollback on error
+			if (context?.previousStatuses) {
+				context.previousStatuses.forEach(({ clipId, status }) => {
+					if (status) {
+						queryClient.setQueryData(
+							favoriteKeys.status(clipId),
+							status
+						);
+						const wasFavorited =
+							(status as any)?.isFavorited || false;
+						updateClipFavoriteStatus(
+							queryClient,
+							clipId,
+							wasFavorited
+						);
+					}
+				});
+			}
+		},
+		onSettled: (data, error, clipIds) => {
+			// Refetch to ensure consistency
+			clipIds.forEach((clipId) => {
+				queryClient.invalidateQueries({
+					queryKey: favoriteKeys.status(clipId),
+				});
+			});
+		},
+	});
 }
 
 /**
  * Remove multiple clips from favorites with bulk operation
  */
 export function useRemoveMultipleFavorites() {
-    const queryClient = useQueryClient();
+	const queryClient = useQueryClient();
 
-    return useMutation({
-        ...removeMultipleFavoritesMutation,
-        onMutate: async (clipIds: string[]) => {
-            // Cancel outgoing refetches for all clips
-            await Promise.all(
-                clipIds.map(clipId =>
-                    queryClient.cancelQueries({
-                        queryKey: favoriteKeys.status(clipId),
-                    })
-                )
-            );
+	return useMutation({
+		...removeMultipleFavoritesMutation,
+		onMutate: async (clipIds: string[]) => {
+			// Cancel outgoing refetches for all clips
+			await Promise.all(
+				clipIds.map((clipId) =>
+					queryClient.cancelQueries({
+						queryKey: favoriteKeys.status(clipId),
+					})
+				)
+			);
 
-            // Snapshot previous values
-            const previousStatuses = clipIds.map(clipId => ({
-                clipId,
-                status: queryClient.getQueryData(favoriteKeys.status(clipId)),
-            }));
+			// Snapshot previous values
+			const previousStatuses = clipIds.map((clipId) => ({
+				clipId,
+				status: queryClient.getQueryData(favoriteKeys.status(clipId)),
+			}));
 
-            // Optimistically update all to not favorited
-            clipIds.forEach(clipId => {
-                queryClient.setQueryData(favoriteKeys.status(clipId), {
-                    isFavorited: false,
-                });
-                updateClipFavoriteStatus(queryClient, clipId, false);
-            });
+			// Optimistically update all to not favorited
+			clipIds.forEach((clipId) => {
+				queryClient.setQueryData(favoriteKeys.status(clipId), {
+					isFavorited: false,
+				});
+				updateClipFavoriteStatus(queryClient, clipId, false);
+			});
 
-            return { previousStatuses };
-        },
-        onError: (err, clipIds, context) => {
-            // Rollback on error
-            if (context?.previousStatuses) {
-                context.previousStatuses.forEach(({ clipId, status }) => {
-                    if (status) {
-                        queryClient.setQueryData(
-                            favoriteKeys.status(clipId),
-                            status
-                        );
-                        const wasFavorited =
-                            (status as any)?.isFavorited || false;
-                        updateClipFavoriteStatus(
-                            queryClient,
-                            clipId,
-                            wasFavorited
-                        );
-                    }
-                });
-            }
-        },
-        onSettled: (data, error, clipIds) => {
-            // Refetch to ensure consistency
-            clipIds.forEach(clipId => {
-                queryClient.invalidateQueries({
-                    queryKey: favoriteKeys.status(clipId),
-                });
-            });
-        },
-    });
+			return { previousStatuses };
+		},
+		onError: (err, clipIds, context) => {
+			// Rollback on error
+			if (context?.previousStatuses) {
+				context.previousStatuses.forEach(({ clipId, status }) => {
+					if (status) {
+						queryClient.setQueryData(
+							favoriteKeys.status(clipId),
+							status
+						);
+						const wasFavorited =
+							(status as any)?.isFavorited || false;
+						updateClipFavoriteStatus(
+							queryClient,
+							clipId,
+							wasFavorited
+						);
+					}
+				});
+			}
+		},
+		onSettled: (data, error, clipIds) => {
+			// Refetch to ensure consistency
+			clipIds.forEach((clipId) => {
+				queryClient.invalidateQueries({
+					queryKey: favoriteKeys.status(clipId),
+				});
+			});
+		},
+	});
 }
 
 // ============================================================================
@@ -351,126 +351,126 @@ export function useRemoveMultipleFavorites() {
  * This ensures consistency across clip lists and detail views
  */
 function updateClipFavoriteStatus(
-    queryClient: ReturnType<typeof useQueryClient>,
-    clipId: string,
-    isFavorited: boolean
+	queryClient: ReturnType<typeof useQueryClient>,
+	clipId: string,
+	isFavorited: boolean
 ) {
-    const getNewCount = (
-        currentCount: number | undefined,
-        currentFavorited: boolean | undefined
-    ) => {
-        const count = currentCount || 0;
-        const isCurrentlyFavorited = !!currentFavorited;
+	const getNewCount = (
+		currentCount: number | undefined,
+		currentFavorited: boolean | undefined
+	) => {
+		const count = currentCount || 0;
+		const isCurrentlyFavorited = !!currentFavorited;
 
-        if (isCurrentlyFavorited === isFavorited) return count;
+		if (isCurrentlyFavorited === isFavorited) return count;
 
-        return isFavorited ? count + 1 : Math.max(0, count - 1);
-    };
+		return isFavorited ? count + 1 : Math.max(0, count - 1);
+	};
 
-    // Update all clip list queries
-    queryClient.setQueriesData(
-        { queryKey: clipKeys.lists() },
-        (oldData: any) => {
-            if (!oldData?.pages) return oldData;
+	// Update all clip list queries
+	queryClient.setQueriesData(
+		{ queryKey: clipKeys.lists() },
+		(oldData: any) => {
+			if (!oldData?.pages) return oldData;
 
-            return {
-                ...oldData,
-                pages: oldData.pages.map((page: any) => ({
-                    ...page,
-                    clips:
-                        page.clips?.map((clip: FullClip) => {
-                            if (clip.clip.id === clipId) {
-                                return {
-                                    ...clip,
-                                    isFavorited,
-                                    favorite_count: getNewCount(
-                                        clip.favorite_count,
-                                        clip.isFavorited
-                                    ),
-                                };
-                            }
-                            return clip;
-                        }) || page.clips,
-                })),
-            };
-        }
-    );
+			return {
+				...oldData,
+				pages: oldData.pages.map((page: any) => ({
+					...page,
+					clips:
+						page.clips?.map((clip: FullClip) => {
+							if (clip.clip.id === clipId) {
+								return {
+									...clip,
+									isFavorited,
+									favorite_count: getNewCount(
+										clip.favorite_count,
+										clip.isFavorited
+									),
+								};
+							}
+							return clip;
+						}) || page.clips,
+				})),
+			};
+		}
+	);
 
-    // Update clip detail queries (single clip queries)
-    queryClient.setQueriesData({ queryKey: clipKeys.all }, (oldData: any) => {
-        // Skip if no data
-        if (!oldData) return oldData;
+	// Update clip detail queries (single clip queries)
+	queryClient.setQueriesData({ queryKey: clipKeys.all }, (oldData: any) => {
+		// Skip if no data
+		if (!oldData) return oldData;
 
-        // Handle paginated list data (infinite queries)
-        if (oldData.pages) {
-            return oldData; // Already handled above in clip lists update
-        }
+		// Handle paginated list data (infinite queries)
+		if (oldData.pages) {
+			return oldData; // Already handled above in clip lists update
+		}
 
-        // Handle single clip data (detail queries)
-        if (oldData.clip && oldData.clip.id === clipId) {
-            return {
-                ...oldData,
-                isFavorited,
-                favorite_count: getNewCount(
-                    oldData.favorite_count,
-                    oldData.isFavorited
-                ),
-            };
-        }
+		// Handle single clip data (detail queries)
+		if (oldData.clip && oldData.clip.id === clipId) {
+			return {
+				...oldData,
+				isFavorited,
+				favorite_count: getNewCount(
+					oldData.favorite_count,
+					oldData.isFavorited
+				),
+			};
+		}
 
-        // Handle direct clip data (if any queries return clip directly)
-        if (oldData.id === clipId) {
-            return {
-                ...oldData,
-                isFavorited,
-                favorite_count: getNewCount(
-                    oldData.favorite_count,
-                    oldData.isFavorited
-                ),
-            };
-        }
+		// Handle direct clip data (if any queries return clip directly)
+		if (oldData.id === clipId) {
+			return {
+				...oldData,
+				isFavorited,
+				favorite_count: getNewCount(
+					oldData.favorite_count,
+					oldData.isFavorited
+				),
+			};
+		}
 
-        return oldData;
-    });
+		return oldData;
+	});
 }
 
 /**
  * Helper to get the current favorite status from any available cache
  */
 function getClipFavoriteStatus(
-    queryClient: ReturnType<typeof useQueryClient>,
-    clipId: string
+	queryClient: ReturnType<typeof useQueryClient>,
+	clipId: string
 ): boolean {
-    // 1. Check specific status query
-    const statusData = queryClient.getQueryData<{ isFavorited: boolean }>(
-        favoriteKeys.status(clipId)
-    );
-    if (statusData !== undefined) {
-        return statusData.isFavorited;
-    }
+	// 1. Check specific status query
+	const statusData = queryClient.getQueryData<{ isFavorited: boolean }>(
+		favoriteKeys.status(clipId)
+	);
+	if (statusData !== undefined) {
+		return statusData.isFavorited;
+	}
 
-    // 2. Check clip detail query
-    // Note: clipKeys.detail(clipId) returns ["clips", clipId]
-    const clipData = queryClient.getQueryData<FullClip>(["clips", clipId]);
-    if (clipData?.isFavorited !== undefined) {
-        return clipData.isFavorited;
-    }
+	// 2. Check clip detail query
+	// Note: clipKeys.detail(clipId) returns ["clips", clipId]
+	const clipData = queryClient.getQueryData<FullClip>(["clips", clipId]);
+	if (clipData?.isFavorited !== undefined) {
+		return clipData.isFavorited;
+	}
 
-    // 3. Check clip lists (expensive but fallback)
-    const listData = queryClient.getQueriesData<any>({
-        queryKey: clipKeys.lists(),
-    });
-    for (const [, data] of listData) {
-        if (!data?.pages) continue;
-        for (const page of data.pages) {
-            const clip = page.clips?.find(
-                (c: FullClip) => c.clip.id === clipId
-            );
-            if (clip?.isFavorited !== undefined) {
-                return clip.isFavorited;
-            }
-        }
-    }
+	// 3. Check clip lists (expensive but fallback)
+	const listData = queryClient.getQueriesData<any>({
+		queryKey: clipKeys.lists(),
+	});
+	for (const [, data] of listData) {
+		if (!data?.pages) continue;
+		for (const page of data.pages) {
+			const clip = page.clips?.find(
+				(c: FullClip) => c.clip.id === clipId
+			);
+			if (clip?.isFavorited !== undefined) {
+				return clip.isFavorited;
+			}
+		}
+	}
 
-    return false;
+	return false;
 }

@@ -18,10 +18,10 @@ import type { AuthorStatsResponse } from "@/lib/api/author";
  * 3. Invalidate specific guild: queryClient.invalidateQueries({ queryKey: authorKeys.statsByGuild(guildId) })
  */
 export const authorKeys = {
-    all: ["authors"] as const,
-    stats: () => [...authorKeys.all, "stats"] as const,
-    statsByGuild: (guildId: string) =>
-        [...authorKeys.stats(), guildId] as const,
+	all: ["authors"] as const,
+	stats: () => [...authorKeys.all, "stats"] as const,
+	statsByGuild: (guildId: string) =>
+		[...authorKeys.stats(), guildId] as const,
 };
 
 // ============================================================================
@@ -33,9 +33,9 @@ export const authorKeys = {
  * Returns all authors with clip counts and per-channel breakdowns.
  */
 export const authorStatsQuery = (guildId: string) =>
-    queryOptions<AuthorStatsResponse>({
-        queryKey: authorKeys.statsByGuild(guildId),
-        queryFn: () => api.authors.stats(guildId),
-        enabled: !!guildId,
-        staleTime: 120_000, // 2 minutes - authors don't change frequently
-    });
+	queryOptions<AuthorStatsResponse>({
+		queryKey: authorKeys.statsByGuild(guildId),
+		queryFn: () => api.authors.stats(guildId),
+		enabled: !!guildId,
+		staleTime: 120_000, // 2 minutes - authors don't change frequently
+	});

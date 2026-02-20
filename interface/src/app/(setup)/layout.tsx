@@ -6,21 +6,21 @@ import { Toaster } from "sonner";
 import { PageContainer } from "@/components/layout";
 
 export default async function SetupLayout({
-    children,
+	children,
 }: {
-    children: React.ReactNode;
+	children: React.ReactNode;
 }) {
-    // Protect all setup routes - require authentication
-    const session = await getServerSession(authOptions);
+	// Protect all setup routes - require authentication
+	const session = await getServerSession(authOptions);
 
-    if (!session) {
-        redirect("/login");
-    }
+	if (!session) {
+		redirect("/login");
+	}
 
-    return (
-        <RootLayout>
-            <PageContainer>{children}</PageContainer>
-            <Toaster duration={5000} theme="dark" richColors closeButton />
-        </RootLayout>
-    );
+	return (
+		<RootLayout>
+			<PageContainer>{children}</PageContainer>
+			<Toaster duration={5000} theme="dark" richColors closeButton />
+		</RootLayout>
+	);
 }

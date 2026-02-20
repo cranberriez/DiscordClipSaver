@@ -12,71 +12,71 @@ import { patchClipAcrossLists, patchClipDetail } from "@/lib/queries/clip";
  * - Assumes backend refreshes CDN URL and updates clip.expires_at when queried.
  */
 export function useLatestVideoUrl(
-    clip: FullClip | null | undefined,
-    opts?: { skewSeconds?: number }
+	clip: FullClip | null | undefined,
+	opts?: { skewSeconds?: number }
 ) {
-    const skewMs = (opts?.skewSeconds ?? 30) * 1000;
+	const skewMs = (opts?.skewSeconds ?? 30) * 1000;
 
-    const { needsRefresh, guildId, clipId } = useMemo(() => {
-        if (!clip)
-            return {
-                needsRefresh: false,
-                guildId: undefined as string | undefined,
-                clipId: undefined as string | undefined,
-            };
-        const expiresAt = new Date(clip.clip.expires_at).getTime();
-        const now = Date.now();
-        const needs = isFinite(expiresAt) ? expiresAt - now <= skewMs : true;
-        return {
-            needsRefresh: needs,
-            guildId: clip.clip.guild_id,
-            clipId: clip.clip.id,
-        };
-    }, [clip, skewMs]);
+	const { needsRefresh, guildId, clipId } = useMemo(() => {
+		if (!clip)
+			return {
+				needsRefresh: false,
+				guildId: undefined as string | undefined,
+				clipId: undefined as string | undefined,
+			};
+		const expiresAt = new Date(clip.clip.expires_at).getTime();
+		const now = Date.now();
+		const needs = isFinite(expiresAt) ? expiresAt - now <= skewMs : true;
+		return {
+			needsRefresh: needs,
+			guildId: clip.clip.guild_id,
+			clipId: clip.clip.id,
+		};
+	}, [clip, skewMs]);
 
-    // Query server for refreshed clip if needed; server will refresh CDN URL if expired.
-    const {
-        data: refreshed,
-        isLoading,
-        isFetching,
-        isError,
-        error,
-    } = useClip(guildId ?? "", clipId ?? "", {
-        enabled: needsRefresh,
-        staleTime: 0, // Force fetch if we know it's expired
-    });
+	// Query server for refreshed clip if needed; server will refresh CDN URL if expired.
+	const {
+		data: refreshed,
+		isLoading,
+		isFetching,
+		isError,
+		error,
+	} = useClip(guildId ?? "", clipId ?? "", {
+		enabled: needsRefresh,
+		staleTime: 0, // Force fetch if we know it's expired
+	});
 
-    const qc = useQueryClient();
-    useEffect(() => {
-        if (!refreshed?.clip) return;
-        const c = refreshed.clip;
-        patchClipDetail(qc, c.id, {
-            cdn_url: c.cdn_url,
-            expires_at: c.expires_at,
-        });
-        patchClipAcrossLists(qc, c.id, {
-            cdn_url: c.cdn_url,
-            expires_at: c.expires_at,
-        });
-    }, [qc, refreshed]);
+	const qc = useQueryClient();
+	useEffect(() => {
+		if (!refreshed?.clip) return;
+		const c = refreshed.clip;
+		patchClipDetail(qc, c.id, {
+			cdn_url: c.cdn_url,
+			expires_at: c.expires_at,
+		});
+		patchClipAcrossLists(qc, c.id, {
+			cdn_url: c.cdn_url,
+			expires_at: c.expires_at,
+		});
+	}, [qc, refreshed]);
 
-    const effectiveUrl = useMemo(() => {
-        if (!clip) return undefined as string | undefined;
-        // If we decided it needs refresh and have refreshed data, use it; else use initial
-        if (needsRefresh && refreshed?.clip?.cdn_url)
-            return refreshed.clip.cdn_url;
-        return clip.clip.cdn_url;
-    }, [clip, needsRefresh, refreshed]);
+	const effectiveUrl = useMemo(() => {
+		if (!clip) return undefined as string | undefined;
+		// If we decided it needs refresh and have refreshed data, use it; else use initial
+		if (needsRefresh && refreshed?.clip?.cdn_url)
+			return refreshed.clip.cdn_url;
+		return clip.clip.cdn_url;
+	}, [clip, needsRefresh, refreshed]);
 
-    // Also expose the most up-to-date clip object when available
-    const effectiveClip = refreshed ?? clip;
+	// Also expose the most up-to-date clip object when available
+	const effectiveClip = refreshed ?? clip;
 
-    return {
-        url: effectiveUrl,
-        clip: effectiveClip,
-        isLoading: needsRefresh && (isLoading || isFetching),
-        didRefresh: needsRefresh && !!refreshed,
-        isError: needsRefresh && isError,
-        error: needsRefresh ? error : null,
-    } as const;
+	return {
+		url: effectiveUrl,
+		clip: effectiveClip,
+		isLoading: needsRefresh && (isLoading || isFetching),
+		didRefresh: needsRefresh && !!refreshed,
+		isError: needsRefresh && isError,
+		error: needsRefresh ? error : null,
+	} as const;
 }

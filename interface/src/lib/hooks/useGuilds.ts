@@ -3,12 +3,12 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api/client";
 import {
-    guildKeys,
-    guildQuery,
-    guildsQuery,
-    guildsDiscordQuery,
-    guildsWithClipCountQuery,
-    guildStatsQuery,
+	guildKeys,
+	guildQuery,
+	guildsQuery,
+	guildsDiscordQuery,
+	guildsWithClipCountQuery,
+	guildStatsQuery,
 } from "@/lib/queries";
 import { Guild, type GuildStatsOptions } from "../api/guild";
 
@@ -38,7 +38,7 @@ import { Guild, type GuildStatsOptions } from "../api/guild";
  * ```
  */
 export function useGuilds(includePerms?: boolean) {
-    return useQuery(guildsQuery(includePerms));
+	return useQuery(guildsQuery(includePerms));
 }
 
 /**
@@ -63,7 +63,7 @@ export function useGuilds(includePerms?: boolean) {
  * ```
  */
 export function useGuildsDiscord(includeDB?: boolean) {
-    return useQuery(guildsDiscordQuery(includeDB));
+	return useQuery(guildsDiscordQuery(includeDB));
 }
 
 /**
@@ -92,7 +92,7 @@ export function useGuildsDiscord(includeDB?: boolean) {
  * ```
  */
 export function useGuildsWithClipCount() {
-    return useQuery(guildsWithClipCountQuery());
+	return useQuery(guildsWithClipCountQuery());
 }
 
 /**
@@ -113,7 +113,7 @@ export function useGuildsWithClipCount() {
  * ```
  */
 export function useGuild(guildId: string, options?: { initialData?: Guild }) {
-    return useQuery(guildQuery(guildId, options));
+	return useQuery(guildQuery(guildId, options));
 }
 
 /**
@@ -147,11 +147,8 @@ export function useGuild(guildId: string, options?: { initialData?: Guild }) {
  * }
  * ```
  */
-export function useGuildStats(
-    guildIds: string[],
-    options?: GuildStatsOptions
-) {
-    return useQuery(guildStatsQuery(guildIds, options));
+export function useGuildStats(guildIds: string[], options?: GuildStatsOptions) {
+	return useQuery(guildStatsQuery(guildIds, options));
 }
 
 // ============================================================================
@@ -187,50 +184,50 @@ export function useGuildStats(
  * ```
  */
 export function useToggleScanning(guildId: string) {
-    const queryClient = useQueryClient();
+	const queryClient = useQueryClient();
 
-    return useMutation({
-        mutationFn: (enabled: boolean) =>
-            api.guilds.toggleScanning(guildId, enabled),
+	return useMutation({
+		mutationFn: (enabled: boolean) =>
+			api.guilds.toggleScanning(guildId, enabled),
 
-        // Optimistic update
-        onMutate: async enabled => {
-            // Cancel outgoing refetches
-            await queryClient.cancelQueries({
-                queryKey: guildKeys.detail(guildId),
-            });
+		// Optimistic update
+		onMutate: async (enabled) => {
+			// Cancel outgoing refetches
+			await queryClient.cancelQueries({
+				queryKey: guildKeys.detail(guildId),
+			});
 
-            // Snapshot previous value
-            const previousGuild = queryClient.getQueryData<Guild>(
-                guildKeys.detail(guildId)
-            );
+			// Snapshot previous value
+			const previousGuild = queryClient.getQueryData<Guild>(
+				guildKeys.detail(guildId)
+			);
 
-            // Optimistically update
-            if (previousGuild) {
-                queryClient.setQueryData<Guild>(guildKeys.detail(guildId), {
-                    ...previousGuild,
-                    message_scan_enabled: enabled,
-                });
-            }
+			// Optimistically update
+			if (previousGuild) {
+				queryClient.setQueryData<Guild>(guildKeys.detail(guildId), {
+					...previousGuild,
+					message_scan_enabled: enabled,
+				});
+			}
 
-            return { previousGuild };
-        },
+			return { previousGuild };
+		},
 
-        // Rollback on error
-        onError: (err, variables, context) => {
-            if (context?.previousGuild) {
-                queryClient.setQueryData(
-                    guildKeys.detail(guildId),
-                    context.previousGuild
-                );
-            }
-        },
+		// Rollback on error
+		onError: (err, variables, context) => {
+			if (context?.previousGuild) {
+				queryClient.setQueryData(
+					guildKeys.detail(guildId),
+					context.previousGuild
+				);
+			}
+		},
 
-        // Refetch on success to ensure consistency
-        onSuccess: () => {
-            queryClient.invalidateQueries({
-                queryKey: guildKeys.detail(guildId),
-            });
-        },
-    });
+		// Refetch on success to ensure consistency
+		onSuccess: () => {
+			queryClient.invalidateQueries({
+				queryKey: guildKeys.detail(guildId),
+			});
+		},
+	});
 }

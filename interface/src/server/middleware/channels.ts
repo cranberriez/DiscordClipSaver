@@ -39,29 +39,29 @@ import { hasPermission, DiscordPermissions } from "./auth";
  * ```
  */
 export function filterChannelsByPermissions(
-    channels: Channel[],
-    discordGuild: DiscordGuild | undefined
+	channels: Channel[],
+	discordGuild: DiscordGuild | undefined
 ): Channel[] {
-    // If no Discord guild data, return empty (user doesn't have access)
-    if (!discordGuild) {
-        return [];
-    }
+	// If no Discord guild data, return empty (user doesn't have access)
+	if (!discordGuild) {
+		return [];
+	}
 
-    // Guild owner or admin can see all channels
-    if (
-        discordGuild.owner ||
-        hasPermission(discordGuild, DiscordPermissions.ADMINISTRATOR)
-    ) {
-        return channels;
-    }
+	// Guild owner or admin can see all channels
+	if (
+		discordGuild.owner ||
+		hasPermission(discordGuild, DiscordPermissions.ADMINISTRATOR)
+	) {
+		return channels;
+	}
 
-    // For now, return all channels if user has guild access
-    // TODO: Implement more granular channel-level permission checking
-    // This would require:
-    // 1. Fetching channel permission overwrites from Discord API
-    // 2. Checking user's roles and their permissions
-    // 3. Applying permission overwrites
-    return channels;
+	// For now, return all channels if user has guild access
+	// TODO: Implement more granular channel-level permission checking
+	// This would require:
+	// 1. Fetching channel permission overwrites from Discord API
+	// 2. Checking user's roles and their permissions
+	// 3. Applying permission overwrites
+	return channels;
 }
 
 /**
@@ -75,22 +75,22 @@ export function filterChannelsByPermissions(
  * @returns Whether user can view the channel
  */
 export function canViewChannel(
-    channelId: string,
-    discordGuild: DiscordGuild | undefined
+	channelId: string,
+	discordGuild: DiscordGuild | undefined
 ): boolean {
-    if (!discordGuild) return false;
+	if (!discordGuild) return false;
 
-    // Guild owner or admin can view all channels
-    if (
-        discordGuild.owner ||
-        hasPermission(discordGuild, DiscordPermissions.ADMINISTRATOR)
-    ) {
-        return true;
-    }
+	// Guild owner or admin can view all channels
+	if (
+		discordGuild.owner ||
+		hasPermission(discordGuild, DiscordPermissions.ADMINISTRATOR)
+	) {
+		return true;
+	}
 
-    // For now, assume user can view if they have guild access
-    // TODO: Implement channel-specific permission checking
-    return true;
+	// For now, assume user can view if they have guild access
+	// TODO: Implement channel-specific permission checking
+	return true;
 }
 
 /**

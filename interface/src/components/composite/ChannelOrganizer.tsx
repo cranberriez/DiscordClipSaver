@@ -3,35 +3,35 @@ import { Hash, Volume2, MessageSquare, Folder } from "lucide-react";
 import type { ChannelType } from "@/lib/api/types";
 
 export interface ChannelTypeConfig {
-    label: string;
-    icon: React.ComponentType<{ className?: string }>;
-    order: number;
+	label: string;
+	icon: React.ComponentType<{ className?: string }>;
+	order: number;
 }
 
 /**
  * Channel type configuration with labels, icons, and display order
  */
 export const CHANNEL_TYPE_CONFIG: Record<ChannelType, ChannelTypeConfig> = {
-    text: {
-        label: "Text Channels",
-        icon: Hash,
-        order: 1,
-    },
-    voice: {
-        label: "Voice Channels",
-        icon: Volume2,
-        order: 2,
-    },
-    forum: {
-        label: "Forum Channels",
-        icon: MessageSquare,
-        order: 3,
-    },
-    category: {
-        label: "Categories",
-        icon: Folder,
-        order: 4,
-    },
+	text: {
+		label: "Text Channels",
+		icon: Hash,
+		order: 1,
+	},
+	voice: {
+		label: "Voice Channels",
+		icon: Volume2,
+		order: 2,
+	},
+	forum: {
+		label: "Forum Channels",
+		icon: MessageSquare,
+		order: 3,
+	},
+	category: {
+		label: "Categories",
+		icon: Folder,
+		order: 4,
+	},
 };
 
 /**
@@ -54,46 +54,46 @@ type HasChannelType = { type: ChannelType; [key: string]: any };
  * ```
  */
 export function groupChannelsByType<T extends HasChannelType>(
-    channels: T[],
-    sortBy?: keyof T
+	channels: T[],
+	sortBy?: keyof T
 ): Record<ChannelType, T[]> {
-    const groups: Record<ChannelType, T[]> = {
-        text: [],
-        voice: [],
-        forum: [],
-        category: [],
-    };
+	const groups: Record<ChannelType, T[]> = {
+		text: [],
+		voice: [],
+		forum: [],
+		category: [],
+	};
 
-    // Group channels by type
-    channels.forEach(channel => {
-        groups[channel.type].push(channel);
-    });
+	// Group channels by type
+	channels.forEach((channel) => {
+		groups[channel.type].push(channel);
+	});
 
-    // Sort each group
-    Object.keys(groups).forEach(type => {
-        const channelType = type as ChannelType;
-        groups[channelType].sort((a, b) => {
-            if (sortBy) {
-                const aVal = a[sortBy];
-                const bVal = b[sortBy];
+	// Sort each group
+	Object.keys(groups).forEach((type) => {
+		const channelType = type as ChannelType;
+		groups[channelType].sort((a, b) => {
+			if (sortBy) {
+				const aVal = a[sortBy];
+				const bVal = b[sortBy];
 
-                // String comparison
-                if (typeof aVal === "string" && typeof bVal === "string") {
-                    return aVal.localeCompare(bVal);
-                }
+				// String comparison
+				if (typeof aVal === "string" && typeof bVal === "string") {
+					return aVal.localeCompare(bVal);
+				}
 
-                // Number comparison
-                if (typeof aVal === "number" && typeof bVal === "number") {
-                    return aVal - bVal;
-                }
-            }
+				// Number comparison
+				if (typeof aVal === "number" && typeof bVal === "number") {
+					return aVal - bVal;
+				}
+			}
 
-            // Default: maintain original order
-            return 0;
-        });
-    });
+			// Default: maintain original order
+			return 0;
+		});
+	});
 
-    return groups;
+	return groups;
 }
 
 /**
@@ -102,9 +102,9 @@ export function groupChannelsByType<T extends HasChannelType>(
  * @returns Array of channel types in display order
  */
 export function getSortedChannelTypes(): ChannelType[] {
-    return (Object.keys(CHANNEL_TYPE_CONFIG) as ChannelType[]).sort(
-        (a, b) => CHANNEL_TYPE_CONFIG[a].order - CHANNEL_TYPE_CONFIG[b].order
-    );
+	return (Object.keys(CHANNEL_TYPE_CONFIG) as ChannelType[]).sort(
+		(a, b) => CHANNEL_TYPE_CONFIG[a].order - CHANNEL_TYPE_CONFIG[b].order
+	);
 }
 
 /**
@@ -114,15 +114,15 @@ export function getSortedChannelTypes(): ChannelType[] {
  * @returns JSX element with icon and label
  */
 export function ChannelTypeHeader({ type }: { type: ChannelType }) {
-    const config = CHANNEL_TYPE_CONFIG[type];
-    const Icon = config.icon;
+	const config = CHANNEL_TYPE_CONFIG[type];
+	const Icon = config.icon;
 
-    return (
-        <div className="flex items-center gap-2">
-            <Icon className="h-4 w-4 text-muted-foreground" />
-            <span className="font-semibold text-sm text-muted-foreground">
-                {config.label}
-            </span>
-        </div>
-    );
+	return (
+		<div className="flex items-center gap-2">
+			<Icon className="text-muted-foreground h-4 w-4" />
+			<span className="text-muted-foreground text-sm font-semibold">
+				{config.label}
+			</span>
+		</div>
+	);
 }

@@ -1,6 +1,6 @@
 export type SetupStepState =
-    | "need_action"
-    | "loading"
-    | "success"
-    | "error"
-    | null;
+	| "need_action"
+	| "loading"
+	| "success"
+	| "error"
+	| null;

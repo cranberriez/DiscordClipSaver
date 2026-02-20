@@ -14,19 +14,19 @@ const MANAGE_GUILD = BigInt(32); // 1 << 5
  * Returns true if user is owner or has ADMINISTRATOR or MANAGE_GUILD permissions.
  */
 export function canInviteBot(g: DiscordGuild): boolean {
-    if (!g) return false;
-    if (g.owner) return true;
-    if (!g.permissions) return false;
-    const perms = BigInt((g.permissions as string | number | undefined) ?? 0);
-    return (perms & (ADMINISTRATOR | MANAGE_GUILD)) !== BigInt(0);
+	if (!g) return false;
+	if (g.owner) return true;
+	if (!g.permissions) return false;
+	const perms = BigInt((g.permissions as string | number | undefined) ?? 0);
+	return (perms & (ADMINISTRATOR | MANAGE_GUILD)) !== BigInt(0);
 }
 export function canInviteBotPerms(perms: bigint): boolean {
-    return (perms & (ADMINISTRATOR | MANAGE_GUILD)) !== BigInt(0);
+	return (perms & (ADMINISTRATOR | MANAGE_GUILD)) !== BigInt(0);
 }
 
 /**
  * Filter guilds to only those where the user can invite the bot.
  */
 export function filterInvitableGuilds(guilds: DiscordGuild[]): DiscordGuild[] {
-    return guilds.filter(g => canInviteBot(g));
+	return guilds.filter((g) => canInviteBot(g));
 }

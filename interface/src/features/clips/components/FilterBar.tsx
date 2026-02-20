@@ -2,10 +2,10 @@ import { FilterMenu } from "./clip-filtering/FilterMenu";
 import { NavbarCompact } from "@/components/composite/navbarCompact";
 
 interface FilterBarProps {
-    guildName?: string;
-    guildIcon?: string | null;
-    channelCount?: number;
-    authorCount?: number;
+	guildName?: string;
+	guildIcon?: string | null;
+	channelCount?: number;
+	authorCount?: number;
 }
 
 /**
@@ -19,22 +19,22 @@ interface FilterBarProps {
  * - Sort order toggle
  */
 export function FilterBar({
-    guildName,
-    guildIcon,
-    channelCount = 0,
-    authorCount = 0,
+	guildName,
+	guildIcon,
+	channelCount = 0,
+	authorCount = 0,
 }: FilterBarProps) {
-    return (
-        <div className="container mx-auto px-3 sm:px-8 max-w-full absolute top-0 z-10 bg-popover">
-            <div className="flex items-center justify-between gap-2 py-2">
-                <FilterMenu
-                    guildName={guildName || ""}
-                    guildIcon={guildIcon || null}
-                    channelCount={channelCount}
-                    authorCount={authorCount}
-                />
-                <NavbarCompact />
-            </div>
-        </div>
-    );
+	return (
+		<div className="bg-popover absolute top-0 z-10 container mx-auto max-w-full px-3 sm:px-8">
+			<div className="flex items-center justify-between gap-2 py-2">
+				<FilterMenu
+					guildName={guildName || ""}
+					guildIcon={guildIcon || null}
+					channelCount={channelCount}
+					authorCount={authorCount}
+				/>
+				<NavbarCompact />
+			</div>
+		</div>
+	);
 }

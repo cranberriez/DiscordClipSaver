@@ -1,16 +1,16 @@
 import { Navbar } from "@/components/composite/navbar";
 
 export function RootLayout({
-    children,
-    noLines,
+	children,
+	noLines,
 }: {
-    children: React.ReactNode;
-    noLines?: boolean;
+	children: React.ReactNode;
+	noLines?: boolean;
 }) {
-    return (
-        <div className="min-h-screen flex flex-col">
-            <Navbar noLines={noLines} />
-            <main className="flex flex-col flex-1">{children}</main>
-        </div>
-    );
+	return (
+		<div className="flex min-h-screen flex-col">
+			<Navbar noLines={noLines} />
+			<main className="flex flex-1 flex-col">{children}</main>
+		</div>
+	);
 }

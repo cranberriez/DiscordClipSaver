@@ -10,7 +10,12 @@ interface TagBadgeProps {
 	size?: "sm" | "md";
 }
 
-export function TagBadge({ tag, onRemove, className, size = "md" }: TagBadgeProps) {
+export function TagBadge({
+	tag,
+	onRemove,
+	className,
+	size = "md",
+}: TagBadgeProps) {
 	// Calculate contrasting text color (simple version)
 	// If needed, we can add a proper utility for this later
 	const isDarkColor = (color: string) => {
@@ -27,7 +32,7 @@ export function TagBadge({ tag, onRemove, className, size = "md" }: TagBadgeProp
 				backgroundColor: tag.color,
 				color: isDarkColor(tag.color) ? "white" : "black",
 				borderColor: "transparent",
-		  }
+			}
 		: undefined;
 
 	return (
@@ -35,12 +40,12 @@ export function TagBadge({ tag, onRemove, className, size = "md" }: TagBadgeProp
 			variant="secondary"
 			className={cn(
 				"gap-1 transition-all hover:brightness-110",
-				size === "sm" ? "text-[10px] px-1.5 py-0" : "px-2 py-0.5",
+				size === "sm" ? "px-1.5 py-0 text-[10px]" : "px-2 py-0.5",
 				className
 			)}
 			style={style}
 		>
-			<span className="truncate max-w-[150px]">{tag.name}</span>
+			<span className="max-w-[150px] truncate">{tag.name}</span>
 			{onRemove && (
 				<button
 					onClick={(e) => {
@@ -48,11 +53,11 @@ export function TagBadge({ tag, onRemove, className, size = "md" }: TagBadgeProp
 						onRemove();
 					}}
 					className={cn(
-						"rounded-full hover:bg-black/20 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-1 p-0.5 -mr-1",
+						"focus:ring-ring -mr-1 rounded-full p-0.5 hover:bg-black/20 focus:ring-2 focus:ring-offset-1 focus:outline-none",
 						size === "sm" ? "h-3 w-3" : "h-4 w-4"
 					)}
 				>
-					<X className={cn("w-full h-full")} />
+					<X className={cn("h-full w-full")} />
 					<span className="sr-only">Remove {tag.name} tag</span>
 				</button>
 			)}

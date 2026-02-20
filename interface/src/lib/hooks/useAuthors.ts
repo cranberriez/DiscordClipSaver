@@ -33,7 +33,7 @@ import { authorKeys, authorStatsQuery } from "@/lib/queries/author";
  * ```
  */
 export function useAuthorStats(guildId: string) {
-    return useQuery(authorStatsQuery(guildId));
+	return useQuery(authorStatsQuery(guildId));
 }
 
 /**
@@ -56,11 +56,11 @@ export function useAuthorStats(guildId: string) {
  * ```
  */
 export function usePrefetchAuthorStats() {
-    const queryClient = useQueryClient();
+	const queryClient = useQueryClient();
 
-    return (guildId: string) => {
-        queryClient.prefetchQuery(authorStatsQuery(guildId));
-    };
+	return (guildId: string) => {
+		queryClient.prefetchQuery(authorStatsQuery(guildId));
+	};
 }
 
 // Export authorKeys for manual cache invalidation
