@@ -151,6 +151,9 @@ export type ClipPatch = {
 	cdn_url?: string;
 	expires_at?: string | Date;
 	tags?: string[];
+	title?: string | null;
+	visibility?: "PUBLIC" | "UNLISTED" | "PRIVATE";
+	deleted_at?: string | Date | null;
 };
 
 /** Patch the single-clip detail cache. */
@@ -168,10 +171,13 @@ export function patchClipDetail(
 		) {
 			normalized.expires_at = new Date(normalized.expires_at);
 		}
+
+		const { tags, ...clipUpdates } = normalized;
+
 		return {
 			...old,
-			clip: { ...old.clip, ...normalized },
-			tags: normalized.tags ?? old.tags,
+			clip: { ...old.clip, ...clipUpdates },
+			tags: tags ?? old.tags,
 		} as FullClip;
 	});
 }
@@ -217,10 +223,13 @@ export function patchClipInInfiniteList(
 				) {
 					normalized.expires_at = new Date(normalized.expires_at);
 				}
+
+				const { tags, ...clipUpdates } = normalized;
+
 				return {
 					...c,
-					clip: { ...c.clip, ...normalized },
-					tags: normalized.tags ?? c.tags,
+					clip: { ...c.clip, ...clipUpdates },
+					tags: tags ?? c.tags,
 				};
 			}),
 		}));
@@ -249,12 +258,30 @@ export function patchClipAcrossLists(
 					) {
 						normalized.expires_at = new Date(normalized.expires_at);
 					}
+
+					const { tags, ...clipUpdates } = normalized;
+
 					return {
 						...c,
-						clip: { ...c.clip, ...normalized },
-						tags: normalized.tags ?? c.tags,
+						clip: { ...c.clip, ...clipUpdates },
+						tags: tags ?? c.tags,
 					};
 				}),
+			}));
+			return { ...old, pages };
+		}
+	);
+}
+
+/** Remove a clip from all list variants under clips/lists. */
+export function removeClipFromLists(qc: QueryClient, clipId: string) {
+	qc.setQueriesData<{ pages: { clips: any[] }[]; pageParams: any[] }>(
+		{ queryKey: clipKeys.lists(), exact: false },
+		(old) => {
+			if (!old) return old;
+			const pages = old.pages.map((page) => ({
+				...page,
+				clips: page.clips.filter((c) => c.clip.id !== clipId),
 			}));
 			return { ...old, pages };
 		}

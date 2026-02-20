@@ -1,6 +1,12 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { clipKeys } from "@/lib/queries/clip";
+import {
+	clipKeys,
+	patchClipDetail,
+	patchClipAcrossLists,
+	removeClipFromLists,
+} from "@/lib/queries/clip";
+import { FullClip } from "@/lib/api/clip";
 
 export function useUpdateVisibility() {
 	const queryClient = useQueryClient();
@@ -26,21 +32,47 @@ export function useUpdateVisibility() {
 
 			return res.json();
 		},
+		onMutate: async ({ clipId, visibility }) => {
+			// Cancel outgoing refetches
+			await queryClient.cancelQueries({
+				queryKey: clipKeys.detail(clipId),
+			});
+			await queryClient.cancelQueries({ queryKey: clipKeys.lists() });
+
+			// Snapshot previous value
+			const previousClip = queryClient.getQueryData<FullClip>(
+				clipKeys.detail(clipId)
+			);
+
+			// Optimistic update
+			patchClipDetail(queryClient, clipId, { visibility });
+			patchClipAcrossLists(queryClient, clipId, { visibility });
+
+			return { previousClip };
+		},
+		onError: (error, { clipId }, context) => {
+			toast.error(error.message);
+			// Rollback
+			if (context?.previousClip) {
+				patchClipDetail(queryClient, clipId, {
+					visibility: context.previousClip.clip.visibility,
+				});
+				patchClipAcrossLists(queryClient, clipId, {
+					visibility: context.previousClip.clip.visibility,
+				});
+			}
+		},
+		onSettled: (_, __, { clipId }) => {
+			// Only invalidate detail to ensure consistency
+			queryClient.invalidateQueries({
+				queryKey: clipKeys.detail(clipId),
+			});
+			// Do NOT invalidate lists to prevent re-randomization
+		},
 		onSuccess: (_, variables) => {
 			toast.success(
 				`Visibility updated to ${variables.visibility.toLowerCase()}`
 			);
-			// Invalidate specific clip query
-			queryClient.invalidateQueries({
-				queryKey: clipKeys.detail(variables.clipId),
-			});
-			// Invalidate list queries since visibility affects list filtering
-			queryClient.invalidateQueries({
-				queryKey: clipKeys.lists(),
-			});
-		},
-		onError: (error) => {
-			toast.error(error.message);
 		},
 	});
 }
@@ -61,17 +93,45 @@ export function useArchiveClip() {
 
 			return res.json();
 		},
-		onSuccess: (_, clipId) => {
-			toast.success("Clip archived");
+		onMutate: async (clipId) => {
+			// Cancel outgoing refetches
+			await queryClient.cancelQueries({
+				queryKey: clipKeys.detail(clipId),
+			});
+			await queryClient.cancelQueries({ queryKey: clipKeys.lists() });
+
+			// Snapshot previous value
+			const previousClip = queryClient.getQueryData<FullClip>(
+				clipKeys.detail(clipId)
+			);
+
+			// Optimistic update
+			const now = new Date();
+			patchClipDetail(queryClient, clipId, { deleted_at: now });
+			patchClipAcrossLists(queryClient, clipId, { deleted_at: now });
+
+			return { previousClip };
+		},
+		onError: (error, clipId, context) => {
+			toast.error(error.message);
+			// Rollback
+			if (context?.previousClip) {
+				patchClipDetail(queryClient, clipId, {
+					deleted_at: context.previousClip.clip.deleted_at,
+				});
+				patchClipAcrossLists(queryClient, clipId, {
+					deleted_at: context.previousClip.clip.deleted_at,
+				});
+			}
+		},
+		onSettled: (_, __, clipId) => {
 			queryClient.invalidateQueries({
 				queryKey: clipKeys.detail(clipId),
 			});
-			queryClient.invalidateQueries({
-				queryKey: clipKeys.lists(),
-			});
+			// Do NOT invalidate lists
 		},
-		onError: (error) => {
-			toast.error(error.message);
+		onSuccess: () => {
+			toast.success("Clip archived");
 		},
 	});
 }
@@ -92,17 +152,44 @@ export function useUnarchiveClip() {
 
 			return res.json();
 		},
-		onSuccess: (_, clipId) => {
-			toast.success("Clip unarchived");
+		onMutate: async (clipId) => {
+			// Cancel outgoing refetches
+			await queryClient.cancelQueries({
+				queryKey: clipKeys.detail(clipId),
+			});
+			await queryClient.cancelQueries({ queryKey: clipKeys.lists() });
+
+			// Snapshot previous value
+			const previousClip = queryClient.getQueryData<FullClip>(
+				clipKeys.detail(clipId)
+			);
+
+			// Optimistic update
+			patchClipDetail(queryClient, clipId, { deleted_at: null });
+			patchClipAcrossLists(queryClient, clipId, { deleted_at: null });
+
+			return { previousClip };
+		},
+		onError: (error, clipId, context) => {
+			toast.error(error.message);
+			// Rollback
+			if (context?.previousClip) {
+				patchClipDetail(queryClient, clipId, {
+					deleted_at: context.previousClip.clip.deleted_at,
+				});
+				patchClipAcrossLists(queryClient, clipId, {
+					deleted_at: context.previousClip.clip.deleted_at,
+				});
+			}
+		},
+		onSettled: (_, __, clipId) => {
 			queryClient.invalidateQueries({
 				queryKey: clipKeys.detail(clipId),
 			});
-			queryClient.invalidateQueries({
-				queryKey: clipKeys.lists(),
-			});
+			// Do NOT invalidate lists
 		},
-		onError: (error) => {
-			toast.error(error.message);
+		onSuccess: () => {
+			toast.success("Clip unarchived");
 		},
 	});
 }
@@ -123,18 +210,35 @@ export function useDeleteClip() {
 
 			return res.json();
 		},
+		onMutate: async (clipId) => {
+			// Cancel outgoing refetches
+			await queryClient.cancelQueries({
+				queryKey: clipKeys.detail(clipId),
+			});
+			await queryClient.cancelQueries({ queryKey: clipKeys.lists() });
+
+			// Snapshot isn't strictly necessary for delete if we don't plan to undo,
+			// but good practice if we wanted to support undo.
+			// For now, we just remove it from the list optimistically.
+
+			// We won't remove from detail cache immediately in case user is viewing it?
+			// Actually if they delete it, they probably shouldn't see it.
+
+			removeClipFromLists(queryClient, clipId);
+		},
 		onSuccess: (_, clipId) => {
 			toast.success("Clip deleted");
-			// Remove from cache directly if possible, or invalidate
 			queryClient.removeQueries({
 				queryKey: clipKeys.detail(clipId),
 			});
-			queryClient.invalidateQueries({
-				queryKey: clipKeys.lists(),
-			});
+			// Lists already updated in onMutate
 		},
 		onError: (error) => {
 			toast.error(error.message);
+			// If we implemented undo/rollback, we would put it back here.
+			// Since we don't have the full clip object easily available unless we snapshotted it,
+			// easiest rollback for delete is invalidating lists to refetch.
+			queryClient.invalidateQueries({ queryKey: clipKeys.lists() });
 		},
 	});
 }
@@ -163,17 +267,45 @@ export function useRenameClip() {
 
 			return res.json();
 		},
-		onSuccess: (_, variables) => {
-			toast.success("Clip renamed");
-			queryClient.invalidateQueries({
-				queryKey: clipKeys.detail(variables.clipId),
+		onMutate: async ({ clipId, title }) => {
+			// Cancel outgoing refetches
+			await queryClient.cancelQueries({
+				queryKey: clipKeys.detail(clipId),
 			});
-			queryClient.invalidateQueries({
-				queryKey: clipKeys.lists(),
-			});
+			await queryClient.cancelQueries({ queryKey: clipKeys.lists() });
+
+			// Snapshot previous value
+			const previousClip = queryClient.getQueryData<FullClip>(
+				clipKeys.detail(clipId)
+			);
+
+			// Optimistic update
+			patchClipDetail(queryClient, clipId, { title });
+			patchClipAcrossLists(queryClient, clipId, { title });
+
+			return { previousClip };
 		},
-		onError: (error) => {
+		onError: (error, { clipId }, context) => {
 			toast.error(error.message);
+			// Rollback
+			if (context?.previousClip) {
+				patchClipDetail(queryClient, clipId, {
+					title: context.previousClip.clip.title,
+				});
+				patchClipAcrossLists(queryClient, clipId, {
+					title: context.previousClip.clip.title,
+				});
+			}
+		},
+		onSettled: (_, __, { clipId }) => {
+			// Only invalidate detail to ensure consistency
+			queryClient.invalidateQueries({
+				queryKey: clipKeys.detail(clipId),
+			});
+			// Do NOT invalidate lists to prevent re-randomization
+		},
+		onSuccess: () => {
+			toast.success("Clip renamed");
 		},
 	});
 }

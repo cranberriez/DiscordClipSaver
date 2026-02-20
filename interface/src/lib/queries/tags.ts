@@ -217,9 +217,8 @@ export function useAddClipTags() {
 			queryClient.invalidateQueries({
 				queryKey: clipKeys.detail(clipId),
 			});
-			queryClient.invalidateQueries({
-				queryKey: clipKeys.lists(),
-			});
+			// Don't invalidate lists to prevent re-randomization
+			// The optimistic update handles the list cache
 		},
 	});
 }
@@ -299,9 +298,8 @@ export function useRemoveClipTags() {
 			queryClient.invalidateQueries({
 				queryKey: clipKeys.detail(clipId),
 			});
-			queryClient.invalidateQueries({
-				queryKey: clipKeys.lists(),
-			});
+			// Don't invalidate lists to prevent re-randomization
+			// The optimistic update handles the list cache
 		},
 	});
 }

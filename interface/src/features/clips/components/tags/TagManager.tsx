@@ -190,14 +190,6 @@ export function TagManager({
 								</div>
 							) : (
 								<>
-									{/* Existing Tags */}
-									{filteredAvailableTags.length > 0 &&
-										!searchQuery && (
-											<div className="text-muted-foreground px-2 py-1 text-xs font-medium">
-												All Tags
-											</div>
-										)}
-
 									{filteredAvailableTags.length === 0 &&
 										!searchQuery && (
 											<div className="text-muted-foreground p-2 text-center text-xs">
