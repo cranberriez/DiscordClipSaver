@@ -49,23 +49,50 @@ class ScanService:
                     logger.debug(f"Guild {guild.id} not found in Discord, skipping")
                     continue
                 
-                # Get all channels with scanning enabled
-                channels = await Channel.filter(
-                    guild_id=guild.id,
-                    message_scan_enabled=True,
-                    deleted_at=None
-                ).all()
-                
-                for channel in channels:
-                    gap_detected = await self._check_and_queue_gap(discord_guild, channel)
-                    if gap_detected:
-                        total_gaps_found += 1
+                gaps_found = await self.check_guild_gaps(discord_guild, guild)
+                total_gaps_found += gaps_found
                         
             except Exception as e:
                 logger.error(f"Error detecting gaps for guild {guild.id}: {e}", exc_info=True)
                 continue
         
         logger.info(f"Gap detection complete. Found {total_gaps_found} channels with gaps.")
+
+    async def check_guild_gaps(self, discord_guild: discord.Guild, guild_model: Optional[Guild] = None) -> int:
+        """
+        Check for gaps in all enabled channels of a specific guild.
+        
+        Args:
+            discord_guild: Discord guild object
+            guild_model: Optional Guild DB model (fetched if not provided)
+            
+        Returns:
+            Number of channels where gaps were detected
+        """
+        if not guild_model:
+            guild_model = await Guild.get_or_none(id=str(discord_guild.id))
+            
+        if not guild_model or not guild_model.message_scan_enabled:
+            return 0
+            
+        try:
+            # Get all channels with scanning enabled
+            channels = await Channel.filter(
+                guild_id=guild_model.id,
+                message_scan_enabled=True,
+                deleted_at=None
+            ).all()
+            
+            gaps_found = 0
+            for channel in channels:
+                gap_detected = await self._check_and_queue_gap(discord_guild, channel)
+                if gap_detected:
+                    gaps_found += 1
+            
+            return gaps_found
+        except Exception as e:
+            logger.error(f"Error checking gaps for guild {discord_guild.id}: {e}", exc_info=True)
+            return 0
     
     async def _check_and_queue_gap(self, discord_guild: discord.Guild, channel: Channel) -> bool:
         """

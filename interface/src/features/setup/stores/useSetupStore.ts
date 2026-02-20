@@ -303,8 +303,9 @@ export function useSetupStoreHydrated() {
 			isStepCompleted: () => false,
 			getCompletedStepsCount: () => 0,
 			getTotalStepsCount: () => 7,
+			isHydrated: false,
 		};
 	}
 
-	return store;
+	return { ...store, isHydrated: true };
 }

@@ -68,6 +68,15 @@ class GuildService:
         except Exception as e:
             logger.warning("Failed to stop scans for guild %s: %s", guild_id, e)
         
+        # Delete all scan statuses for this guild to ensure a fresh start on re-join
+        # This prevents "Initial Scan" from thinking it's already done if re-added
+        try:
+            deleted_count = await ChannelScanStatus.filter(guild_id=guild_id).delete()
+            if deleted_count > 0:
+                logger.info("Deleted %d scan status records for guild %s", deleted_count, guild_id)
+        except Exception as e:
+            logger.error("Failed to delete scan statuses for guild %s: %s", guild_id, e)
+
         # Soft delete guild (sets deleted_at timestamp)
         await db_delete_single_guild(guild_id)
         logger.info("Removed from guild: %s (%s) - marked as deleted", guild.name, guild.id)

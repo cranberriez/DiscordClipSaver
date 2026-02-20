@@ -29,6 +29,10 @@ async def on_ready():
 async def on_guild_join(guild: discord.Guild):
     await guild_service.on_guild_join(guild)
     await channel_service.sync_channels(bot, guild)
+    
+    # Check for gaps if scanning was previously enabled
+    scan_service = get_scan_service()
+    await scan_service.check_guild_gaps(guild)
 
 
 @bot.event

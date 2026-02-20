@@ -196,8 +196,9 @@ class PurgeHandler:
             guild = await Guild.get_or_none(id=guild_id)
             if guild:
                 guild.deleted_at = datetime.now(timezone.utc)
+                guild.message_scan_enabled = False  # Reset scanning state so setup is required on re-join
                 await guild.save()
-                logger.info(f"Soft deleted guild {guild_id}")
+                logger.info(f"Soft deleted guild {guild_id} and disabled scanning")
             
             # Leave the guild via bot
             try:

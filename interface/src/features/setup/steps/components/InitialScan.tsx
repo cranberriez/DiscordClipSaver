@@ -1,15 +1,16 @@
 "use client";
 
-import type { Guild } from "@/lib/api/guild";
 import { Step } from "./Step";
 import { useChannels, useStartBulkScan, useScanStatuses } from "@/lib/hooks";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback, useMemo, useRef } from "react";
 import { useSetupStoreHydrated } from "../../stores/useSetupStore";
 import { Button } from "@/components/ui/button";
-import { mergeChannelsWithStatuses } from "@/features/dashboard/admin/scans/lib/mergeChannelsWithStatuses";
-import type { ChannelWithStatus } from "@/features/dashboard/admin/scans/types";
+import type { Guild } from "@/lib/api/guild";
 
-const INITIAL_SCAN_STORAGE_KEY = "discord-clip-saver-initial-scan-completed";
+export const INITIAL_SCAN_STORAGE_KEY =
+	"discord-clip-saver-initial-scan-completed";
+export const INITIAL_SCAN_INITIATED_KEY =
+	"discord-clip-saver-initial-scan-initiated";
 
 export function InitialScan({
 	guild,
@@ -24,49 +25,78 @@ export function InitialScan({
 	const [failedChannels, setFailedChannels] = useState<string[]>([]);
 	const [completionTriggered, setCompletionTriggered] = useState(false);
 
-	const { data: serverChannels = [] } = useChannels(guild.id);
-	const { data: scanStatuses = [], isLoading: statusesLoading } =
+	const { data: serverChannels = [], isLoading: isLoadingChannels } =
+		useChannels(guild.id);
+	const { data: scanStatuses = [], isLoading: isLoadingStatuses } =
 		useScanStatuses(guild.id);
 	const startBulkScanMutation = useStartBulkScan(guild.id);
 
-	const { startStep, updateStepState, completeStep, getStepData } =
-		useSetupStoreHydrated();
+	const {
+		startStep,
+		updateStepState,
+		completeStep,
+		getStepData,
+		isHydrated,
+	} = useSetupStoreHydrated();
 
 	const stepData = getStepData("initial_scan");
 
 	// Check if initial scan was already completed
-	const isInitialScanCompleted = () => {
+	const isInitialScanCompleted = useCallback(() => {
+		if (typeof window === "undefined") return false;
 		return (
 			localStorage.getItem(`${INITIAL_SCAN_STORAGE_KEY}-${guild.id}`) ===
 			"true"
 		);
-	};
+	}, [guild.id]);
+
+	// Check if initial scan was already initiated (requested)
+	const isInitialScanInitiated = useCallback(() => {
+		if (typeof window === "undefined") return false;
+		return (
+			localStorage.getItem(
+				`${INITIAL_SCAN_INITIATED_KEY}-${guild.id}`
+			) === "true"
+		);
+	}, [guild.id]);
 
 	// Mark initial scan as completed
-	const markInitialScanCompleted = () => {
+	const markInitialScanCompleted = useCallback(() => {
+		if (typeof window === "undefined") return;
 		localStorage.setItem(`${INITIAL_SCAN_STORAGE_KEY}-${guild.id}`, "true");
-	};
+		// Also clear the initiated flag so it doesn't block future rescans if needed (though for initial scan it's fine)
+	}, [guild.id]);
 
-	// Merge channels with their scan statuses
-	const channels: ChannelWithStatus[] = mergeChannelsWithStatuses(
-		serverChannels,
-		scanStatuses
-	);
+	// Mark initial scan as initiated
+	const markInitialScanInitiated = useCallback(() => {
+		if (typeof window === "undefined") return;
+		localStorage.setItem(
+			`${INITIAL_SCAN_INITIATED_KEY}-${guild.id}`,
+			"true"
+		);
+	}, [guild.id]);
 
 	// Get scan statistics
-	const scanStats = {
-		queued: scanStatuses.filter((s) => s.status === "QUEUED").length,
-		running: scanStatuses.filter((s) => s.status === "RUNNING").length,
-		completed: scanStatuses.filter((s) => s.status === "SUCCEEDED").length,
-		failed: scanStatuses.filter((s) => s.status === "FAILED").length,
-		total: scanStatuses.length,
-	};
+	const scanStats = useMemo(
+		() => ({
+			queued: scanStatuses.filter((s) => s.status === "QUEUED").length,
+			running: scanStatuses.filter((s) => s.status === "RUNNING").length,
+			completed: scanStatuses.filter((s) => s.status === "SUCCEEDED")
+				.length,
+			failed: scanStatuses.filter((s) => s.status === "FAILED").length,
+			total: scanStatuses.length,
+		}),
+		[scanStatuses]
+	);
 
 	// Get failed channel details
-	const failedScans = scanStatuses.filter((s) => s.status === "FAILED");
+	const failedScans = useMemo(
+		() => scanStatuses.filter((s) => s.status === "FAILED"),
+		[scanStatuses]
+	);
 
 	// Get channels that need scanning (don't have any scan status and aren't category channels)
-	const getChannelsNeedingScans = () => {
+	const getChannelsNeedingScans = useCallback(() => {
 		const scannedChannelIds = new Set(
 			scanStatuses.map((s) => s.channel_id)
 		);
@@ -75,7 +105,7 @@ export function InitialScan({
 				!scannedChannelIds.has(channel.id) &&
 				channel.type !== "category"
 		);
-	};
+	}, [scanStatuses, serverChannels]);
 
 	// Filter out category channels from all server channels for display
 	const scannableChannels = serverChannels.filter(
@@ -86,57 +116,125 @@ export function InitialScan({
 	const alreadyScannedCount =
 		scannableChannels.length - channelsNeedingScans.length;
 
-	// Start the step when shouldStart becomes true
-	useEffect(() => {
-		if (shouldStart && stepData.state === null && !completionTriggered) {
-			// Check if already completed
-			if (isInitialScanCompleted()) {
-				setCompletionTriggered(true);
-				completeStep("initial_scan");
-				setTimeout(() => onComplete(), 500);
-				return;
-			}
-			startStep("initial_scan");
-		}
-	}, [
-		shouldStart,
-		stepData.state,
-		completionTriggered,
-		completeStep,
-		onComplete,
-		startStep,
-	]);
+	const startInitialScan = useCallback(
+		(channelsToScan = serverChannels) => {
+			console.log(
+				"Starting initial scan for",
+				channelsToScan.length,
+				"channels"
+			);
 
-	// Start initial scan when step is loading and not yet started
+			// Set scan started immediately to prevent duplicate requests
+			setScanStarted(true);
+			markInitialScanInitiated();
+
+			const channelIds = channelsToScan.map((ch) => ch.id);
+
+			startBulkScanMutation.mutate(
+				{
+					channelIds,
+					options: {
+						isUpdate: false, // Start from newest message
+						limit: 500, // Higher limit for initial scan
+						autoContinue: false, // Don't auto-continue
+						rescan: "stop", // Stop on duplicates
+					},
+				},
+				{
+					onSuccess: (result) => {
+						console.log("Initial scan started:", result);
+					},
+					onError: (error) => {
+						console.error("Failed to start initial scan:", error);
+						setScanStarted(false);
+						// Don't clear initiated flag on error immediately, user can retry
+						updateStepState(
+							"initial_scan",
+							"error",
+							"Failed to start initial scan"
+						);
+					},
+				}
+			);
+		},
+		[
+			serverChannels,
+			startBulkScanMutation,
+			updateStepState,
+			markInitialScanInitiated,
+		]
+	);
+
+	// Guard against double-firing and infinite loops
+	const initiationGuard = useRef(false);
+
+	// Consolidated initialization effect
 	useEffect(() => {
 		if (
-			stepData.state === "loading" &&
-			!scanStarted &&
-			serverChannels.length > 0 &&
-			!completionTriggered
+			!shouldStart ||
+			completionTriggered ||
+			initiationGuard.current ||
+			isLoadingChannels ||
+			isLoadingStatuses ||
+			!isHydrated
 		) {
-			// Check if we need to scan or can skip
-			const channelsNeedingScans = getChannelsNeedingScans();
-			if (channelsNeedingScans.length === 0) {
-				// All channels already scanned, skip this step
+			return;
+		}
+
+		initiationGuard.current = true;
+
+		if (isInitialScanCompleted()) {
+			setCompletionTriggered(true);
+			completeStep("initial_scan");
+			setTimeout(() => onComplete(), 500);
+			return;
+		}
+
+		if (stepData.state === null) {
+			startStep("initial_scan");
+		}
+
+		const hasActiveScans = scanStatuses.some((s) =>
+			["QUEUED", "RUNNING"].includes(s.status)
+		);
+		const hasFailedScans = scanStatuses.some((s) => s.status === "FAILED");
+		const channelsToScan = getChannelsNeedingScans();
+		const alreadyInitiated = isInitialScanInitiated();
+		const allChannelsHaveStatus = channelsToScan.length === 0;
+
+		if (allChannelsHaveStatus) {
+			if (hasActiveScans || hasFailedScans) {
+				setScanStarted(true);
+			} else {
 				setCompletionTriggered(true);
 				markInitialScanCompleted();
 				completeStep("initial_scan");
 				setTimeout(() => onComplete(), 1000);
+			}
+		} else {
+			if (hasActiveScans || alreadyInitiated) {
+				setScanStarted(true);
 			} else {
-				startInitialScan(channelsNeedingScans);
+				startInitialScan(channelsToScan);
 			}
 		}
 	}, [
-		stepData.state,
-		scanStarted,
-		serverChannels,
-		scanStatuses,
+		shouldStart,
 		completionTriggered,
+		isLoadingChannels,
+		isLoadingStatuses,
+		isHydrated,
+		// Stable dependencies
+		isInitialScanCompleted,
 		completeStep,
 		onComplete,
+		stepData.state,
+		startStep,
+		scanStatuses,
 		getChannelsNeedingScans,
 		markInitialScanCompleted,
+		startInitialScan,
+		isInitialScanInitiated,
 	]);
 
 	// Monitor scan completion
@@ -175,42 +273,6 @@ export function InitialScan({
 		onComplete,
 		updateStepState,
 	]);
-
-	const startInitialScan = (channelsToScan = serverChannels) => {
-		console.log(
-			"Starting initial scan for",
-			channelsToScan.length,
-			"channels"
-		);
-
-		const channelIds = channelsToScan.map((ch) => ch.id);
-
-		startBulkScanMutation.mutate(
-			{
-				channelIds,
-				options: {
-					isUpdate: false, // Start from newest message
-					limit: 500, // Higher limit for initial scan
-					autoContinue: false, // Don't auto-continue
-					rescan: "stop", // Stop on duplicates
-				},
-			},
-			{
-				onSuccess: (result) => {
-					console.log("Initial scan started:", result);
-					setScanStarted(true);
-				},
-				onError: (error) => {
-					console.error("Failed to start initial scan:", error);
-					updateStepState(
-						"initial_scan",
-						"error",
-						"Failed to start initial scan"
-					);
-				},
-			}
-		);
-	};
 
 	const retryFailedScans = () => {
 		console.log(
