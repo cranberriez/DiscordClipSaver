@@ -1,5 +1,10 @@
 /**
- * Format a date as a relative time string (e.g., "2 hours ago", "3 days ago")
+ * Format a date as a relative time string with smart fallback to absolute dates
+ *
+ * Rules:
+ * 0-7 days: relative with precision ("3 hours ago", "Yesterday", "6 days ago")
+ * 8-90 days: relative with less precision ("2 weeks ago", "1 month ago")
+ * >90 days or previous year: absolute date ("Oct 12" or "Oct 12, 2024")
  */
 export function formatRelativeTime(date: Date | string | null): string {
 	if (!date) return "Never";
@@ -13,22 +18,36 @@ export function formatRelativeTime(date: Date | string | null): string {
 	const diffDay = Math.floor(diffHour / 24);
 	const diffWeek = Math.floor(diffDay / 7);
 	const diffMonth = Math.floor(diffDay / 30);
-	const diffYear = Math.floor(diffDay / 365);
 
+	// More than 90 days or previous calendar year - use absolute date
+	if (diffDay > 90 || past.getFullYear() !== now.getFullYear()) {
+		return formatDateShort(past);
+	}
+
+	// 8-90 days - less precision relative time
+	if (diffDay >= 8) {
+		if (diffMonth >= 2) {
+			return `${diffMonth} month${diffMonth === 1 ? "" : "s"} ago`;
+		} else if (diffWeek >= 2) {
+			return `${diffWeek} week${diffWeek === 1 ? "" : "s"} ago`;
+		} else if (diffWeek >= 1) {
+			return `${diffWeek} week${diffWeek === 1 ? "" : "s"} ago`;
+		} else {
+			return `${diffDay} day${diffDay === 1 ? "" : "s"} ago`;
+		}
+	}
+
+	// 0-7 days - more precision relative time
 	if (diffSec < 60) {
 		return "Just now";
 	} else if (diffMin < 60) {
-		return `${diffMin} ${diffMin === 1 ? "minute" : "minutes"} ago`;
+		return `${diffMin} hour${diffMin === 1 ? "" : "s"} ago`;
 	} else if (diffHour < 24) {
-		return `${diffHour} ${diffHour === 1 ? "hour" : "hours"} ago`;
-	} else if (diffDay < 7) {
-		return `${diffDay} ${diffDay === 1 ? "day" : "days"} ago`;
-	} else if (diffDay < 30) {
-		return `${diffWeek} ${diffWeek === 1 ? "week" : "weeks"} ago`;
-	} else if (diffDay < 365) {
-		return `${diffMonth} ${diffMonth === 1 ? "month" : "months"} ago`;
+		return `${diffHour} hour${diffHour === 1 ? "" : "s"} ago`;
+	} else if (diffDay === 1) {
+		return "Yesterday";
 	} else {
-		return `${diffYear} ${diffYear === 1 ? "year" : "years"} ago`;
+		return `${diffDay} day${diffDay === 1 ? "" : "s"} ago`;
 	}
 }
 
@@ -50,4 +69,32 @@ export function parseIsoDate(timestamp: Date): Date {
 // Parse ISO timestamp to unix timestamps
 export function parseIsoTimestamp(timestamp: Date): number {
 	return new Date(timestamp).getTime() / 1000;
+}
+
+/**
+ * Format a date as "Month Day, Year" (e.g., "Jan 15, 2024")
+ */
+export function formatDateShort(date: Date | string | null): string {
+	if (!date) return "";
+
+	const d = new Date(date);
+	const months = [
+		"Jan",
+		"Feb",
+		"Mar",
+		"Apr",
+		"May",
+		"Jun",
+		"Jul",
+		"Aug",
+		"Sep",
+		"Oct",
+		"Nov",
+		"Dec",
+	];
+	const month = months[d.getMonth()];
+	const day = d.getDate();
+	const year = d.getFullYear();
+
+	return `${month} ${day}, ${year}`;
 }
