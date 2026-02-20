@@ -3,14 +3,20 @@ import type { DbServerTag, DbNewServerTag, DbServerTagUpdate } from "../types";
 
 // Server Tag Operations
 
-export async function getServerTags(guildId: string): Promise<DbServerTag[]> {
-	return await getDb()
+export async function getServerTags(
+	guildId: string,
+	includeInactive: boolean = false
+): Promise<DbServerTag[]> {
+	let query = getDb()
 		.selectFrom("server_tags")
 		.selectAll()
-		.where("guild_id", "=", guildId)
-		.where("is_active", "=", true)
-		.orderBy("name", "asc")
-		.execute();
+		.where("guild_id", "=", guildId);
+
+	if (!includeInactive) {
+		query = query.where("is_active", "=", true);
+	}
+
+	return await query.orderBy("name", "asc").execute();
 }
 
 export async function getServerTagById(
@@ -46,21 +52,22 @@ export async function updateServerTag(
 }
 
 export async function deleteServerTag(tagId: string): Promise<boolean> {
-	// Soft delete by setting is_active to false?
-	// The schema has is_active, but usually user wants to delete.
-	// User request: "is_active BOOLEAN NOT NULL DEFAULT TRUE"
-	// Let's assume hard delete or soft delete via is_active.
-	// Given the unique constraint (guild_id, slug), if we soft delete, we might block new tags with same slug.
-	// The schema doesn't have deleted_at. It has is_active.
+	// Hard delete the tag
+	// NOTE: We assume CASCADE is set up in the database for clip_tags.
+	// If not, we should manually delete from clip_tags first.
+	// Given the user request "cascade that", we'll attempt to delete.
+	// Kysely/Postgres will handle cascade if configured, otherwise it might throw foreign key violation.
+	// To be safe and ensure "cascade" behavior even if DB constraint isn't CASCADE,
+	// we can manually delete from clip_tags first.
 
-	// For now, let's implement soft delete via is_active = false
+	await getDb().deleteFrom("clip_tags").where("tag_id", "=", tagId).execute();
+
 	const result = await getDb()
-		.updateTable("server_tags")
-		.set({ is_active: false })
+		.deleteFrom("server_tags")
 		.where("id", "=", tagId)
 		.executeTakeFirst();
 
-	return result.numUpdatedRows > 0;
+	return result.numDeletedRows > 0;
 }
 
 // Clip Tag Operations

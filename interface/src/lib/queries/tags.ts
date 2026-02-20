@@ -15,10 +15,13 @@ export const tagKeys = {
 /**
  * Hook to fetch all tags for a guild.
  */
-export function useGuildTags(guildId: string) {
+export function useGuildTags(
+	guildId: string,
+	includeInactive: boolean = false
+) {
 	return useQuery({
-		queryKey: tagKeys.byGuild(guildId),
-		queryFn: () => api.tags.list(guildId),
+		queryKey: [...tagKeys.byGuild(guildId), includeInactive],
+		queryFn: () => api.tags.list(guildId, includeInactive),
 		enabled: !!guildId,
 		staleTime: 5 * 60 * 1000, // 5 minutes
 	});
@@ -48,14 +51,52 @@ export function useCreateTag() {
 				queryKey: tagKeys.byGuild(guildId),
 			});
 
-			// Optimistically update list?
-			// We can append the new tag to the cached list
-			queryClient.setQueryData<Tag[]>(
-				tagKeys.byGuild(guildId),
+			// Optimistically update list for both active-only and all lists
+			// We iterate over queries starting with the guild key
+			queryClient.setQueriesData<Tag[]>(
+				{ queryKey: tagKeys.byGuild(guildId) },
 				(oldTags) => {
 					if (!oldTags) return [newTag];
 					return [...oldTags, newTag].sort((a, b) =>
 						a.name.localeCompare(b.name)
+					);
+				}
+			);
+		},
+	});
+}
+
+/**
+ * Hook to update a tag.
+ */
+export function useUpdateTag() {
+	const queryClient = useQueryClient();
+
+	return useMutation({
+		mutationFn: async ({
+			guildId,
+			tagId,
+			data,
+		}: {
+			guildId: string;
+			tagId: string;
+			data: { name?: string; color?: string | null; is_active?: boolean };
+		}) => {
+			return api.tags.update(guildId, tagId, data);
+		},
+		onSuccess: (updatedTag, { guildId }) => {
+			// Invalidate all guild tag queries
+			queryClient.invalidateQueries({
+				queryKey: tagKeys.byGuild(guildId),
+			});
+
+			// Optimistically update all matching queries
+			queryClient.setQueriesData<Tag[]>(
+				{ queryKey: tagKeys.byGuild(guildId) },
+				(oldTags) => {
+					if (!oldTags) return [updatedTag];
+					return oldTags.map((t) =>
+						t.id === updatedTag.id ? updatedTag : t
 					);
 				}
 			);
@@ -85,9 +126,9 @@ export function useDeleteGuildTag() {
 				queryKey: tagKeys.byGuild(guildId),
 			});
 
-			// Optimistically update list
-			queryClient.setQueryData<Tag[]>(
-				tagKeys.byGuild(guildId),
+			// Optimistically update all matching queries
+			queryClient.setQueriesData<Tag[]>(
+				{ queryKey: tagKeys.byGuild(guildId) },
 				(oldTags) => {
 					if (!oldTags) return [];
 					return oldTags.filter((t) => t.id !== tagId);

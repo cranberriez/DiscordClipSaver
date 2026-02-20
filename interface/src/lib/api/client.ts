@@ -442,8 +442,27 @@ export const api = {
 		 * Get all tags for a guild
 		 * GET /api/guilds/[guildId]/tags
 		 */
-		list: (guildId: string) =>
-			apiRequest<import("./clip").Tag[]>(`/api/guilds/${guildId}/tags`),
+		list: (guildId: string, includeInactive: boolean = false) =>
+			apiRequest<import("./clip").Tag[]>(
+				`/api/guilds/${guildId}/tags?include_inactive=${includeInactive}`
+			),
+
+		/**
+		 * Update a tag
+		 * PATCH /api/guilds/[guildId]/tags/[tagId]
+		 */
+		update: (
+			guildId: string,
+			tagId: string,
+			data: { name?: string; color?: string | null; is_active?: boolean }
+		) =>
+			apiRequest<import("./clip").Tag>(
+				`/api/guilds/${guildId}/tags/${tagId}`,
+				{
+					method: "PATCH",
+					body: JSON.stringify(data),
+				}
+			),
 
 		/**
 		 * Add tags to a clip

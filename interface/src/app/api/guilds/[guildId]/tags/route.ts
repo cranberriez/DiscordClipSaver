@@ -42,8 +42,16 @@ export async function GET(
 
 	if (auth instanceof NextResponse) return auth;
 
+	const searchParams = req.nextUrl.searchParams;
+	const includeInactive = searchParams.get("include_inactive") === "true";
+
+	console.log(
+		`[API] Fetching tags for guild ${guildId}, includeInactive=${includeInactive}`
+	);
+
 	try {
-		const tags = await db.getServerTags(guildId);
+		const tags = await db.getServerTags(guildId, includeInactive);
+		console.log(`[API] Found ${tags.length} tags for guild ${guildId}`);
 
 		return NextResponse.json(tags.map(ClipMapper.toTag));
 	} catch (error) {
