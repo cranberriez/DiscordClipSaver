@@ -62,16 +62,20 @@ export async function requireAuth(
 	try {
 		authInfo = await getAuthInfo(req);
 	} catch (error) {
+		// Don't log expected unauthorized errors
+		if (error instanceof Error && error.message === "Unauthorized") {
+			return NextResponse.json(
+				{ error: "Unauthorized" },
+				{ status: 401 }
+			);
+		}
 		console.error("[requireAuth] getAuthInfo failed:", error);
 		return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 	}
 
 	const { discordUserId, accessToken } = authInfo;
 	if (!accessToken) {
-		console.error(
-			"[requireAuth] Missing accessToken for user:",
-			discordUserId
-		);
+		// This might happen if session exists but token is lost/expired
 		return NextResponse.json(
 			{ error: "Missing Discord token" },
 			{ status: 401 }
@@ -92,7 +96,11 @@ export async function requireAuth(
 			"discord:guilds",
 			freshTtlMs,
 			staleTtlMs,
-			() => discordFetch<DiscordGuild[]>("/users/@me/guilds", accessToken)
+			() =>
+				discordFetch<DiscordGuild[]>(
+					"/users/@me/guilds?limit=200",
+					accessToken
+				)
 		);
 	} catch (err: any) {
 		// Graceful cache should have handled rate limits by returning stale data

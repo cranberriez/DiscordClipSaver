@@ -19,7 +19,7 @@ export async function getAuthInfo(req?: NextRequest): Promise<AuthInfo> {
 	// console.log("[getAuthInfo] Session:", session ? "Found" : "Null", "User ID:", session?.user?.id);
 
 	if (!session?.user?.id) {
-		console.error("[getAuthInfo] No session or user ID found");
+		// No session found - this is expected for unauthenticated requests
 		throw new Error("Unauthorized");
 	}
 

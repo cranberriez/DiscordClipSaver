@@ -17,11 +17,23 @@ export async function GET(
 	req: NextRequest,
 	{ params }: { params: Promise<{ path: string[] }> }
 ) {
-	const { path } = await params;
+	const { path: pathParams } = await params;
+	// Join path segments immediately so we can use it for logging
+	const filePath = pathParams.join("/");
 
 	// 1. Authentication Check
 	const auth = await requireAuth(req);
-	if (auth instanceof NextResponse) return auth;
+	if (auth instanceof NextResponse) {
+		// Log auth failures (401)
+		// Only log as warning if it's NOT a 401 (which is expected for bots/unauth)
+		// or if we want to debug specific issues.
+		if (auth.status !== 401) {
+			console.warn(
+				`[Storage] Auth check failed for ${filePath}: ${auth.status}`
+			);
+		}
+		return auth;
+	}
 
 	// Rate Limit: 600 requests per minute (high limit for assets like thumbnails)
 	const limitResult = await rateLimit(
@@ -30,14 +42,12 @@ export async function GET(
 		"1 m"
 	);
 	if (!limitResult.success) {
+		console.warn(`[Storage] Rate limit exceeded for ${auth.discordUserId}`);
 		return NextResponse.json(
 			{ error: "Rate limit exceeded" },
 			{ status: 429 }
 		);
 	}
-
-	// Join path segments
-	const filePath = path.join("/");
 
 	// 2. Authorization Check (Guild Access)
 	// Expecting paths like: thumbnails/guild_123456789/clip_abcdef.webp
@@ -52,8 +62,14 @@ export async function GET(
 
 		if (!hasAccess) {
 			console.warn(
-				`[Storage] Access denied for user ${auth.discordUserId} to guild ${guildId}`
+				`[Storage] Access denied for user ${auth.discordUserId} to guild ${guildId}. User has ${auth.userGuilds.length} guilds.`
 			);
+			// Debug: Check if user has many guilds (Discord pagination limit)
+			if (auth.userGuilds.length >= 200) {
+				console.warn(
+					`[Storage] User ${auth.discordUserId} has >= 200 guilds. This might be a pagination issue.`
+				);
+			}
 			return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 		}
 	} else {
