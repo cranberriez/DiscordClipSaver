@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireGuildAccess } from "@/server/middleware/auth";
 import { bulkUpdateChannelsEnabled } from "@/server/db";
 import { z } from "zod";
+import { rateLimit } from "@/server/rate-limit";
 
 const BulkUpdateSchema = z.object({
 	enabled: z.boolean(),
@@ -22,6 +23,19 @@ export async function POST(
 	// Verify authentication and ownership
 	const auth = await requireGuildAccess(req, guildId, true);
 	if (auth instanceof NextResponse) return auth;
+
+	// Rate Limit: 5 requests per minute per user
+	const limitResult = await rateLimit(
+		`bulk_channel_update:${auth.discordUserId}`,
+		5,
+		"1 m"
+	);
+	if (!limitResult.success) {
+		return NextResponse.json(
+			{ error: "Rate limit exceeded" },
+			{ status: 429 }
+		);
+	}
 
 	// Parse and validate request body
 	let body: unknown;

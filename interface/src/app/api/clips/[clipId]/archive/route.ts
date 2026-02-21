@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireAuth } from "@/server/middleware/auth";
 import { getDb } from "@/server/db";
 import { PermissionService } from "@/server/services/permission-service";
+import { rateLimit } from "@/server/rate-limit";
 
 /**
  * POST /api/clips/[clipId]/archive
@@ -18,11 +19,24 @@ export async function POST(
 
 	if (auth instanceof NextResponse) return auth;
 
+	// Rate Limit: 10 requests per minute
+	const limitResult = await rateLimit(
+		`archive_clip:${auth.discordUserId}`,
+		10,
+		"1 m"
+	);
+	if (!limitResult.success) {
+		return NextResponse.json(
+			{ error: "Rate limit exceeded" },
+			{ status: 429 }
+		);
+	}
+
 	try {
 		// Check Permissions
 		const permResult = await PermissionService.checkClipPermission(
 			clipId,
-			auth.discordUserId,
+			auth,
 			["guild_owner"]
 		);
 
@@ -70,11 +84,24 @@ export async function DELETE(
 
 	if (auth instanceof NextResponse) return auth;
 
+	// Rate Limit: 10 requests per minute
+	const limitResult = await rateLimit(
+		`archive_clip:${auth.discordUserId}`,
+		10,
+		"1 m"
+	);
+	if (!limitResult.success) {
+		return NextResponse.json(
+			{ error: "Rate limit exceeded" },
+			{ status: 429 }
+		);
+	}
+
 	try {
 		// Check Permissions (include deleted clips since we are unarchiving)
 		const permResult = await PermissionService.checkClipPermission(
 			clipId,
-			auth.discordUserId,
+			auth,
 			["guild_owner"],
 			{ includeDeleted: true }
 		);

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireGuildAccess } from "@/server/middleware/auth";
 import { queueGuildPurge } from "@/lib/redis/jobs";
 import { db } from "@/server/db";
+import { rateLimit } from "@/server/rate-limit";
 
 /**
  * POST /api/guilds/[guildId]/purge
@@ -25,6 +26,21 @@ export async function POST(
 	// Verify authentication and ownership
 	const auth = await requireGuildAccess(req, guildId, true);
 	if (auth instanceof NextResponse) return auth;
+
+	// Rate Limit: 1 request per 24 hours per user
+	const limitResult = await rateLimit(
+		`purge_guild:${auth.discordUserId}`,
+		1,
+		"24 h"
+	);
+	if (!limitResult.success) {
+		return NextResponse.json(
+			{
+				error: "Rate limit exceeded. Guild purge can only be requested once every 24 hours.",
+			},
+			{ status: 429 }
+		);
+	}
 
 	// Verify guild is not already deleted
 	if (auth.guild.deleted_at) {

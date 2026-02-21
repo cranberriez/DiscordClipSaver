@@ -7,6 +7,7 @@ import {
 	DefaultChannelSettingsSchema,
 } from "@/lib/schema/guild-settings.schema";
 import { DataService } from "@/server/services/data-service";
+import { rateLimit } from "@/server/rate-limit";
 
 /**
  * GET /api/guilds/[guildId]/settings
@@ -23,6 +24,19 @@ export async function GET(
 	// Verify authentication and ownership
 	const auth = await requireGuildAccess(req, guildId, true);
 	if (auth instanceof NextResponse) return auth;
+
+	// Rate Limit: 20 requests per minute
+	const limitResult = await rateLimit(
+		`get_settings:${auth.discordUserId}`,
+		20,
+		"1 m"
+	);
+	if (!limitResult.success) {
+		return NextResponse.json(
+			{ error: "Rate limit exceeded" },
+			{ status: 429 }
+		);
+	}
 
 	// Get guild settings
 	const settings = await DataService.getGuildSettings(guildId);
@@ -58,6 +72,21 @@ export async function PATCH(
 	// Verify authentication and ownership
 	const auth = await requireGuildAccess(req, guildId, true);
 	if (auth instanceof NextResponse) return auth;
+
+	// Rate Limit: 10 updates per minute
+	const limitResult = await rateLimit(
+		`update_settings:${auth.discordUserId}`,
+		10,
+		"1 m"
+	);
+	if (!limitResult.success) {
+		return NextResponse.json(
+			{
+				error: "Rate limit exceeded. Please wait before updating settings again.",
+			},
+			{ status: 429 }
+		);
+	}
 
 	// Parse and validate request body
 	let body: unknown;

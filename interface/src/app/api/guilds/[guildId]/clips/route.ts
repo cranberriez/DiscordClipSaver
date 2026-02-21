@@ -1,6 +1,40 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireGuildAccess } from "@/server/middleware/auth";
 import { DataService } from "@/server/services/data-service";
+import { z } from "zod";
+import { rateLimit } from "@/server/rate-limit";
+
+const ClipsQuerySchema = z.object({
+	channelIds: z
+		.string()
+		.transform((val) => val.split(",").map((id) => id.trim()))
+		.pipe(z.array(z.string().regex(/^\d{17,21}$/, "Invalid channel ID")))
+		.optional(),
+	authorIds: z
+		.string()
+		.transform((val) => val.split(",").map((id) => id.trim()))
+		.pipe(z.array(z.string().regex(/^\d{17,21}$/, "Invalid author ID")))
+		.optional(),
+	tagsAny: z
+		.string()
+		.transform((val) => val.split(",").map((t) => t.trim()))
+		.optional(),
+	tagsAll: z
+		.string()
+		.transform((val) => val.split(",").map((t) => t.trim()))
+		.optional(),
+	tagsExclude: z
+		.string()
+		.transform((val) => val.split(",").map((t) => t.trim()))
+		.optional(),
+	favorites: z.enum(["true", "false"]).optional(),
+	limit: z.coerce.number().int().min(1).max(100).default(50),
+	offset: z.coerce.number().int().min(0).default(0),
+	sortOrder: z.enum(["asc", "desc"]).default("desc"),
+	sortType: z
+		.enum(["date", "duration", "size", "likes", "random"])
+		.default("date"),
+});
 
 /**
  * GET /api/guilds/[guildId]/clips?channelIds=xxx,yyy&authorIds=aaa,bbb&limit=50&offset=0&sort=desc&favorites=true
@@ -25,36 +59,49 @@ export async function GET(
 	const auth = await requireGuildAccess(req, guildId);
 	if (auth instanceof NextResponse) return auth;
 
+	// Rate Limit: 30 requests per minute
+	const limitResult = await rateLimit(
+		`get_clips:${auth.discordUserId}`,
+		30,
+		"1 m"
+	);
+	if (!limitResult.success) {
+		return NextResponse.json(
+			{ error: "Rate limit exceeded" },
+			{ status: 429 }
+		);
+	}
+
 	// Get query parameters
-	const searchParams = req.nextUrl.searchParams;
-	const channelIdsParam = searchParams.get("channelIds");
-	const channelIds = channelIdsParam ? channelIdsParam.split(",") : null;
-	const authorIdsParam = searchParams.get("authorIds");
-	const authorIds = authorIdsParam ? authorIdsParam.split(",") : undefined;
+	const searchParams = Object.fromEntries(req.nextUrl.searchParams);
 
-	const tagsAnyParam = searchParams.get("tagsAny");
-	const tagsAny = tagsAnyParam ? tagsAnyParam.split(",") : undefined;
+	// Validate query parameters
+	const validation = ClipsQuerySchema.safeParse(searchParams);
 
-	const tagsAllParam = searchParams.get("tagsAll");
-	const tagsAll = tagsAllParam ? tagsAllParam.split(",") : undefined;
+	if (!validation.success) {
+		return NextResponse.json(
+			{
+				error: "Invalid query parameters",
+				details: validation.error.format(),
+			},
+			{ status: 400 }
+		);
+	}
 
-	const tagsExcludeParam = searchParams.get("tagsExclude");
-	const tagsExclude = tagsExcludeParam
-		? tagsExcludeParam.split(",")
-		: undefined;
+	const {
+		channelIds,
+		authorIds,
+		tagsAny,
+		tagsAll,
+		tagsExclude,
+		favorites,
+		limit,
+		offset,
+		sortOrder,
+		sortType,
+	} = validation.data;
 
-	const favoritesOnly = searchParams.get("favorites") === "true";
-	const limit = Math.min(parseInt(searchParams.get("limit") || "50"), 100);
-	const offset = parseInt(searchParams.get("offset") || "0");
-	const sortOrder = (searchParams.get("sortOrder") || "desc") as
-		| "asc"
-		| "desc";
-	const sortType = (searchParams.get("sortType") || "date") as
-		| "date"
-		| "duration"
-		| "size"
-		| "likes"
-		| "random";
+	const favoritesOnly = favorites === "true";
 
 	try {
 		// Fetch one extra to determine if there are more results

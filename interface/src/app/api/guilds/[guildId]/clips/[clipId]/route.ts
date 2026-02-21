@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireGuildAccess } from "@/server/middleware/auth";
 import { DataService } from "@/server/services/data-service";
 import { updateClipCdnUrl } from "@/server/db/queries/clips";
+import { rateLimit } from "@/server/rate-limit";
 
 /**
  * GET /api/guilds/[guildId]/clips/[clipId]
@@ -20,6 +21,19 @@ export async function GET(
 	// Verify authentication and guild access
 	const auth = await requireGuildAccess(req, guildId);
 	if (auth instanceof NextResponse) return auth;
+
+	// Rate Limit: 60 requests per minute (browsing clips)
+	const limitResult = await rateLimit(
+		`get_clip:${auth.discordUserId}`,
+		60,
+		"1 m"
+	);
+	if (!limitResult.success) {
+		return NextResponse.json(
+			{ error: "Rate limit exceeded" },
+			{ status: 429 }
+		);
+	}
 
 	try {
 		// Pass user ID for favorites support

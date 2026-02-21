@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireGuildAccess } from "@/server/middleware/auth";
-import { updateChannelEnabled } from "@/server/db";
+import { updateChannelEnabled, getChannelById } from "@/server/db";
 import { z } from "zod";
+import { rateLimit } from "@/server/rate-limit";
 
 const ToggleChannelSchema = z.object({
 	enabled: z.boolean(),
@@ -22,6 +23,28 @@ export async function POST(
 	// Verify authentication and ownership
 	const auth = await requireGuildAccess(req, guildId, true);
 	if (auth instanceof NextResponse) return auth;
+
+	// Rate Limit: 20 requests per minute per user
+	const limitResult = await rateLimit(
+		`toggle_channel:${auth.discordUserId}`,
+		20,
+		"1 m"
+	);
+	if (!limitResult.success) {
+		return NextResponse.json(
+			{ error: "Rate limit exceeded" },
+			{ status: 429 }
+		);
+	}
+
+	// Verify channel belongs to guild
+	const channel = await getChannelById(guildId, channelId);
+	if (!channel) {
+		return NextResponse.json(
+			{ error: "Channel not found or does not belong to this guild" },
+			{ status: 404 }
+		);
+	}
 
 	// Parse and validate request body
 	let body: unknown;

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireAuth } from "@/server/middleware/auth";
 import { DataService } from "@/server/services/data-service";
 import { toggleFavorite } from "@/server/db";
+import { rateLimit } from "@/server/rate-limit";
 
 /**
  * GET /api/clips/[clipId]/favorite
@@ -18,6 +19,19 @@ export async function GET(
 	// Verify authentication
 	const auth = await requireAuth(req);
 	if (auth instanceof NextResponse) return auth;
+
+	// Rate Limit: 60 requests per minute
+	const limitResult = await rateLimit(
+		`check_favorite:${auth.discordUserId}`,
+		60,
+		"1 m"
+	);
+	if (!limitResult.success) {
+		return NextResponse.json(
+			{ error: "Rate limit exceeded" },
+			{ status: 429 }
+		);
+	}
 
 	try {
 		// Security: Check guild access first
@@ -67,6 +81,21 @@ export async function POST(
 	// Verify authentication
 	const auth = await requireAuth(req);
 	if (auth instanceof NextResponse) return auth;
+
+	// Rate Limit: 60 requests per minute (users may favorite many clips quickly)
+	const limitResult = await rateLimit(
+		`favorite:${auth.discordUserId}`,
+		60,
+		"1 m"
+	);
+	if (!limitResult.success) {
+		return NextResponse.json(
+			{
+				error: "Rate limit exceeded. Please wait before favoriting more clips.",
+			},
+			{ status: 429 }
+		);
+	}
 
 	try {
 		const body = await req.json().catch(() => ({}));
@@ -157,6 +186,19 @@ export async function DELETE(
 	// Verify authentication
 	const auth = await requireAuth(req);
 	if (auth instanceof NextResponse) return auth;
+
+	// Rate Limit: 60 requests per minute
+	const limitResult = await rateLimit(
+		`favorite:${auth.discordUserId}`,
+		60,
+		"1 m"
+	);
+	if (!limitResult.success) {
+		return NextResponse.json(
+			{ error: "Rate limit exceeded" },
+			{ status: 429 }
+		);
+	}
 
 	try {
 		const body = await req.json().catch(() => ({}));

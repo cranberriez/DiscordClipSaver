@@ -6,6 +6,7 @@ import {
 } from "@/server/db";
 import { requireAuth } from "@/server/middleware/auth";
 import { getCurrentUser } from "@/server/discord/discordClient";
+import { rateLimit } from "@/server/rate-limit";
 
 /**
  * GET /api/discord/bot/claim
@@ -72,6 +73,19 @@ export async function GET(req: NextRequest) {
 	// 2) Verify authentication and get access token
 	const auth = await requireAuth(req);
 	if (auth instanceof NextResponse) return auth;
+
+	// Rate Limit: 5 requests per minute
+	const limitResult = await rateLimit(
+		`bot_claim:${auth.discordUserId}`,
+		5,
+		"1 m"
+	);
+	if (!limitResult.success) {
+		return NextResponse.json(
+			{ error: "Rate limit exceeded" },
+			{ status: 429 }
+		);
+	}
 
 	const tok = auth.accessToken;
 	if (!tok) {

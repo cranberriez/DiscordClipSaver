@@ -3,6 +3,7 @@ import { requireAuth } from "@/server/middleware/auth";
 import { getCurrentUser } from "@/server/discord/discordClient";
 import { getUserByDiscordId } from "@/server/db";
 import { cacheUserScopedGraceful } from "@/server/cache";
+import { rateLimit } from "@/server/rate-limit";
 
 /**
  * GET /api/discord/me
@@ -22,6 +23,19 @@ export async function GET(req: NextRequest) {
 		return NextResponse.json(
 			{ error: "Missing Discord access token" },
 			{ status: 401 }
+		);
+	}
+
+	// Rate Limit: 60 requests per minute
+	const limitResult = await rateLimit(
+		`discord_me:${discordUserId}`,
+		60,
+		"1 m"
+	);
+	if (!limitResult.success) {
+		return NextResponse.json(
+			{ error: "Rate limit exceeded" },
+			{ status: 429 }
 		);
 	}
 

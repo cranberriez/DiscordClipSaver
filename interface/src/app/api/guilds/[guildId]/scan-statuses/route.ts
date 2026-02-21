@@ -6,6 +6,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireGuildAccess } from "@/server/middleware/auth";
 import { DataService } from "@/server/services/data-service";
+import { rateLimit } from "@/server/rate-limit";
 
 export async function GET(
 	req: NextRequest,
@@ -16,6 +17,19 @@ export async function GET(
 	// Verify authentication and ownership
 	const auth = await requireGuildAccess(req, guildId, true);
 	if (auth instanceof NextResponse) return auth;
+
+	// Rate Limit: 30 requests per minute
+	const limitResult = await rateLimit(
+		`scan_statuses:${auth.discordUserId}`,
+		30,
+		"1 m"
+	);
+	if (!limitResult.success) {
+		return NextResponse.json(
+			{ error: "Rate limit exceeded" },
+			{ status: 429 }
+		);
+	}
 
 	try {
 		// Returns only scan statuses for channels that have been scanned

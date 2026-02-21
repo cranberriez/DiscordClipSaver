@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireGuildAccess } from "@/server/middleware/auth";
 import { queueChannelPurge } from "@/lib/redis/jobs";
 import { DataService } from "@/server/services/data-service";
+import { rateLimit } from "@/server/rate-limit";
 
 /**
  * POST /api/guilds/[guildId]/channels/[channelId]/purge
@@ -27,6 +28,19 @@ export async function POST(
 	// Verify authentication and ownership
 	const auth = await requireGuildAccess(req, guildId, true);
 	if (auth instanceof NextResponse) return auth;
+
+	// Rate Limit: 5 requests per minute
+	const limitResult = await rateLimit(
+		`purge_channel:${auth.discordUserId}`,
+		5,
+		"1 m"
+	);
+	if (!limitResult.success) {
+		return NextResponse.json(
+			{ error: "Rate limit exceeded" },
+			{ status: 429 }
+		);
+	}
 
 	// Check if channel exists and belongs to this guild
 	const channel = await DataService.getChannelById(guildId, channelId);

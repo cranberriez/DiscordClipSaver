@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireGuildAccess } from "@/server/middleware/auth";
 import { updateGuildMessageScanEnabled } from "@/server/db";
 import { ToggleSchema } from "@/lib/schema/guild-toggle.schema";
+import { rateLimit } from "@/server/rate-limit";
 
 /**
  * POST /api/guilds/[guildId]/toggle
@@ -19,6 +20,19 @@ export async function POST(
 	// Verify authentication and ownership
 	const auth = await requireGuildAccess(req, guildId, true);
 	if (auth instanceof NextResponse) return auth;
+
+	// Rate Limit: 10 requests per minute
+	const limitResult = await rateLimit(
+		`toggle_guild:${auth.discordUserId}`,
+		10,
+		"1 m"
+	);
+	if (!limitResult.success) {
+		return NextResponse.json(
+			{ error: "Rate limit exceeded" },
+			{ status: 429 }
+		);
+	}
 
 	// Parse and validate request body
 	let body: unknown;

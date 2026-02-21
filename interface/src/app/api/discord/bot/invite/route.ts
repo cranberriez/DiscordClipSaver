@@ -3,6 +3,7 @@ import crypto from "node:crypto";
 import { requireAuth } from "@/server/middleware/auth";
 import { createInstallIntent } from "@/server/db";
 import { buildInviteUrl } from "@/server/discord/generateBotInvite";
+import { rateLimit } from "@/server/rate-limit";
 
 /**
  * GET /api/discord/bot/invite
@@ -26,6 +27,19 @@ export async function GET(req: NextRequest) {
 	// Verify authentication
 	const auth = await requireAuth(req);
 	if (auth instanceof NextResponse) return auth;
+
+	// Rate Limit: 10 requests per minute
+	const limitResult = await rateLimit(
+		`bot_invite:${auth.discordUserId}`,
+		10,
+		"1 m"
+	);
+	if (!limitResult.success) {
+		return NextResponse.json(
+			{ error: "Rate limit exceeded" },
+			{ status: 429 }
+		);
+	}
 
 	const ownerDiscordId = process.env.OWNER_DISCORD_ID;
 	if (ownerDiscordId && auth.discordUserId !== ownerDiscordId) {

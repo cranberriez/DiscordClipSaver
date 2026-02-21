@@ -4,6 +4,7 @@ import * as db from "@/server/db/queries/tags";
 import { ClipMapper } from "@/server/mappers/clip-mapper";
 import { z } from "zod";
 import { randomUUID } from "crypto";
+import { rateLimit } from "@/server/rate-limit";
 
 // Validation schema for creating a tag
 const createTagSchema = z.object({
@@ -42,6 +43,19 @@ export async function GET(
 
 	if (auth instanceof NextResponse) return auth;
 
+	// Rate Limit: 30 requests per minute
+	const limitResult = await rateLimit(
+		`get_tags:${auth.discordUserId}`,
+		30,
+		"1 m"
+	);
+	if (!limitResult.success) {
+		return NextResponse.json(
+			{ error: "Rate limit exceeded" },
+			{ status: 429 }
+		);
+	}
+
 	const searchParams = req.nextUrl.searchParams;
 	const includeInactive = searchParams.get("include_inactive") === "true";
 
@@ -77,6 +91,19 @@ export async function POST(
 	const auth = await requireGuildAccess(req, guildId);
 
 	if (auth instanceof NextResponse) return auth;
+
+	// Rate Limit: 10 requests per minute
+	const limitResult = await rateLimit(
+		`create_tag:${auth.discordUserId}`,
+		10,
+		"1 m"
+	);
+	if (!limitResult.success) {
+		return NextResponse.json(
+			{ error: "Rate limit exceeded" },
+			{ status: 429 }
+		);
+	}
 
 	// Check permissions
 	if (!auth.isOwner && !canManageGuild(auth.discordGuild)) {

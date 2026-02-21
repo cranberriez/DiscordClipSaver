@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireAuth } from "@/server/middleware/auth";
 import { getDb } from "@/server/db";
 import { PermissionService } from "@/server/services/permission-service";
+import { rateLimit } from "@/server/rate-limit";
 
 /**
  * DELETE /api/clips/[clipId]
@@ -18,11 +19,24 @@ export async function DELETE(
 
 	if (auth instanceof NextResponse) return auth;
 
+	// Rate Limit: 5 requests per minute
+	const limitResult = await rateLimit(
+		`delete_clip:${auth.discordUserId}`,
+		5,
+		"1 m"
+	);
+	if (!limitResult.success) {
+		return NextResponse.json(
+			{ error: "Rate limit exceeded" },
+			{ status: 429 }
+		);
+	}
+
 	try {
 		// Check Permissions (include deleted clips as we might be deleting an archived clip)
 		const permResult = await PermissionService.checkClipPermission(
 			clipId,
-			auth.discordUserId,
+			auth,
 			["guild_owner"],
 			{ includeDeleted: true }
 		);

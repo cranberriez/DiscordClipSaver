@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAuth } from "@/server/middleware/auth";
 import { DataService } from "@/server/services/data-service";
+import { rateLimit } from "@/server/rate-limit";
 
 /**
  * GET /api/guilds/stats?guildIds=xxx,yyy&withClipCount=1&withAuthorCount=1
@@ -19,6 +20,19 @@ export async function GET(req: NextRequest) {
 	// Verify authentication and get user's guilds
 	const auth = await requireAuth(req);
 	if (auth instanceof NextResponse) return auth;
+
+	// Rate Limit: 20 requests per minute
+	const limitResult = await rateLimit(
+		`guilds_stats:${auth.discordUserId}`,
+		20,
+		"1 m"
+	);
+	if (!limitResult.success) {
+		return NextResponse.json(
+			{ error: "Rate limit exceeded" },
+			{ status: 429 }
+		);
+	}
 
 	// Parse query parameters
 	const { searchParams } = new URL(req.url);

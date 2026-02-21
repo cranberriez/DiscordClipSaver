@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireAuth } from "@/server/middleware/auth";
 import { getDb } from "@/server/db";
 import { PermissionService } from "@/server/services/permission-service";
+import { rateLimit } from "@/server/rate-limit";
 
 /**
  * PATCH /api/clips/[clipId]/title
@@ -17,6 +18,19 @@ export async function PATCH(
 	const auth = await requireAuth(req);
 
 	if (auth instanceof NextResponse) return auth;
+
+	// Rate Limit: 10 requests per minute
+	const limitResult = await rateLimit(
+		`update_clip_title:${auth.discordUserId}`,
+		10,
+		"1 m"
+	);
+	if (!limitResult.success) {
+		return NextResponse.json(
+			{ error: "Rate limit exceeded" },
+			{ status: 429 }
+		);
+	}
 
 	try {
 		const body = await req.json();
@@ -42,7 +56,7 @@ export async function PATCH(
 		// Check Permissions
 		const permResult = await PermissionService.checkClipPermission(
 			clipId,
-			auth.discordUserId,
+			auth,
 			["clip_owner", "guild_owner", "system_admin"]
 		);
 

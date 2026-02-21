@@ -3,6 +3,7 @@ import { requireAuth } from "@/server/middleware/auth";
 import { PermissionService } from "@/server/services/permission-service";
 import * as db from "@/server/db/queries/tags";
 import { z } from "zod";
+import { rateLimit } from "@/server/rate-limit";
 
 // Validation schema
 const manageTagsSchema = z.object({
@@ -24,6 +25,19 @@ export async function POST(
 
 	if (auth instanceof NextResponse) return auth;
 
+	// Rate Limit: 30 requests per minute
+	const limitResult = await rateLimit(
+		`clip_tags:${auth.discordUserId}`,
+		30,
+		"1 m"
+	);
+	if (!limitResult.success) {
+		return NextResponse.json(
+			{ error: "Rate limit exceeded" },
+			{ status: 429 }
+		);
+	}
+
 	try {
 		const body = await req.json();
 		const validation = manageTagsSchema.safeParse(body);
@@ -44,7 +58,7 @@ export async function POST(
 		// Check Permissions
 		const permResult = await PermissionService.checkClipPermission(
 			clipId,
-			auth.discordUserId,
+			auth,
 			["clip_owner", "guild_owner", "system_admin"]
 		);
 
@@ -91,6 +105,19 @@ export async function DELETE(
 
 	if (auth instanceof NextResponse) return auth;
 
+	// Rate Limit: 30 requests per minute
+	const limitResult = await rateLimit(
+		`clip_tags:${auth.discordUserId}`,
+		30,
+		"1 m"
+	);
+	if (!limitResult.success) {
+		return NextResponse.json(
+			{ error: "Rate limit exceeded" },
+			{ status: 429 }
+		);
+	}
+
 	try {
 		const body = await req.json();
 		const validation = manageTagsSchema.safeParse(body);
@@ -111,7 +138,7 @@ export async function DELETE(
 		// Check Permissions
 		const permResult = await PermissionService.checkClipPermission(
 			clipId,
-			auth.discordUserId,
+			auth,
 			["clip_owner", "guild_owner", "system_admin"]
 		);
 

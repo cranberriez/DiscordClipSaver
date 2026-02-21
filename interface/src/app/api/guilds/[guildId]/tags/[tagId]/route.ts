@@ -1,6 +1,22 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireGuildAccess, canManageGuild } from "@/server/middleware/auth";
 import * as db from "@/server/db/queries/tags";
+import { z } from "zod";
+import { rateLimit } from "@/server/rate-limit";
+
+const updateTagSchema = z.object({
+	name: z
+		.string()
+		.min(1, "Name is required")
+		.max(64, "Name must be less than 64 characters")
+		.trim()
+		.optional(),
+	color: z
+		.string()
+		.regex(/^#[0-9A-Fa-f]{6}$/, "Invalid color format (must be #RRGGBB)")
+		.optional(),
+	is_active: z.boolean().optional(),
+});
 
 /**
  * DELETE /api/guilds/[guildId]/tags/[tagId]
@@ -16,6 +32,19 @@ export async function DELETE(
 	const auth = await requireGuildAccess(req, guildId);
 
 	if (auth instanceof NextResponse) return auth;
+
+	// Rate Limit: 30 requests per minute
+	const limitResult = await rateLimit(
+		`manage_tags:${auth.discordUserId}`,
+		30,
+		"1 m"
+	);
+	if (!limitResult.success) {
+		return NextResponse.json(
+			{ error: "Rate limit exceeded" },
+			{ status: 429 }
+		);
+	}
 
 	// Check permissions
 	if (!auth.isOwner && !canManageGuild(auth.discordGuild)) {
@@ -78,6 +107,19 @@ export async function PATCH(
 
 	if (auth instanceof NextResponse) return auth;
 
+	// Rate Limit: 30 requests per minute
+	const limitResult = await rateLimit(
+		`manage_tags:${auth.discordUserId}`,
+		30,
+		"1 m"
+	);
+	if (!limitResult.success) {
+		return NextResponse.json(
+			{ error: "Rate limit exceeded" },
+			{ status: 429 }
+		);
+	}
+
 	// Check permissions
 	if (!auth.isOwner && !canManageGuild(auth.discordGuild)) {
 		return NextResponse.json(
@@ -90,7 +132,20 @@ export async function PATCH(
 
 	try {
 		const body = await req.json();
-		const { name, color, is_active } = body;
+
+		// Validate input with Zod
+		const validation = updateTagSchema.safeParse(body);
+		if (!validation.success) {
+			return NextResponse.json(
+				{
+					error: "Validation failed",
+					details: validation.error.format(),
+				},
+				{ status: 400 }
+			);
+		}
+
+		const { name, color, is_active } = validation.data;
 
 		// Verify the tag belongs to the guild
 		const tag = await db.getServerTagById(tagId);

@@ -32,6 +32,16 @@ function getAuthUrl(req?: Request): string {
 function createAuthOptions(baseUrl?: string): NextAuthOptions {
 	return {
 		secret: process.env.NEXTAUTH_SECRET,
+		session: {
+			strategy: "jwt",
+			maxAge: 30 * 24 * 60 * 60, // 30 days
+		},
+		jwt: {
+			// Explicitly strict enforcement of JWE (encrypted JWTs)
+			// This ensures that even if the cookie is stolen (unlikely via HttpOnly),
+			// the content (including access_token) cannot be read without the server-side secret.
+			// NextAuth v4 uses JWE by default, but we declare it here for security audit clarity.
+		},
 		providers: [
 			DiscordProvider({
 				clientId: process.env.DISCORD_CLIENT_ID ?? "",

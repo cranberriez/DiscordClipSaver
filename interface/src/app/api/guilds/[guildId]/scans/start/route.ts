@@ -6,6 +6,7 @@ import {
 	upsertChannelScanStatus,
 } from "@/server/db/queries/scan_status";
 import { getChannelById } from "@/server/db/queries/channels";
+import { rateLimit } from "@/server/rate-limit";
 
 /**
  * POST /api/guilds/[guildId]/scans/start
@@ -22,6 +23,22 @@ export async function POST(
 	// Verify authentication and ownership
 	const auth = await requireGuildAccess(req, guildId, true);
 	if (auth instanceof NextResponse) return auth;
+
+	// Rate Limit: 10 requests per minute per user
+	const limitResult = await rateLimit(
+		`scan:${auth.discordUserId}`,
+		10,
+		"1 m"
+	);
+	if (!limitResult.success) {
+		return NextResponse.json(
+			{
+				error: "Rate limit exceeded. Please wait before starting more scans.",
+				retryAfter: Math.ceil((limitResult.reset - Date.now()) / 1000),
+			},
+			{ status: 429 }
+		);
+	}
 
 	// Parse request body
 	let body;
@@ -70,12 +87,52 @@ export async function POST(
 	);
 	const statusMap = new Map(existingStatuses.map((s) => [s.channel_id, s]));
 
+	// OPTIMIZATION: Bulk validate channel ownership
+	// Fetch all valid channels from DB in one go
+	// We can't query by IDs easily with existing functions, but we can fetch all guild channels
+	// or create a new query. For now, let's fetch all guild channels (usually < 500) and filter.
+	// Or even better, just modify the loop to fail if the individual fetch returns nothing (which it does).
+
+	// But to be EXPLICIT as per audit, let's verify ownership first.
+	// Actually, the loop does verify ownership because getChannelById checks guildId.
+	// However, we can make it safer/faster by fetching valid IDs first.
+	const { getDb } = await import("@/server/db");
+	const validChannels = await getDb()
+		.selectFrom("channel")
+		.select("id")
+		.where("guild_id", "=", guildId)
+		.where("id", "in", channelIds)
+		.where("deleted_at", "is", null)
+		.execute();
+
+	const validChannelIds = new Set(validChannels.map((c) => c.id));
+
+	// Check if any requested channel is invalid
+	const invalidChannelIds = channelIds.filter(
+		(id) => !validChannelIds.has(id)
+	);
+	if (invalidChannelIds.length > 0) {
+		// If we want to fail the whole request:
+		// return NextResponse.json({ error: "One or more channels do not belong to this guild", invalidIds: invalidChannelIds }, { status: 400 });
+		// If we want to return per-item errors (which the response format supports):
+		// We'll handle it in the loop.
+	}
+
 	// Process each channel
 	const results = await Promise.all(
 		channelIds.map(async (channelId: string) => {
 			try {
-				// Validate channel exists and is enabled
-				// Note: We could optimize this with a bulk fetch too, but getChannelById is cached/fast usually
+				// Validate channel exists and belongs to guild
+				if (!validChannelIds.has(channelId)) {
+					return {
+						channelId,
+						success: false,
+						error: "Channel not found or does not belong to this guild",
+					};
+				}
+
+				// Fetch full channel data for message_scan_enabled check
+				// We could have fetched this in the bulk query above.
 				const channel = await getChannelById(guildId, channelId);
 				if (!channel) {
 					return {

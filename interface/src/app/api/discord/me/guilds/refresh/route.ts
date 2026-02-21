@@ -3,6 +3,7 @@ import { cacheSet } from "@/server/cache";
 import { requireAuth } from "@/server/middleware/auth";
 import { discordFetch, DiscordAPIError } from "@/server/discord/discordClient";
 import type { DiscordGuild } from "@/server/discord/types";
+import { rateLimit } from "@/server/rate-limit";
 
 // POST /api/discord/guilds/refresh
 // Forces a fresh fetch of the user's Discord guilds and updates the server cache.
@@ -13,6 +14,19 @@ export async function POST(req: NextRequest) {
 		if (auth instanceof NextResponse) return auth;
 
 		const { discordUserId, accessToken } = auth;
+
+		// Rate Limit: 5 requests per minute (heavy operation)
+		const limitResult = await rateLimit(
+			`refresh_guilds:${discordUserId}`,
+			5,
+			"1 m"
+		);
+		if (!limitResult.success) {
+			return NextResponse.json(
+				{ error: "Rate limit exceeded" },
+				{ status: 429 }
+			);
+		}
 
 		// Fetch latest guilds directly from Discord (bypass cache)
 		const guilds = await discordFetch<DiscordGuild[]>(

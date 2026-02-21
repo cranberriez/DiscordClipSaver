@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireGuildAccess } from "@/server/middleware/auth";
 import { filterChannelsByPermissions } from "@/server/middleware/channels";
 import { DataService } from "@/server/services/data-service";
+import { rateLimit } from "@/server/rate-limit";
 
 /**
  * GET /api/guilds/[guildId]/channels
@@ -18,6 +19,19 @@ export async function GET(
 	// Verify authentication and guild access
 	const auth = await requireGuildAccess(req, guildId);
 	if (auth instanceof NextResponse) return auth;
+
+	// Rate Limit: 30 requests per minute
+	const limitResult = await rateLimit(
+		`get_channels:${auth.discordUserId}`,
+		30,
+		"1 m"
+	);
+	if (!limitResult.success) {
+		return NextResponse.json(
+			{ error: "Rate limit exceeded" },
+			{ status: 429 }
+		);
+	}
 
 	// Get all channels for this guild
 	try {

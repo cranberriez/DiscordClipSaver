@@ -27,7 +27,6 @@ export async function middleware(request: NextRequest) {
 		// Exclude public API routes (auth callbacks, webhooks, etc.)
 		const publicApiRoutes = [
 			"/api/auth/", // NextAuth routes
-			"/api/storage/",
 			"/api/discord/bot/claim",
 		];
 
@@ -70,6 +69,49 @@ export async function middleware(request: NextRequest) {
 
 			// User is authenticated - continue to route handler
 			// Route handler will do more granular checks (guild access, ownership, etc.)
+		}
+	}
+
+	// CSRF Protection & Body Size Limit
+	// Verify Origin header for state-changing requests to API routes
+	if (
+		isApiRoute &&
+		["POST", "PUT", "PATCH", "DELETE"].includes(request.method)
+	) {
+		// 1. Body Size Limit (1MB)
+		const contentLength = request.headers.get("content-length");
+		if (contentLength && parseInt(contentLength) > 1024 * 1024) {
+			return NextResponse.json(
+				{ error: "Payload too large. Limit is 1MB." },
+				{ status: 413 }
+			);
+		}
+
+		// 2. CSRF / Origin Check
+		const origin = request.headers.get("origin");
+		const host = request.headers.get("host");
+
+		// If Origin is present, it must match the Host
+		// (Browsers always send Origin for CORS/POST requests)
+		if (origin && host) {
+			try {
+				const originUrl = new URL(origin);
+				if (originUrl.host !== host) {
+					console.warn(
+						`[Middleware] CSRF Blocked: Origin ${origin} does not match Host ${host}`
+					);
+					return NextResponse.json(
+						{ error: "Invalid Origin" },
+						{ status: 403 }
+					);
+				}
+			} catch {
+				// Invalid Origin URL
+				return NextResponse.json(
+					{ error: "Invalid Origin Header" },
+					{ status: 403 }
+				);
+			}
 		}
 	}
 
