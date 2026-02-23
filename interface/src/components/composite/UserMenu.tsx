@@ -14,18 +14,18 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { LogOut, Settings } from "lucide-react";
 import Link from "next/link";
 
-export function UserMenu({ user }: { user: User }) {
+export function UserMenu({ user }: { user?: User }) {
 	return (
 		<DropdownMenu>
 			<DropdownMenuTrigger asChild>
 				<button className="flex items-center gap-2 transition-opacity hover:opacity-80 focus:outline-none">
 					<Avatar className="h-8 w-8">
 						<AvatarImage
-							src={user.image ?? undefined}
-							alt={user.name ?? "User"}
+							src={user?.image ?? undefined}
+							alt={user?.name ?? "User"}
 						/>
 						<AvatarFallback>
-							{user.name?.charAt(0).toUpperCase() ?? "U"}
+							{user?.name?.charAt(0).toUpperCase() ?? "U"}
 						</AvatarFallback>
 					</Avatar>
 				</button>
@@ -34,7 +34,7 @@ export function UserMenu({ user }: { user: User }) {
 				<DropdownMenuLabel>
 					<div className="flex flex-col space-y-1">
 						<p className="text-sm leading-none font-medium">
-							{user.name ?? "Unknown"}
+							{user?.name ?? "Unknown"}
 						</p>
 					</div>
 				</DropdownMenuLabel>

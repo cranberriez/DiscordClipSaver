@@ -11,7 +11,7 @@ import {
 	Hero,
 } from "@/features/hero/components";
 import { PageContainer, RootLayout } from "@/components/layout";
-import { HeroNav } from "@/features/hero/components/HeroNav";
+import { Navbar } from "@/components/composite/navbar";
 
 export default async function HomePage() {
 	const session = await getServerSession(authOptions);
@@ -22,7 +22,10 @@ export default async function HomePage() {
 			{/* <HeroLayout>
 				<HeroSection isAuthenticated={isAuthenticated} />
 			</HeroLayout> */}
-			<HeroNav />
+			<Navbar
+				containerClassName="mt-2 py-0!"
+				className="bg-sidebar/50 border-border/25 rounded-full backdrop-blur-sm"
+			/>
 			<Hero isAuthenticated={isAuthenticated} />
 			<PageContainer>
 				<div className="flex flex-col">
