@@ -14,8 +14,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
 	return (
 		<ThemeProvider
 			attribute="class"
-			defaultTheme="system" // Default to dark theme (can cause hydration errors)
-			enableSystem
+			defaultTheme="dark"
 			disableTransitionOnChange
 		>
 			<SessionProvider>

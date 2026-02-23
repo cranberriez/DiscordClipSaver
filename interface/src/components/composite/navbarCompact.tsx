@@ -29,7 +29,7 @@ export function NavbarCompact() {
 				{/* Logo/Brand */}
 				<Link
 					href="/"
-					className="hover:bg-background/50 rounded-lg p-2 text-lg font-bold transition-colors hover:text-blue-400"
+					className="hover:bg-background/50 hover:text-primary rounded-lg p-2 text-lg font-bold transition-colors"
 				>
 					<Home />
 				</Link>
@@ -40,13 +40,13 @@ export function NavbarCompact() {
 						<>
 							<Link
 								href="/clips"
-								className="hover:bg-background/50 rounded-lg p-2 text-sm font-medium transition-colors hover:text-blue-400"
+								className="hover:bg-background/50 hover:text-primary rounded-lg p-2 text-sm font-medium transition-colors"
 							>
 								<TvMinimal />
 							</Link>
 							<Link
 								href="/dashboard"
-								className="hover:bg-background/50 rounded-lg p-2 text-sm font-medium transition-colors hover:text-blue-400"
+								className="hover:bg-background/50 hover:text-primary rounded-lg p-2 text-sm font-medium transition-colors"
 							>
 								<LayoutDashboard />
 							</Link>
@@ -54,7 +54,7 @@ export function NavbarCompact() {
 							{isClipsPage && selectedGuildId && (
 								<Link
 									href={`/dashboard/${selectedGuildId}`}
-									className={`hover:bg-background/50 rounded-lg p-2 text-sm font-medium transition-colors hover:text-blue-400 ${isGuildOwner ? "" : "pointer-events-none invisible"}`}
+									className={`hover:bg-background/50 hover:text-primary rounded-lg p-2 text-sm font-medium transition-colors ${isGuildOwner ? "" : "pointer-events-none invisible"}`}
 									title={
 										isGuildOwner
 											? "Open server dashboard"
@@ -74,7 +74,9 @@ export function NavbarCompact() {
 						<UserMenu user={session.user as User} />
 					) : (
 						<Button asChild>
-							<Link href="/login">Sign In</Link>
+							<Link href="/login" className="text-xs">
+								Sign In
+							</Link>
 						</Button>
 					)}
 				</div>

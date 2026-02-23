@@ -30,7 +30,7 @@ export function VideoSection({
 				{isRefreshing ? (
 					<div className="flex aspect-video h-full max-h-full w-full flex-col items-center justify-center gap-4 rounded-lg border border-white/5 bg-gradient-to-br from-neutral-900/50 to-neutral-800/50 shadow-xl backdrop-blur-sm">
 						<div className="animate-in fade-in flex flex-col items-center gap-3 duration-300">
-							<Loader2 className="text-primary/80 h-8 w-8 animate-spin" />
+							<Loader2 className="text-foreground/80 h-8 w-8 animate-spin" />
 							<div className="space-y-1 text-center">
 								<p className="text-foreground/90 text-lg font-medium">
 									Refreshing Stream

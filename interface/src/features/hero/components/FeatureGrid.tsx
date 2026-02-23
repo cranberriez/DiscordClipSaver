@@ -73,7 +73,7 @@ export function FeatureGrid() {
 								>
 									<feature.icon className="h-6 w-6" />
 								</div>
-								<h3 className="group-hover:text-primary text-left text-xl font-semibold transition-colors">
+								<h3 className="group-hover:text-primary-hover text-left text-xl font-semibold transition-colors">
 									{feature.title}
 								</h3>
 							</div>

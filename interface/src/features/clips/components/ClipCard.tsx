@@ -139,7 +139,7 @@ export function ClipCard({
 					<div className="text-muted-foreground bg-muted/50 flex h-full w-full flex-col items-center justify-center p-4 text-center">
 						{isProcessing ? (
 							<>
-								<Loader2 className="text-primary mb-2 h-8 w-8 animate-spin" />
+								<Loader2 className="text-foreground mb-2 h-8 w-8 animate-spin" />
 								<span className="text-xs font-medium">
 									Processing...
 								</span>

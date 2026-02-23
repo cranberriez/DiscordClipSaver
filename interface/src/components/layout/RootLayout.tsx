@@ -1,9 +1,15 @@
 import { Navbar } from "@/components/composite/navbar";
 
-export function RootLayout({ children }: { children: React.ReactNode }) {
+export function RootLayout({
+	children,
+	hideNavbar,
+}: {
+	children: React.ReactNode;
+	hideNavbar?: boolean;
+}) {
 	return (
-		<div className="flex min-h-screen flex-col">
-			<Navbar />
+		<div className="bg-background relative flex min-h-screen flex-col">
+			{!hideNavbar && <Navbar />}
 			<main className="flex flex-1 flex-col">{children}</main>
 		</div>
 	);

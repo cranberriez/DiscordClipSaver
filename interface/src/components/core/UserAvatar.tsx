@@ -62,7 +62,7 @@ export function UserAvatar({
 			<div className="flex items-center gap-2">
 				{avatarContent}
 				<span
-					className={`${textSizeClasses[size]} group-hover:text-primary truncate font-medium duration-200`}
+					className={`${textSizeClasses[size]} group-hover:text-foreground truncate font-medium duration-200`}
 				>
 					{username || `User ${userId.slice(0, 8)}`}
 				</span>

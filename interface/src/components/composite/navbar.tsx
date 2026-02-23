@@ -20,9 +20,9 @@ export function Navbar() {
 					{/* Logo/Brand */}
 					<Link
 						href="/"
-						className="text-xl font-bold transition-colors hover:text-blue-400"
+						className="hover:text-primary text-xl font-bold transition-colors"
 					>
-						Discord Clip Saver
+						Guild Moments
 					</Link>
 
 					{/* Navigation Links */}
@@ -31,13 +31,13 @@ export function Navbar() {
 							<>
 								<Link
 									href="/clips"
-									className="text-sm font-medium transition-colors hover:text-blue-400"
+									className="hover:text-primary text-sm font-medium transition-colors"
 								>
 									Clips
 								</Link>
 								<Link
 									href="/dashboard"
-									className="text-sm font-medium transition-colors hover:text-blue-400"
+									className="hover:text-primary text-sm font-medium transition-colors"
 								>
 									Dashboard
 								</Link>

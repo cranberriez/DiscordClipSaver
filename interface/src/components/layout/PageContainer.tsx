@@ -14,10 +14,9 @@ type PageContainerProps = {
 export const PageContainer = React.forwardRef<
 	HTMLDivElement,
 	PageContainerProps
->(({ children, className, maxWidth = "6xl" }, ref) => {
+>(({ children, className, maxWidth = "default" }, ref) => {
 	const maxWidthClass = {
-		"6xl": "max-w-6xl",
-		"7xl": "max-w-7xl",
+		default: "max-w-[1600px]",
 		full: "max-w-full",
 	}[maxWidth];
 

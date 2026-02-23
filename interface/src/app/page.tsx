@@ -1,26 +1,29 @@
+import React from "react";
 import { getServerSession } from "next-auth";
 import { authOptions } from "./api/auth/[...nextauth]/route";
 import {
-	HeroSection,
 	FeatureGrid,
 	PricingSection,
 	OpenSourceBanner,
 	CallToAction,
 	DataPrivacySection,
-	HeroLayout,
 	SectionLayout,
+	Hero,
 } from "@/features/hero/components";
 import { PageContainer, RootLayout } from "@/components/layout";
+import { HeroNav } from "@/features/hero/components/HeroNav";
 
 export default async function HomePage() {
 	const session = await getServerSession(authOptions);
 	const isAuthenticated = !!session;
 
 	return (
-		<RootLayout>
-			<HeroLayout>
+		<RootLayout hideNavbar={true}>
+			{/* <HeroLayout>
 				<HeroSection isAuthenticated={isAuthenticated} />
-			</HeroLayout>
+			</HeroLayout> */}
+			<HeroNav />
+			<Hero isAuthenticated={isAuthenticated} />
 			<PageContainer>
 				<div className="flex flex-col">
 					<SectionLayout>
