@@ -7,7 +7,7 @@ import { User } from "next-auth";
 import { Button } from "@/components/ui/button";
 import { PageContainer } from "@/components/layout";
 
-export function Navbar({ noLines = false }: { noLines?: boolean }) {
+export function Navbar() {
 	const { data: session } = useSession();
 
 	return (
@@ -15,7 +15,7 @@ export function Navbar({ noLines = false }: { noLines?: boolean }) {
 			className="bg-background z-50 border-b border-white/10"
 			style={{ height: "var(--navbar-height)" }}
 		>
-			<PageContainer noLines={noLines} className="h-full">
+			<PageContainer className="h-full">
 				<div className="flex h-full items-center justify-between">
 					{/* Logo/Brand */}
 					<Link

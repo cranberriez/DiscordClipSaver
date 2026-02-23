@@ -17,11 +17,11 @@ export default async function HomePage() {
 	const isAuthenticated = !!session;
 
 	return (
-		<RootLayout noLines>
+		<RootLayout>
 			<HeroLayout>
 				<HeroSection isAuthenticated={isAuthenticated} />
 			</HeroLayout>
-			<PageContainer noLines>
+			<PageContainer>
 				<div className="flex flex-col">
 					<SectionLayout>
 						<FeatureGrid />

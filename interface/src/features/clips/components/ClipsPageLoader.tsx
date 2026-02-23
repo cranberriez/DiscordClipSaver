@@ -7,7 +7,7 @@ import { Navbar } from "@/components/composite/navbar";
 export function ClipsPageLoader() {
 	return (
 		<div className="bg-background flex h-screen flex-col">
-			<Navbar noLines />
+			<Navbar />
 			<div className="flex flex-1 items-center justify-center">
 				<div className="text-muted-foreground py-24 text-center">
 					<div className="border-primary mx-auto mb-4 h-8 w-8 animate-spin rounded-full border-b-2"></div>

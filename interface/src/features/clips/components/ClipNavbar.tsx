@@ -11,10 +11,7 @@ export function ClipNavbar({ children }: { children: React.ReactNode }) {
 	const { data: session } = useSession();
 	return (
 		<div className="z-10 flex h-16 min-h-16 w-full items-center border-b">
-			<PageContainer
-				className="flex h-full items-center gap-2 p-0!"
-				noLines
-			>
+			<PageContainer className="flex h-full items-center gap-2 p-0!">
 				<FilterNavButton>
 					<Link href="/">
 						<HomeIcon className="h-5 w-5" />

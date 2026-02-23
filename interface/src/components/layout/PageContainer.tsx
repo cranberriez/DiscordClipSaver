@@ -5,7 +5,6 @@ type PageContainerProps = {
 	children: React.ReactNode;
 	className?: string;
 	maxWidth?: "6xl" | "7xl" | "full";
-	noLines?: boolean;
 };
 
 /**
@@ -15,7 +14,7 @@ type PageContainerProps = {
 export const PageContainer = React.forwardRef<
 	HTMLDivElement,
 	PageContainerProps
->(({ children, className, maxWidth = "6xl", noLines = false }, ref) => {
+>(({ children, className, maxWidth = "6xl" }, ref) => {
 	const maxWidthClass = {
 		"6xl": "max-w-6xl",
 		"7xl": "max-w-7xl",
@@ -28,10 +27,7 @@ export const PageContainer = React.forwardRef<
 			className={cn(
 				"container mx-auto p-4 sm:p-8",
 				maxWidthClass,
-				className,
-				noLines
-					? "border-x border-transparent"
-					: "border-x border-dashed border-white/10"
+				className
 			)}
 		>
 			{children}
