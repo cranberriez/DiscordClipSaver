@@ -78,6 +78,7 @@ export interface ClipListParams {
 	tagsAny?: string[];
 	tagsAll?: string[];
 	tagsExclude?: string[];
+	searchQuery?: string;
 	limit?: number;
 	offset?: number;
 	sortOrder?: SortOrder;

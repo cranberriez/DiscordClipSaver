@@ -27,6 +27,7 @@ const ClipsQuerySchema = z.object({
 		.string()
 		.transform((val) => val.split(",").map((t) => t.trim()))
 		.optional(),
+	searchQuery: z.string().trim().max(100).optional(),
 	favorites: z.enum(["true", "false"]).optional(),
 	limit: z.coerce.number().int().min(1).max(100).default(50),
 	offset: z.coerce.number().int().min(0).default(0),
@@ -94,6 +95,7 @@ export async function GET(
 		tagsAny,
 		tagsAll,
 		tagsExclude,
+		searchQuery,
 		favorites,
 		limit,
 		offset,
@@ -119,7 +121,8 @@ export async function GET(
 					auth.isOwner, // Pass isGuildOwner
 					tagsAny,
 					tagsAll,
-					tagsExclude
+					tagsExclude,
+					searchQuery
 				)
 			: await DataService.getClipsByGuildId(
 					guildId,
@@ -133,7 +136,8 @@ export async function GET(
 					auth.isOwner, // Pass isGuildOwner
 					tagsAny,
 					tagsAll,
-					tagsExclude
+					tagsExclude,
+					searchQuery
 				);
 
 		if (!clips) {

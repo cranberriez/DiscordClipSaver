@@ -145,7 +145,8 @@ export class DataService {
 		isGuildOwner?: boolean,
 		tagsAny?: string[],
 		tagsAll?: string[],
-		tagsExclude?: string[]
+		tagsExclude?: string[],
+		searchQuery?: string
 	) {
 		const clips = await db.getClipsByGuildId(
 			guildId,
@@ -159,7 +160,8 @@ export class DataService {
 			isGuildOwner,
 			tagsAny,
 			tagsAll,
-			tagsExclude
+			tagsExclude,
+			searchQuery
 		);
 
 		if (!clips) {
@@ -182,7 +184,8 @@ export class DataService {
 		isGuildOwner?: boolean,
 		tagsAny?: string[],
 		tagsAll?: string[],
-		tagsExclude?: string[]
+		tagsExclude?: string[],
+		searchQuery?: string
 	) {
 		const clips = await db.getClipsByChannelIds(
 			channelIds,
@@ -196,7 +199,8 @@ export class DataService {
 			isGuildOwner,
 			tagsAny,
 			tagsAll,
-			tagsExclude
+			tagsExclude,
+			searchQuery
 		);
 
 		if (!clips) {

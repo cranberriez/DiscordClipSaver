@@ -27,7 +27,8 @@ export async function getClipsByGuildId(
 	isGuildOwner?: boolean,
 	tagsAny?: string[],
 	tagsAll?: string[],
-	tagsExclude?: string[]
+	tagsExclude?: string[],
+	searchQuery?: string
 ): Promise<ClipWithMetadata[]> {
 	return ClipQueryOrchestrator.getClips(
 		{
@@ -39,6 +40,7 @@ export async function getClipsByGuildId(
 			tagsAny,
 			tagsAll,
 			tagsExclude,
+			searchQuery,
 		},
 		{
 			limit,
@@ -64,7 +66,8 @@ export async function getClipsByChannelIds(
 	isGuildOwner?: boolean,
 	tagsAny?: string[],
 	tagsAll?: string[],
-	tagsExclude?: string[]
+	tagsExclude?: string[],
+	searchQuery?: string
 ): Promise<ClipWithMetadata[]> {
 	return ClipQueryOrchestrator.getClips(
 		{
@@ -76,6 +79,7 @@ export async function getClipsByChannelIds(
 			tagsAny,
 			tagsAll,
 			tagsExclude,
+			searchQuery,
 		},
 		{
 			limit,

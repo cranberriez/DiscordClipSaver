@@ -71,6 +71,7 @@ export function SearchFilter({ isOpen, onToggle }: SearchProps) {
 					<Input
 						ref={inputRef}
 						value={searchValue}
+						maxLength={100}
 						onChange={(e) => setSearchValue(e.target.value)}
 						placeholder="Search by title, filename, author, or content..."
 						className="bg-sidebar border-sidebar h-10 border-2 pr-8 pl-9"

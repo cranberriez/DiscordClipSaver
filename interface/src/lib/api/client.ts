@@ -343,6 +343,8 @@ export const api = {
 				searchParams.set("limit", params.limit.toString());
 			if (params.offset)
 				searchParams.set("offset", params.offset.toString());
+			if (params.searchQuery)
+				searchParams.set("searchQuery", params.searchQuery);
 			if (params.sortOrder)
 				searchParams.set("sortOrder", params.sortOrder);
 			if (params.sortType) searchParams.set("sortType", params.sortType);

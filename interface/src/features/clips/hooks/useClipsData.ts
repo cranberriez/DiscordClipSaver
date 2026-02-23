@@ -66,6 +66,7 @@ export function useClipsData(opts: { hydrated: boolean; targetPage?: number }) {
 		tagsAny: tagsAny.length > 0 ? tagsAny : undefined,
 		tagsAll: tagsAll.length > 0 ? tagsAll : undefined,
 		tagsExclude: tagsExclude.length > 0 ? tagsExclude : undefined,
+		searchQuery: deferredSearchQuery.trim() || undefined,
 		limit: 50,
 		sortOrder: sortOrder,
 		sortType: sortType,
@@ -110,27 +111,6 @@ export function useClipsData(opts: { hydrated: boolean; targetPage?: number }) {
 		return unique;
 	}, [clipsQuery.data?.pages]);
 
-	// Pre-compute search index to avoid re-normalizing on every search
-	const searchIndex = useMemo(() => {
-		const normalize = (str: string) =>
-			str.toLowerCase().replace(/[_-]/g, " ");
-
-		return new Map(
-			allClips.map((clip) => [
-				clip.clip.id,
-				{
-					content: normalize(clip.message.content || ""),
-					filename: normalize(clip.clip.filename),
-					title: normalize(clip.clip.title || ""),
-					authorName: normalize(
-						authorMap.get(clip.message.author_id)?.display_name ||
-							""
-					),
-				},
-			])
-		);
-	}, [allClips, authorMap]);
-
 	const filteredClips = useMemo(() => {
 		let clips = allClips;
 
@@ -144,34 +124,8 @@ export function useClipsData(opts: { hydrated: boolean; targetPage?: number }) {
 			);
 		}
 
-		// Apply search query filtering
-		const trimmedSearchQuery = deferredSearchQuery.trim();
-		if (trimmedSearchQuery) {
-			const normalize = (str: string) =>
-				str.toLowerCase().replace(/[_-]/g, " ");
-			const query = normalize(trimmedSearchQuery);
-
-			clips = clips.filter((clip) => {
-				const searchData = searchIndex.get(clip.clip.id);
-				if (!searchData) return false;
-
-				return (
-					searchData.content.includes(query) ||
-					searchData.filename.includes(query) ||
-					searchData.title.includes(query) ||
-					searchData.authorName.includes(query)
-				);
-			});
-		}
-
 		return clips;
-	}, [
-		allClips,
-		selectedAuthorIds,
-		authors.length,
-		deferredSearchQuery,
-		searchIndex,
-	]);
+	}, [allClips, selectedAuthorIds, authors.length]);
 
 	const selectedGuild = guilds.find((g) => g.id === selectedGuildId);
 

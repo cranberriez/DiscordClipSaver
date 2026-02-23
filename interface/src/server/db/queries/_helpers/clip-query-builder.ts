@@ -1,7 +1,6 @@
 // Centralized clip query builder following SOLID principles
 import { getDb } from "../../db";
 import { type SelectQueryBuilder, sql } from "kysely";
-import type { DB } from "../../schemas/db";
 import type { DbClip, DbMessage, DbThumbnail } from "../../types";
 import { onlyFavorites, getFavoriteStatusForClips } from "./favorites";
 import { getTagsForClips } from "../tags";
@@ -16,6 +15,7 @@ export interface ClipQueryFilters {
 	tagsAny?: string[];
 	tagsAll?: string[];
 	tagsExclude?: string[];
+	searchQuery?: string;
 }
 
 export interface ClipQueryOptions {
@@ -40,8 +40,8 @@ export interface ClipWithMetadata {
  */
 class ClipQueryBuilder {
 	private query: SelectQueryBuilder<
-		DB,
-		"clip" | "message",
+		any,
+		"clip" | "message" | "author",
 		DbClip & { favorite_count: number | null }
 	>;
 
@@ -171,6 +171,24 @@ class ClipQueryBuilder {
 					"=",
 					requiredCount
 				)
+			);
+		}
+
+		if (filters.searchQuery) {
+			// Conditionally join author table only when searching
+			this.query = this.query.leftJoin("author", (join) =>
+				join
+					.onRef("author.user_id", "=", "message.author_id")
+					.onRef("author.guild_id", "=", "message.guild_id")
+			);
+
+			const searchTerm = `%${filters.searchQuery}%`;
+			this.query = this.query.where((eb) =>
+				eb.or([
+					eb("message.content", "ilike", searchTerm),
+					eb("clip.filename", "ilike", searchTerm),
+					eb("clip.title", "ilike", searchTerm),
+				])
 			);
 		}
 
