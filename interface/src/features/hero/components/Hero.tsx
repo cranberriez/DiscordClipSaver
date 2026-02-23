@@ -206,8 +206,10 @@ export const Hero = ({ isAuthenticated }: { isAuthenticated: boolean }) => {
 				</div>
 
 				{/* Right Preview: Wider, Glassy, and Proper Infinite Scroll */}
-				<div className="relative w-full pr-16 perspective-[2000px] xl:-ml-4">
-					<div className="pointer-events-none absolute -inset-10 rounded-full bg-indigo-500/10 blur-[100px]" />
+				<div className="relative isolate w-full overflow-visible pr-16 perspective-[2000px] xl:-ml-4">
+					<div className="pointer-events-none absolute -inset-32 -z-20 rounded-full bg-[radial-gradient(circle_at_center,rgba(13,13,18,0)_0%,rgba(13,13,18,0.25)_55%,rgba(13,13,18,0.55)_75%,rgba(13,13,18,0.75)_100%)]" />
+					<div className="pointer-events-none absolute -inset-28 -z-10 rounded-full bg-[radial-gradient(circle_at_center,rgba(99,102,241,0.34)_0%,rgba(139,92,246,0.22)_24%,rgba(99,102,241,0.14)_42%,rgba(99,102,241,0.08)_58%,rgba(13,13,18,0)_88%)] blur-[170px]" />
+					<div className="pointer-events-none absolute -inset-32 -z-10 rounded-full bg-[url('/landing/noise.png')] bg-repeat opacity-[0.22] mix-blend-soft-light" />
 
 					<div className="bg-background/75 relative h-[400px] w-full rotate-x-[6deg] rotate-y-[-16deg] rotate-z-[2deg] transform overflow-hidden rounded-xl border border-white/5 shadow-2xl backdrop-blur-xl transition-all duration-700 sm:h-[800px] xl:rotate-x-[4deg] xl:rotate-y-[-20deg] xl:rotate-z-[3deg]">
 						{/* Slim Glassy Browser Header */}
