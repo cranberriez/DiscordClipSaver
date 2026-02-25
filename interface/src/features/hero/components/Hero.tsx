@@ -139,7 +139,7 @@ const ClipItem = ({ title, date, color, imageUrl }: ClipProps) => (
 // --- Main Page ---
 export const Hero = ({ isAuthenticated }: { isAuthenticated: boolean }) => {
 	return (
-		<div className="flex min-h-screen items-center justify-center overflow-x-hidden bg-[#0d0d12] p-10 text-white selection:bg-indigo-500/30">
+		<div className="flex min-h-screen items-center justify-center overflow-x-visible bg-[#0d0d12] p-10 text-white selection:bg-indigo-500/30">
 			<style>{`
         @keyframes scroll {
           from { transform: translateY(0); }
