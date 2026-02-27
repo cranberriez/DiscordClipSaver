@@ -1,9 +1,11 @@
-export { HeroSection } from "./HeroSectionOld";
+// export { HeroSection } from "./_HeroSectionOld";
+// export { HeroLayout } from "./_HeroLayoutOld";
 export { FeatureGrid } from "./FeatureGrid";
 export { PricingSection } from "./PricingSection";
 export * from "./OpenSourceBanner";
-export * from "./CallToAction";
+export * from "./FinalCallToAction";
 export { DataPrivacySection } from "./DataPrivacySection";
-export { HeroLayout } from "./HeroLayoutOld";
 export { SectionLayout } from "./SectionLayout";
 export * from "./Hero";
+export * from "./TopHeader";
+export * from "./FaqSection";

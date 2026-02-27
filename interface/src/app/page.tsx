@@ -3,12 +3,13 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "./api/auth/[...nextauth]/route";
 import {
 	FeatureGrid,
+	FaqSection,
 	PricingSection,
 	OpenSourceBanner,
-	CallToAction,
+	FinalCallToAction,
 	DataPrivacySection,
-	SectionLayout,
 	Hero,
+	TopHeader,
 } from "@/features/hero/components";
 import { PageContainer, RootLayout } from "@/components/layout";
 import { HeroNavScrollContainer } from "@/components/core/HeroNavScrollContainer";
@@ -26,21 +27,13 @@ export default async function HomePage() {
 			<Hero isAuthenticated={isAuthenticated} />
 			<PageContainer>
 				<div className="flex flex-col">
-					<SectionLayout>
-						<FeatureGrid />
-					</SectionLayout>
-					<SectionLayout>
-						<PricingSection />
-					</SectionLayout>
-					<SectionLayout>
-						<DataPrivacySection />
-					</SectionLayout>
-					<SectionLayout>
-						<OpenSourceBanner />
-					</SectionLayout>
-					<SectionLayout>
-						<CallToAction isAuthenticated={isAuthenticated} />
-					</SectionLayout>
+					<TopHeader />
+					<FeatureGrid />
+					<FaqSection />
+					<PricingSection />
+					<DataPrivacySection />
+					<OpenSourceBanner />
+					<FinalCallToAction isAuthenticated={isAuthenticated} />
 				</div>
 			</PageContainer>
 		</RootLayout>

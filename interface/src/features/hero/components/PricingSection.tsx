@@ -1,118 +1,207 @@
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Check } from "lucide-react";
+import { SectionLayout } from "./SectionLayout";
 
 const plans = [
 	{
+		id: "hosted",
 		name: "Hosted (Free)",
 		price: "Free",
-		description: "Perfect for small communities",
-		features: [
-			"1,000 messages/month",
-			"1 owned server",
-			"3 channels per server",
-			"Basic search",
-			"30-day clip retention",
-		],
 		cta: "Get Started",
 		href: "/login",
+		disabled: false,
+		highlight: false,
 	},
 	{
-		name: "Self-Hosted",
-		price: "Free",
-		description: "Host it yourself with full control",
-		features: [
-			"Unlimited messages",
-			"Unlimited servers",
-			"All channels enabled",
-			"Full feature access",
-			"Your own infrastructure",
-		],
-		cta: "View Guide",
-		href: "/docs/self-hosting",
-	},
-	{
+		id: "premium",
 		name: "Premium",
-		price: "$9",
-		period: "/month",
-		description: "For active gaming communities",
-		features: [
-			"50,000 messages/month",
-			"5 owned servers",
-			"Unlimited channels",
-			"Advanced search & filters",
-			"Unlimited clip retention",
-		],
+		price: "$9/mo",
 		cta: "Coming Soon",
 		href: "#",
 		disabled: true,
+		highlight: false,
+	},
+	{
+		id: "selfHosted",
+		name: "Self-Hosted",
+		price: "Free",
+		cta: "View Guide",
+		href: "/docs/self-hosting",
+		disabled: false,
+		highlight: true,
 	},
 ];
 
+type FeatureValue = string | boolean;
+
+interface Feature {
+	name: string;
+	hosted: FeatureValue;
+	premium: FeatureValue;
+	selfHosted: FeatureValue;
+}
+
+const features: Feature[] = [
+	{
+		name: "Messages per month",
+		hosted: "1,000",
+		premium: "50,000",
+		selfHosted: "Unlimited",
+	},
+	{
+		name: "Active servers",
+		hosted: "1",
+		premium: "5",
+		selfHosted: "Unlimited",
+	},
+	{
+		name: "Monitored channels",
+		hosted: "3 per server",
+		premium: "Unlimited",
+		selfHosted: "Unlimited",
+	},
+	{
+		name: "Advanced search & filters",
+		hosted: false,
+		premium: true,
+		selfHosted: true,
+	},
+	{
+		name: "Unlimited clip retention",
+		hosted: false,
+		premium: true,
+		selfHosted: true,
+	},
+	{
+		name: "Your own infrastructure",
+		hosted: false,
+		premium: false,
+		selfHosted: true,
+	},
+];
+
+function FeatureCell({ value }: { value: FeatureValue }) {
+	if (typeof value === "boolean") {
+		return value ? (
+			<Check className="h-[18px] w-[18px] text-[#818cf8]" />
+		) : (
+			<span className="text-[#3f3f46]">—</span>
+		);
+	}
+	return <span className="text-zinc-400">{value}</span>;
+}
+
 export function PricingSection() {
 	return (
-		<div className="space-y-16 text-center">
-			<div>
-				<h2 className="mb-4 text-3xl font-bold md:text-4xl">
-					Choose your plan
-				</h2>
-				<p className="text-muted-foreground text-lg">
-					From free to enterprise, we have a plan that fits your needs
-				</p>
-			</div>
+		<SectionLayout>
+			<div className="flex flex-col items-center gap-12 md:gap-16">
+				<div className="max-w-2xl space-y-5 px-4 text-center">
+					<div className="space-y-3">
+						<div className="text-[11px] font-bold tracking-[0.2em] text-indigo-500 uppercase">
+							PRICING
+						</div>
+						<h3 className="text-3xl font-bold tracking-tight md:text-4xl md:leading-[1.15]">
+							Choose your plan
+						</h3>
+					</div>
+					<p className="text-[16px] text-zinc-400">
+						From free to premium, we have a plan that fits your
+						community&apos;s needs.
+					</p>
+				</div>
 
-			<div className="grid gap-8 md:grid-cols-3">
-				{plans.map((plan, index) => (
-					<div
-						key={index}
-						className="border-border rounded-lg border p-6"
-					>
-						<div className="mb-6 text-center">
-							<h3 className="mb-2 text-xl font-semibold">
-								{plan.name}
-							</h3>
-							<div className="mb-2">
-								<span className="text-3xl font-bold">
-									{plan.price}
+				<div className="mx-auto w-full max-w-[900px] overflow-x-auto">
+					<div className="relative flex min-w-[600px] gap-4 px-2 pb-4">
+						{/* Features Labels Column */}
+						<div className="flex w-[180px] shrink-0 flex-col pt-8 pb-8">
+							<div className="mb-6 flex h-[80px] items-center">
+								<span className="text-[11px] font-bold tracking-[0.2em] text-zinc-500 uppercase">
+									FEATURES
 								</span>
-								{plan.period && (
-									<span className="text-muted-foreground">
-										{plan.period}
-									</span>
-								)}
 							</div>
-							<p className="text-muted-foreground text-sm">
-								{plan.description}
-							</p>
+							<div className="space-y-4">
+								{features.map((feature, i) => (
+									<div
+										key={i}
+										className="flex h-[52px] items-center text-[14px] font-medium text-zinc-200"
+									>
+										{feature.name}
+									</div>
+								))}
+							</div>
 						</div>
 
-						<ul className="mb-6 space-y-3">
-							{plan.features.map((feature, featureIndex) => (
-								<li
-									key={featureIndex}
-									className="flex items-center gap-3"
+						{/* Plan Columns Grid */}
+						<div className="flex flex-1 gap-4">
+							{plans.map((plan) => (
+								<div
+									key={plan.id}
+									className={`flex flex-1 flex-col rounded-3xl pt-8 pb-8 ${
+										plan.highlight
+											? "border border-[#818cf8]/30 bg-[#818cf8]/[0.05]"
+											: "border border-white/[0.03] bg-[#0c0c10]"
+									}`}
 								>
-									<Check className="text-primary h-4 w-4 flex-shrink-0" />
-									<span className="text-sm">{feature}</span>
-								</li>
-							))}
-						</ul>
+									{/* Plan Header */}
+									<div className="mb-6 flex h-[80px] flex-col items-center justify-center text-center">
+										<h4
+											className={`text-[16px] font-bold ${plan.highlight ? "text-[#818cf8]" : "text-zinc-100"}`}
+										>
+											{plan.name}
+										</h4>
+										<span className="mt-1 text-[14px] font-medium text-zinc-500">
+											{plan.price}
+										</span>
+									</div>
 
-						<Button
-							className="w-full"
-							variant="outline"
-							disabled={plan.disabled}
-							asChild={!plan.disabled}
-						>
-							{plan.disabled ? (
-								<span>{plan.cta}</span>
-							) : (
-								<Link href={plan.href}>{plan.cta}</Link>
-							)}
-						</Button>
+									{/* Plan Features */}
+									<div className="space-y-4 px-2">
+										{features.map((feature, i) => (
+											<div
+												key={i}
+												className="flex h-[52px] items-center justify-center text-center text-[14px]"
+											>
+												<FeatureCell
+													value={
+														feature[
+															plan.id as keyof Feature
+														]
+													}
+												/>
+											</div>
+										))}
+									</div>
+
+									{/* Plan Action */}
+									<div className="mt-8 flex justify-center px-4">
+										<Button
+											className={`w-full max-w-[140px] rounded-full text-[14px] font-medium ${
+												plan.highlight
+													? "bg-[#818cf8] text-white hover:bg-[#6366f1]"
+													: "bg-white/[0.04] text-zinc-200 hover:bg-white/[0.08] hover:text-white"
+											}`}
+											variant="ghost"
+											disabled={plan.disabled}
+											asChild={!plan.disabled}
+										>
+											{plan.disabled ? (
+												<span className="opacity-50">
+													{plan.cta}
+												</span>
+											) : (
+												<Link href={plan.href}>
+													{plan.cta}
+												</Link>
+											)}
+										</Button>
+									</div>
+								</div>
+							))}
+						</div>
 					</div>
-				))}
+				</div>
 			</div>
-		</div>
+		</SectionLayout>
 	);
 }

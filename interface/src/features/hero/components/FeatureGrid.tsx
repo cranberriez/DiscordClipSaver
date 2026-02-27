@@ -1,89 +1,91 @@
 import { Search, Server, Zap, Heart, Filter, Infinity } from "lucide-react";
+import { SectionLayout } from "./SectionLayout";
 
 const features = [
 	{
 		icon: Search,
 		title: "Smart Search",
 		description:
-			"Search by title, game, author, or time. Find any clip in seconds.",
-		color: "bg-blue-500/10 text-blue-500",
+			"Search by game, channel, author, or time—find any clip fast.",
+		color: "text-blue-400",
 	},
 	{
 		icon: Server,
 		title: "Multi-Server",
-		description:
-			"Manage clips across all your Discord servers in one place.",
-		color: "bg-green-500/10 text-green-500",
+		description: "Manage clips across multiple servers in one dashboard.",
+		color: "text-emerald-400",
 	},
 	{
 		icon: Zap,
 		title: "Auto-Capture",
-		description:
-			"Automatically save clips posted in your Discord channels.",
-		color: "bg-yellow-500/10 text-yellow-500",
+		description: "Automatically index clips posted in selected channels.",
+		color: "text-amber-400",
 	},
 	{
 		icon: Heart,
-		title: "Favorites System",
+		title: "Favorites",
 		description:
-			"Mark your best clips as favorites and create custom collections.",
-		color: "bg-red-500/10 text-red-500",
+			"Save favorites and build collections for recaps and events.",
+		color: "text-rose-400",
 	},
 	{
 		icon: Filter,
 		title: "Advanced Filters",
-		description:
-			"Filter by channel, author, date range, and more for precise results.",
-		color: "bg-purple-500/10 text-purple-500",
+		description: "Filter by channel, date range, tags, and more.",
+		color: "text-purple-400",
 	},
 	{
 		icon: Infinity,
 		title: "Fluid Browsing",
 		description:
-			"Infinite scrolling grid with smooth loading for fast exploration.",
-		color: "bg-indigo-500/10 text-indigo-500",
+			"Browse your entire library with smooth infinite scrolling.",
+		color: "text-cyan-400",
 	},
 ];
 
 export function FeatureGrid() {
 	return (
-		<div className="space-y-16 text-center">
-			<div>
-				<h2 className="mb-4 text-3xl font-bold md:text-4xl">
-					Everything you need
-					<br />
-					to manage your clips
-				</h2>
-				<p className="text-muted-foreground mx-auto max-w-2xl text-lg">
-					Powerful features to help you organize and find your best
-					gaming moments
-				</p>
-			</div>
+		<SectionLayout>
+			<div className="space-y-12">
+				<div className="space-y-4 text-center">
+					<div className="text-[11px] font-bold tracking-[0.2em] text-indigo-500 uppercase">
+						FEATURES
+					</div>
+					<h2 className="text-3xl font-bold tracking-tight md:text-4xl">
+						Built to manage clips at scale
+					</h2>
+					<p className="text-muted-foreground mx-auto max-w-2xl text-[17px]">
+						Powerful tools that keep your server&apos;s best moments
+						organized.
+					</p>
+				</div>
 
-			<div className="grid gap-8 md:grid-cols-2 lg:grid-cols-3">
-				{features.map((feature, index) => (
-					<div
-						key={index}
-						className="group border-border hover:border-primary/50 rounded-xl border p-6 transition-all duration-200 hover:shadow-lg"
-					>
-						<div className="space-y-4">
-							<div className="grid grid-cols-[48px_1fr] items-center gap-4">
-								<div
-									className={`flex h-12 w-12 items-center justify-center rounded-lg ${feature.color}`}
-								>
-									<feature.icon className="h-6 w-6" />
-								</div>
-								<h3 className="group-hover:text-primary-hover text-left text-xl font-semibold transition-colors">
+				<div className="mx-auto grid gap-4 md:grid-cols-2">
+					{features.map((feature, index) => (
+						<div
+							key={index}
+							className="flex items-start gap-5 rounded-[1.25rem] border border-white/[0.04] bg-[#0c0c10] p-6 transition-colors hover:bg-[#121218]"
+						>
+							<feature.icon
+								className={`mt-0.5 h-[1.35rem] w-[1.35rem] shrink-0 ${feature.color}`}
+							/>
+							<div className="space-y-1">
+								<h3 className="text-[15px] font-semibold text-zinc-100">
 									{feature.title}
 								</h3>
+								<p className="text-[14px] leading-relaxed text-zinc-400">
+									{feature.description}
+								</p>
 							</div>
-							<p className="text-muted-foreground leading-relaxed">
-								{feature.description}
-							</p>
 						</div>
-					</div>
-				))}
+					))}
+				</div>
+
+				<div className="text-center text-xs text-zinc-600">
+					Works with Discord servers via a bot integration · Not
+					affiliated with or endorsed by Discord
+				</div>
 			</div>
-		</div>
+		</SectionLayout>
 	);
 }
