@@ -101,9 +101,9 @@ export function PricingSection() {
 						<div className="text-[11px] font-bold tracking-[0.2em] text-indigo-500 uppercase">
 							PRICING
 						</div>
-						<h3 className="text-3xl font-bold tracking-tight md:text-4xl md:leading-[1.15]">
+						<h2 className="text-3xl font-bold tracking-tight md:text-4xl md:leading-[1.15]">
 							Choose your plan
-						</h3>
+						</h2>
 					</div>
 					<p className="text-[16px] text-zinc-400">
 						From free to premium, we have a plan that fits your

@@ -2,7 +2,7 @@
 
 import {
 	Shield,
-	Link,
+	Link as LinkIcon,
 	Lock,
 	UserCheck,
 	Image,
@@ -14,6 +14,7 @@ import {
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { SectionLayout } from "./SectionLayout";
+import Link from "next/link";
 
 const privacyPoints = [
 	{
@@ -24,7 +25,7 @@ const privacyPoints = [
 		hasAction: true,
 	},
 	{
-		icon: Link,
+		icon: LinkIcon,
 		title: "We don’t store video files",
 		description:
 			"We do not permanently store your videos. We store Discord CDN links. Video data is temporarily fetched for thumbnails.",
@@ -66,9 +67,9 @@ export function DataPrivacySection() {
 						<div className="text-[11px] font-bold tracking-[0.2em] text-indigo-500 uppercase">
 							PRIVACY
 						</div>
-						<h3 className="text-3xl font-bold tracking-tight md:text-4xl md:leading-[1.15]">
+						<h2 className="text-3xl font-bold tracking-tight md:text-4xl md:leading-[1.15]">
 							Transparent Data Usage
-						</h3>
+						</h2>
 					</div>
 					<p className="text-[16px] text-zinc-400">
 						We believe in full transparency. Here is exactly how we
@@ -237,26 +238,26 @@ export function DataPrivacySection() {
 									</p>
 								</div>
 								<div className="flex gap-2 text-sm font-medium text-zinc-500">
-									<a
-										href="#"
+									<Link
+										href="/privacy"
 										className="transition-colors hover:text-zinc-300"
 									>
 										Privacy Policy
-									</a>
+									</Link>
 									<span>•</span>
-									<a
-										href="#"
+									<Link
+										href="/subprocessors"
 										className="transition-colors hover:text-zinc-300"
 									>
 										Subprocessors
-									</a>
+									</Link>
 									<span>•</span>
-									<a
-										href="#"
+									<Link
+										href="/me/settings"
 										className="transition-colors hover:text-zinc-300"
 									>
 										Delete My Data
-									</a>
+									</Link>
 								</div>
 							</div>
 						</div>

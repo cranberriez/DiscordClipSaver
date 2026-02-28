@@ -1,6 +1,7 @@
 import React from "react";
 import { getServerSession } from "next-auth";
 import { authOptions } from "./api/auth/[...nextauth]/route";
+import { Metadata } from "next";
 import {
 	FeatureGrid,
 	FaqSection,
@@ -13,6 +14,13 @@ import {
 } from "@/features/hero/components";
 import { PageContainer, RootLayout } from "@/components/layout";
 import { HeroNavScrollContainer } from "@/components/core/HeroNavScrollContainer";
+
+export const metadata: Metadata = {
+	title: "Guild Moments | Discord Clip Saver & Organizer",
+	description:
+		"Automatically save, organize, and search through your Discord community's best video clips and attachments.",
+	keywords: ["discord", "clips", "video", "bot", "gaming", "community"],
+};
 
 export default async function HomePage() {
 	const session = await getServerSession(authOptions);

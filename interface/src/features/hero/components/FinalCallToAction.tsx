@@ -17,9 +17,9 @@ export function FinalCallToAction({ isAuthenticated }: CallToActionProps) {
 
 				<div className="relative z-10 flex flex-col items-center space-y-8">
 					<div className="space-y-4">
-						<h3 className="text-4xl font-bold tracking-tight text-white md:text-5xl lg:text-6xl">
+						<h2 className="text-4xl font-bold tracking-tight text-white md:text-5xl lg:text-6xl">
 							Ready to get started?
-						</h3>
+						</h2>
 
 						<p className="mx-auto max-w-2xl text-lg leading-relaxed text-zinc-400 md:text-xl">
 							{isAuthenticated
