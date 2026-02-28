@@ -197,7 +197,7 @@ export const Hero = ({ isAuthenticated }: { isAuthenticated: boolean }) => {
 								<div className="text-xl font-bold tracking-tight">
 									{val}
 								</div>
-								<div className="mt-0.5 text-[9px] tracking-[0.2em] text-zinc-600 uppercase">
+								<div className="text-muted-foreground mt-0.5 text-[9px] tracking-[0.2em] uppercase">
 									{["Servers", "Channels", "Clips"][i]}
 								</div>
 							</div>
