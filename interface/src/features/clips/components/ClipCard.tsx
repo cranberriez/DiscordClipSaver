@@ -16,7 +16,6 @@ import {
 } from "lucide-react";
 import Image from "next/image";
 import { messageTitleOrFilename } from "@/features/clips/lib/discordText";
-import { useImageErrorStore } from "../stores/useImageErrorStore";
 import { parseIsoTimestamp } from "@/lib/utils/time-helpers";
 import { Thumbnail } from "@/lib/api/clip";
 import { ClipOptionsDropdown } from "./ClipOptionsDropdown";
@@ -46,8 +45,6 @@ export function ClipCard({
 	authorMap,
 	highlighted,
 }: ClipCardProps) {
-	const { hasTooManyErrors, reportError } = useImageErrorStore();
-
 	const getThumbnailUrl = (): string | null => {
 		const thumbnail: Thumbnail | undefined =
 			clip.thumbnail?.filter((t) => t.size === "large")[0] ??
@@ -73,7 +70,7 @@ export function ClipCard({
 		clipData.title
 	);
 
-	const showThumbnail = thumbnailUrl && !hasTooManyErrors;
+	const showThumbnail = thumbnailUrl;
 	const isExpired =
 		parseIsoTimestamp(clip.clip.expires_at) < Date.now() / 1000;
 
@@ -124,9 +121,6 @@ export function ClipCard({
 							width={640}
 							height={360}
 							unoptimized
-							onError={() => {
-								reportError();
-							}}
 						/>
 						{/* Play button overlay on hover */}
 						<div className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 transition-opacity group-hover:opacity-100">
