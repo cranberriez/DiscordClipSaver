@@ -46,6 +46,81 @@ export function MobileFilterMenu({
 		setIsOpen((prev) => !prev);
 	};
 
+	const getSubMenuConfig = () => {
+		switch (currentView) {
+			case "server":
+				return {
+					title: "Select Server",
+					className: "flex h-[75dvh] flex-col",
+					content: (
+						<GuildSelectContent
+							guilds={guilds}
+							isLoading={guildsLoading}
+							onSelect={() => setIsOpen(false)}
+						/>
+					),
+				};
+			case "channel":
+				return {
+					title: "Select Channels",
+					className: "flex h-[75dvh] flex-col",
+					content: (
+						<ChannelSelectContent
+							channels={channels}
+							isLoading={channelsLoading}
+						/>
+					),
+				};
+			case "author":
+				return {
+					title: "Select Authors",
+					className: "flex h-[75dvh] flex-col",
+					content: <AuthorSelectContent authors={authors} />,
+				};
+			case "tag":
+				return {
+					title: "Select Tags",
+					className: "flex h-[75dvh] flex-col",
+					content: (
+						<TagSubMenu
+							guildId={
+								guilds.find(
+									(g) =>
+										g.id ===
+										useClipFiltersStore.getState()
+											.selectedGuildId
+								)?.id || ""
+							}
+						/>
+					),
+				};
+			case "sort":
+				return {
+					title: "Sort",
+					content: <SortSubMenu />,
+				};
+			case "filter":
+				return {
+					title: "Filter",
+					content: <FilterSubMenu />,
+				};
+			case "search":
+				return {
+					title: "Search",
+					content: (
+						<SearchSubMenu
+							onBack={() => setCurrentView("main")}
+							closeMenu={() => setIsOpen(false)}
+						/>
+					),
+				};
+			default:
+				return null;
+		}
+	};
+
+	const subMenuConfig = getSubMenuConfig();
+
 	return (
 		<div className="bg-sidebar flex items-center gap-2 rounded-xl p-1 sm:hidden">
 			<MenuButton onClick={toggleMenu} isOpen={isOpen} />
@@ -61,7 +136,7 @@ export function MobileFilterMenu({
 					>
 						<div className="bg-popover border-border flex max-h-[85dvh] w-full flex-col overflow-hidden rounded-xl border shadow-xl">
 							<AnimatePresence mode="wait" initial={false}>
-								{currentView === "main" && (
+								{currentView === "main" ? (
 									<motion.div
 										key="main"
 										initial={{ x: -20, opacity: 0 }}
@@ -75,164 +150,25 @@ export function MobileFilterMenu({
 											guildName={guildName}
 										/>
 									</motion.div>
-								)}
-								{currentView === "server" && (
+								) : subMenuConfig ? (
 									<motion.div
-										key="server"
+										key={currentView}
 										initial={{ x: 20, opacity: 0 }}
 										animate={{ x: 0, opacity: 1 }}
 										exit={{ x: 20, opacity: 0 }}
 										transition={{ duration: 0.15 }}
-										className="flex h-[75dvh] flex-col"
+										className={subMenuConfig.className}
 									>
 										<SubMenuWrapper
-											title="Select Server"
+											title={subMenuConfig.title}
 											onBack={() =>
 												setCurrentView("main")
 											}
 										>
-											<GuildSelectContent
-												guilds={guilds}
-												isLoading={guildsLoading}
-												onSelect={() =>
-													setIsOpen(false)
-												}
-											/>
+											{subMenuConfig.content}
 										</SubMenuWrapper>
 									</motion.div>
-								)}
-								{currentView === "channel" && (
-									<motion.div
-										key="channel"
-										initial={{ x: 20, opacity: 0 }}
-										animate={{ x: 0, opacity: 1 }}
-										exit={{ x: 20, opacity: 0 }}
-										transition={{ duration: 0.15 }}
-										className="flex h-[75dvh] flex-col"
-									>
-										<SubMenuWrapper
-											title="Select Channels"
-											onBack={() =>
-												setCurrentView("main")
-											}
-										>
-											<ChannelSelectContent
-												channels={channels}
-												isLoading={channelsLoading}
-											/>
-										</SubMenuWrapper>
-									</motion.div>
-								)}
-								{currentView === "author" && (
-									<motion.div
-										key="author"
-										initial={{ x: 20, opacity: 0 }}
-										animate={{ x: 0, opacity: 1 }}
-										exit={{ x: 20, opacity: 0 }}
-										transition={{ duration: 0.15 }}
-										className="flex h-[75dvh] flex-col"
-									>
-										<SubMenuWrapper
-											title="Select Authors"
-											onBack={() =>
-												setCurrentView("main")
-											}
-										>
-											<AuthorSelectContent
-												authors={authors}
-											/>
-										</SubMenuWrapper>
-									</motion.div>
-								)}
-								{currentView === "tag" && (
-									<motion.div
-										key="tag"
-										initial={{ x: 20, opacity: 0 }}
-										animate={{ x: 0, opacity: 1 }}
-										exit={{ x: 20, opacity: 0 }}
-										transition={{ duration: 0.15 }}
-										className="flex h-[75dvh] flex-col"
-									>
-										<SubMenuWrapper
-											title="Select Tags"
-											onBack={() =>
-												setCurrentView("main")
-											}
-										>
-											<TagSubMenu
-												guildId={
-													guilds.find(
-														(g) =>
-															g.id ===
-															useClipFiltersStore.getState()
-																.selectedGuildId
-													)?.id || ""
-												}
-											/>
-										</SubMenuWrapper>
-									</motion.div>
-								)}
-								{currentView === "sort" && (
-									<motion.div
-										key="sort"
-										initial={{ x: 20, opacity: 0 }}
-										animate={{ x: 0, opacity: 1 }}
-										exit={{ x: 20, opacity: 0 }}
-										transition={{ duration: 0.15 }}
-									>
-										<SubMenuWrapper
-											title="Sort"
-											onBack={() =>
-												setCurrentView("main")
-											}
-										>
-											<SortSubMenu />
-										</SubMenuWrapper>
-									</motion.div>
-								)}
-								{currentView === "filter" && (
-									<motion.div
-										key="filter"
-										initial={{ x: 20, opacity: 0 }}
-										animate={{ x: 0, opacity: 1 }}
-										exit={{ x: 20, opacity: 0 }}
-										transition={{ duration: 0.15 }}
-									>
-										<SubMenuWrapper
-											title="Filter"
-											onBack={() =>
-												setCurrentView("main")
-											}
-										>
-											<FilterSubMenu />
-										</SubMenuWrapper>
-									</motion.div>
-								)}
-								{currentView === "search" && (
-									<motion.div
-										key="search"
-										initial={{ x: 20, opacity: 0 }}
-										animate={{ x: 0, opacity: 1 }}
-										exit={{ x: 20, opacity: 0 }}
-										transition={{ duration: 0.15 }}
-									>
-										<SubMenuWrapper
-											title="Search"
-											onBack={() =>
-												setCurrentView("main")
-											}
-										>
-											<SearchSubMenu
-												onBack={() =>
-													setCurrentView("main")
-												}
-												closeMenu={() =>
-													setIsOpen(false)
-												}
-											/>
-										</SubMenuWrapper>
-									</motion.div>
-								)}
+								) : null}
 							</AnimatePresence>
 						</div>
 					</motion.div>
