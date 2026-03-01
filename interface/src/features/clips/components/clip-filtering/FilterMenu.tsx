@@ -11,13 +11,21 @@ import {
 	SearchFilter,
 	ServerIcon,
 } from "./";
-import { MobileFilterMenu } from "./MobileFilterMenu";
+import { MobileFilterMenu } from "../mobile-filtering";
+import type { GuildWithStats } from "@/lib/api/guild";
+import type { ChannelWithStats } from "@/lib/api/channel";
+import type { AuthorWithStats } from "@/lib/api/author";
 
 type FilterMenuprops = {
 	guildName: string;
 	guildIcon: string | null;
 	channelCount: number;
 	authorCount: number;
+	guilds: GuildWithStats[];
+	guildsLoading: boolean;
+	channels: ChannelWithStats[];
+	channelsLoading: boolean;
+	authors: AuthorWithStats[];
 };
 
 export function FilterMenu({
@@ -25,6 +33,11 @@ export function FilterMenu({
 	guildIcon,
 	channelCount,
 	authorCount,
+	guilds,
+	guildsLoading,
+	channels,
+	channelsLoading,
+	authors,
 }: FilterMenuprops) {
 	const { searchQuery } = useClipFiltersStore();
 	const [isSearchOpen, setIsSearchOpen] = useState(!!searchQuery);
@@ -44,7 +57,15 @@ export function FilterMenu({
 				<ViewFilter />
 				<SearchFilter isOpen={false} onToggle={setIsSearchOpen} />
 			</div>
-			<MobileFilterMenu />
+			<MobileFilterMenu
+				guildName={guildName}
+				guildIcon={guildIcon}
+				guilds={guilds}
+				guildsLoading={guildsLoading}
+				channels={channels}
+				channelsLoading={channelsLoading}
+				authors={authors}
+			/>
 		</>
 	);
 }

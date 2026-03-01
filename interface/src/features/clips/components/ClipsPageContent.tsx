@@ -188,6 +188,11 @@ export function ClipsPageContent() {
 						guildIcon={selectedGuild?.icon_url}
 						channelCount={channels.length}
 						authorCount={authors.length}
+						guilds={guilds}
+						guildsLoading={guildsLoading}
+						channels={channels}
+						channelsLoading={channelsLoading}
+						authors={authors}
 					/>
 					<ClipGrid
 						clips={filteredClips}

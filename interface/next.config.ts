@@ -7,6 +7,14 @@ const nextConfig: NextConfig = {
 			bodySizeLimit: "1mb",
 		},
 	},
+	images: {
+		remotePatterns: [
+			{
+				protocol: "https",
+				hostname: "cdn.discordapp.com",
+			},
+		],
+	},
 };
 
 export default nextConfig;
