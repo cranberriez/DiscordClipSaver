@@ -19,7 +19,7 @@ export function UserMenu({ user }: { user?: User }) {
 		<DropdownMenu>
 			<DropdownMenuTrigger asChild>
 				<button className="flex items-center gap-2 transition-opacity hover:opacity-80 focus:outline-none">
-					<Avatar className="h-8 w-8">
+					<Avatar className="h-10 w-10">
 						<AvatarImage
 							src={user?.image ?? undefined}
 							alt={user?.name ?? "User"}

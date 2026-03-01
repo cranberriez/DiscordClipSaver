@@ -16,7 +16,7 @@ export function HeroNavScrollContainer() {
 	}, []);
 
 	return (
-		<div className="sticky top-2 z-99">
+		<div className="sticky top-0 z-99">
 			<Navbar
 				containerClassName="mt-2 py-0!"
 				className={`rounded-full bg-transparent transition-all duration-400 ${

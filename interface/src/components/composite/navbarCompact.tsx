@@ -25,7 +25,7 @@ export function NavbarCompact() {
 
 	return (
 		<nav>
-			<div className="text-muted-foreground flex h-full items-center justify-between gap-2 sm:gap-4">
+			<div className="text-muted-foreground flex h-full items-center justify-between gap-2 sm:gap-3">
 				{/* Logo/Brand */}
 				<Link
 					href="/"
@@ -35,7 +35,7 @@ export function NavbarCompact() {
 				</Link>
 
 				{/* Navigation Links */}
-				<div className="flex items-center gap-2 sm:gap-4">
+				<div className="flex items-center gap-2 sm:gap-3">
 					{session && (
 						<>
 							<Link
@@ -51,17 +51,12 @@ export function NavbarCompact() {
 								<LayoutDashboard />
 							</Link>
 
-							{isClipsPage && selectedGuildId && (
+							{isClipsPage && selectedGuildId && isGuildOwner && (
 								<Link
 									href={`/dashboard/${selectedGuildId}`}
-									className={`hover:bg-background/50 hover:text-primary rounded-lg p-2 text-sm font-medium transition-colors ${isGuildOwner ? "" : "pointer-events-none invisible"}`}
-									title={
-										isGuildOwner
-											? "Open server dashboard"
-											: undefined
-									}
-									aria-hidden={!isGuildOwner}
-									tabIndex={isGuildOwner ? 0 : -1}
+									className="hover:bg-background/50 hover:text-primary rounded-lg p-2 text-sm font-medium transition-colors"
+									title="Open server dashboard"
+									aria-label="Open server dashboard"
 								>
 									<Settings />
 								</Link>
