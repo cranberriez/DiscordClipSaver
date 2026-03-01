@@ -362,8 +362,8 @@ function ErrorOverlay({
 	if (clipsLoading) {
 		return (
 			<div className="bg-background/80 pointer-events-auto absolute inset-0 z-[5] flex flex-col items-center justify-center backdrop-blur-sm">
-				<div className="mb-4 h-16 w-16 animate-spin rounded-full border-4 border-blue-400/30 border-t-blue-400"></div>
-				<div className="text-xl font-semibold text-blue-400">
+				<div className="border-primary/30 border-t-primary mb-4 h-16 w-16 animate-spin rounded-full border-4"></div>
+				<div className="text-primary text-xl font-semibold">
 					Loading...
 				</div>
 			</div>
