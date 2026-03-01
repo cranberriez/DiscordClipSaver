@@ -59,13 +59,13 @@ export function InfoBar({
 
 	return (
 		<div className="bg-background border-t">
-			<div className="mx-auto max-w-[95vw] px-4 py-4 md:px-8 2xl:max-w-[1920px]">
+			<div className="mx-auto max-w-[95vw] p-2 sm:p-4 md:px-8 2xl:max-w-[1920px]">
 				<div className="flex flex-1 flex-col">
 					<h2 className="mb-2 truncate text-xl font-semibold">
 						{vidTitle}
 					</h2>
-					<div className="flex items-center justify-between gap-4">
-						<div className="flex min-w-0 flex-1 gap-3">
+					<div className="flex flex-col items-center justify-between gap-4 sm:flex-row">
+						<div className="flex w-full min-w-0 flex-1 gap-3">
 							<UserAvatar
 								userId={message.author_id}
 								username={author?.display_name}
@@ -84,7 +84,9 @@ export function InfoBar({
 									{channelName && (
 										<>
 											<span>#{channelName}</span>
-											<span>•</span>
+											<span className="hidden sm:inline">
+												•
+											</span>
 										</>
 									)}
 									<span>
@@ -113,7 +115,9 @@ export function InfoBar({
 								className="text-muted-foreground hover:text-foreground gap-2"
 							>
 								<Info className="h-4 w-4" />
-								<span className="text-xs">Info</span>
+								<span className="hidden text-xs sm:inline">
+									Info
+								</span>
 							</Button>
 
 							<ClipOptionsDropdown
@@ -154,7 +158,9 @@ export function InfoBar({
 									className="cursor-pointer"
 								>
 									<ChevronLeft className="h-4 w-4" />
-									<span className="mb-0.5 text-xs">Back</span>
+									<span className="mb-0.5 hidden text-xs sm:inline">
+										Back
+									</span>
 								</Button>
 								<Button
 									variant="outline"
@@ -164,7 +170,9 @@ export function InfoBar({
 									title="Next clip"
 									className="cursor-pointer"
 								>
-									<span className="mb-0.5 text-xs">Next</span>
+									<span className="mb-0.5 hidden text-xs sm:inline">
+										Next
+									</span>
 									<ChevronRight className="h-4 w-4" />
 								</Button>
 							</ButtonGroup>
