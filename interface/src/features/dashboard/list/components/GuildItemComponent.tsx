@@ -71,7 +71,11 @@ function RelationButton({
 			colorClass: "text-blue-500",
 		},
 		unowned: { text: "Claim", link: "#", colorClass: "text-orange-400" },
-		other: { text: "View", link: "#", colorClass: "text-blue-200" },
+		other: {
+			text: "View",
+			link: `/clips?guildId=${guildId}`,
+			colorClass: "text-blue-200",
+		},
 	};
 
 	const rel = relations[relation as keyof typeof relations];
