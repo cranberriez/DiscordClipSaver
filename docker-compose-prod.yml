@@ -64,6 +64,7 @@ services:
             - ./.env.global
         environment:
             - BOT_API_URL=http://bot:8000
+            - INTERNAL_HEALTH_TOKEN=${INTERNAL_HEALTH_TOKEN}
         depends_on:
             - bot
             - dcs-postgres
