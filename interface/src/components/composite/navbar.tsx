@@ -6,7 +6,12 @@ import { UserMenu } from "./UserMenu";
 import { User } from "next-auth";
 import { Button } from "@/components/ui/button";
 import { PageContainer } from "@/components/layout";
-import { TvMinimal, LayoutDashboard, Clapperboard } from "lucide-react";
+import {
+	TvMinimal,
+	LayoutDashboard,
+	Clapperboard,
+	BookOpenText,
+} from "lucide-react";
 import { NavLinkItem } from "@/components/core";
 import { HeroNavIconGradient } from "@/components/core/HeroNavIconGradient";
 import { cn } from "@/lib/utils";
@@ -40,6 +45,13 @@ export function Navbar({
 
 				{/* Navigation Links */}
 				<div className="flex items-center md:gap-4">
+					<NavLinkItem
+						href="/docs"
+						text="Docs"
+						icon={<BookOpenText className="h-4 w-4" />}
+						className="text-xs font-medium transition-colors"
+					/>
+
 					{session || status === "loading" ? (
 						<>
 							<NavLinkItem
