@@ -41,7 +41,7 @@ export function GuildItemComponent({
 			<DiscordIcon guildId={id} iconUrl={icon || ""} size="md" />
 
 			<div className="flex flex-1 flex-col gap-1">
-				<p className="text-base font-bold">{name}</p>
+				<p className="line-clamp-2 text-base font-bold">{name}</p>
 				{relation === "invitable" && (
 					<p className="text-muted-foreground text-xs">
 						You can invite the bot to this server
@@ -98,7 +98,7 @@ function RelationButton({
 			>
 				<a href={rel.link} className="flex items-center gap-2">
 					<Plus className="size-4" />
-					<p className="mb-[2px]">Invite Bot</p>
+					<p className="mb-[2px]">{rel.text}</p>
 				</a>
 			</Button>
 		);
