@@ -20,3 +20,6 @@ python/storage/thumbnails
 
 # Testing tools (not part of project)
 python/tests/*
+
+# Deployment scripts
+deploy.sh

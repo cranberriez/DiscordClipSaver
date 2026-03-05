@@ -3,32 +3,22 @@ services:
         image: traefik
         container_name: dcs-traefik
         command:
-            - --api.dashboard=true
             - --providers.docker=true
             - --providers.docker.exposedbydefault=false
             - --entrypoints.web.address=:80
             - --entrypoints.websecure.address=:443
-            - --entrypoints.dashboard.address=:8082 # Dedicated dashboard port
+            - --certificatesresolvers.le.acme.email=${ACME_EMAIL}
+            - --certificatesresolvers.le.acme.storage=/letsencrypt/acme.json
+            - --certificatesresolvers.le.acme.httpchallenge=true
+            - --certificatesresolvers.le.acme.httpchallenge.entrypoint=web
         ports:
             - "80:80"
             - "443:443"
-            - "127.0.0.1:8082:8082" # Bind dashboard port to localhost only
         volumes:
             - /var/run/docker.sock:/var/run/docker.sock:ro
             - traefik_letsencrypt:/letsencrypt
         labels:
             - traefik.enable=true
-            # Dashboard Router (simpler, no TLS)
-            - traefik.http.routers.dashboard.rule=PathPrefix(`/dashboard`)
-            - traefik.http.routers.dashboard.service=api@internal
-            - traefik.http.routers.dashboard.entrypoints=dashboard
-            - traefik.http.routers.dashboard.middlewares=auth,strip-dashboard
-
-            # Middleware: Strip the /dashboard prefix before forwarding
-            - traefik.http.middlewares.strip-dashboard.stripprefix.prefixes=/dashboard
-
-            # Middleware: Authentication
-            - traefik.http.middlewares.auth.basicauth.users=admin:$$apr1$$ulssIwoF$$ctpjqfP9n0yDJhdwVXH050 # generated with htpasswd
         networks:
             - default
         restart: unless-stopped
@@ -38,7 +28,7 @@ services:
             dockerfile: ./python/bot/Dockerfile
         container_name: dcs-bot
         env_file:
-            - ./python/bot/.env
+            # - ./python/bot/.env
             - ./.env.global
         depends_on:
             - dcs-postgres
@@ -47,8 +37,6 @@ services:
         volumes:
             # Optional: mount local settings file for rapid iteration without rebuilding image
             - ./settings.default.json:/app/settings.default.json:ro
-        ports:
-            - "8000:8000"
 
     worker:
         build:
@@ -56,7 +44,7 @@ services:
             dockerfile: ./python/worker/Dockerfile
         # No container_name - allows scaling with --scale worker=N
         env_file:
-            - ./python/worker/.env
+            # - ./python/worker/.env
             - ./.env.global
         depends_on:
             - dcs-postgres
@@ -69,12 +57,10 @@ services:
             replicas: 1 # Default number of workers (change to 3 for testing, 5+ for production)
 
     interface:
-        build:
-            context: .
-            dockerfile: ./interface/Dockerfile
+        image: ghcr.io/cranberriez/discordclipsaver-interface:latest
         container_name: dcs-interface
         env_file:
-            - ./interface/.env
+            # - ./interface/.env
             - ./.env.global
         environment:
             - BOT_API_URL=http://bot:8000
@@ -93,12 +79,49 @@ services:
             # Service port inside the container
             - traefik.http.services.interface.loadbalancer.server.port=3000
 
+            # Public HTTPS router (test domain)
+            - traefik.http.routers.interface-public.rule=Host(`${PUBLIC_DOMAIN}`)
+            - traefik.http.routers.interface-public.entrypoints=websecure
+            - traefik.http.routers.interface-public.tls=true
+            - traefik.http.routers.interface-public.tls.certresolver=le
+            - traefik.http.routers.interface-public.middlewares=secure-headers@docker,interface-ratelimit@docker
+
+            # Redirect www -> apex (prevents host-split auth cookies and keeps canonical URLs)
+            - traefik.http.routers.interface-www.rule=Host(`www.${PUBLIC_DOMAIN}`)
+            - traefik.http.routers.interface-www.entrypoints=websecure
+            - traefik.http.routers.interface-www.tls=true
+            - traefik.http.routers.interface-www.tls.certresolver=le
+            - traefik.http.routers.interface-www.middlewares=redirect-www-to-apex@docker
+
+            - traefik.http.middlewares.redirect-www-to-apex.redirectregex.regex=^https?://www\.(.*)
+            - traefik.http.middlewares.redirect-www-to-apex.redirectregex.replacement=https://$${1}
+            - traefik.http.middlewares.redirect-www-to-apex.redirectregex.permanent=true
+
+            # Public HTTP -> HTTPS redirect for the same host
+            - traefik.http.routers.interface-public-redirect.rule=Host(`${PUBLIC_DOMAIN}`) || Host(`www.${PUBLIC_DOMAIN}`)
+            - traefik.http.routers.interface-public-redirect.entrypoints=web
+            - traefik.http.routers.interface-public-redirect.middlewares=redirect-to-https@docker
+
             # Dev HTTP router for localhost (no TLS, dev only)
             - traefik.http.routers.interface-local.rule=Host(`localhost`) || Host(`127.0.0.1`)
             - traefik.http.routers.interface-local.entrypoints=web
             - traefik.http.routers.interface-local.priority=10
-        ports:
-            - "3000:3000"
+
+            # Middleware: HTTP -> HTTPS
+            - traefik.http.middlewares.redirect-to-https.redirectscheme.scheme=https
+            - traefik.http.middlewares.redirect-to-https.redirectscheme.permanent=true
+
+            # Middleware: Security headers
+            - traefik.http.middlewares.secure-headers.headers.stsSeconds=31536000
+            - traefik.http.middlewares.secure-headers.headers.stsIncludeSubdomains=true
+            - traefik.http.middlewares.secure-headers.headers.stsPreload=true
+            - traefik.http.middlewares.secure-headers.headers.contentTypeNosniff=true
+            - traefik.http.middlewares.secure-headers.headers.frameDeny=true
+            - traefik.http.middlewares.secure-headers.headers.referrerPolicy=no-referrer
+
+            # Middleware: Basic rate limiting (tune for your needs)
+            - traefik.http.middlewares.interface-ratelimit.ratelimit.average=50
+            - traefik.http.middlewares.interface-ratelimit.ratelimit.burst=100
 
     dcs-postgres:
         image: postgres:16-alpine
@@ -110,7 +133,7 @@ services:
         volumes:
             - postgres_data:/var/lib/postgresql/data
         ports:
-            - "5432:5432"
+            - "127.0.0.1:5432:5432"
         networks:
             default:
                 ipv4_address: 172.20.0.10
@@ -122,8 +145,6 @@ services:
         command: ["redis-server", "--save", "60", "1", "--loglevel", "warning"]
         volumes:
             - redis_data:/data
-        ports:
-            - "6379:6379"
         networks:
             default:
                 ipv4_address: 172.20.0.11
@@ -133,7 +154,6 @@ services:
         image: amir20/dozzle:latest
         container_name: dcs-dozzle
         env_file:
-            - ./.env
             - ./.env.global
         restart: unless-stopped
         volumes:
@@ -141,13 +161,12 @@ services:
         networks:
             - default
         ports:
-            - "127.0.0.1:8088:8080" # Exposed locally at http://localhost:8088
+            - "127.0.0.1:8088:8080"
 
     uptime-kuma:
         image: louislam/uptime-kuma:1
         container_name: dcs-uptime-kuma
         env_file:
-            - ./.env
             - ./.env.global
         restart: unless-stopped
         volumes:
@@ -155,7 +174,7 @@ services:
         networks:
             - default
         ports:
-            - "127.0.0.1:3001:3001" # Exposed locally at http://localhost:3001
+            - "127.0.0.1:3001:3001"
 
 networks:
     default:
