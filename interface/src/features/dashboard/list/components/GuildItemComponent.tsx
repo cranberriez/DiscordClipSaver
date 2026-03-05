@@ -42,9 +42,16 @@ export function GuildItemComponent({
 
 			<div className="flex flex-1 flex-col gap-1">
 				<p className="text-base font-bold">{name}</p>
-				<p className="text-muted-foreground text-xs">
-					You can invite the bot to this server
-				</p>
+				{relation === "invitable" && (
+					<p className="text-muted-foreground text-xs">
+						You can invite the bot to this server
+					</p>
+				)}
+				{relation === "other" && (
+					<p className="text-muted-foreground text-xs">
+						You can view clips from this server
+					</p>
+				)}
 			</div>
 
 			<RelationButton guildId={id} relation={relation} />
