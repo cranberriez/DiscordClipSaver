@@ -34,10 +34,14 @@ export function useClipsData(opts: { hydrated: boolean; targetPage?: number }) {
 	const { data: guilds = [], isLoading: guildsLoading } =
 		useGuildsWithClipCount();
 
-	const { data: channels = [], isLoading: channelsLoading } =
-		useChannelStats(effectiveGuildId);
+	const {
+		data: channels = [],
+		isLoading: channelsLoading,
+		error: channelsError,
+	} = useChannelStats(effectiveGuildId);
 
-	const { data: authors = [] } = useAuthorStats(effectiveGuildId);
+	const { data: authors = [], error: authorsError } =
+		useAuthorStats(effectiveGuildId);
 
 	const authorMap = useMemo(
 		() => new Map(authors.map((a) => [a.user_id, a])),
@@ -134,7 +138,9 @@ export function useClipsData(opts: { hydrated: boolean; targetPage?: number }) {
 		guildsLoading,
 		channels,
 		channelsLoading,
+		channelsError,
 		authors,
+		authorsError,
 		authorMap,
 		channelMap,
 		selectedGuild,

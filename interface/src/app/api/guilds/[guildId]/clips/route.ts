@@ -3,6 +3,7 @@ import { requireGuildAccess } from "@/server/middleware/auth";
 import { DataService } from "@/server/services/data-service";
 import { z } from "zod";
 import { rateLimit } from "@/server/rate-limit";
+import { jsonError } from "@/server/http";
 
 const ClipsQuerySchema = z.object({
 	channelIds: z
@@ -159,17 +160,13 @@ export async function GET(
 		return NextResponse.json({
 			clips: clipsToReturn,
 			pagination: {
-				limit,
 				offset,
-				total: offset + clipsToReturn.length + (hasMore ? 1 : 0), // Approximate total
+				limit,
 				hasMore,
 			},
 		});
 	} catch (error) {
 		console.error("Failed to fetch clips:", error);
-		return NextResponse.json(
-			{ error: "Failed to fetch clips" },
-			{ status: 500 }
-		);
+		return jsonError(error);
 	}
 }

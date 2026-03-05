@@ -14,6 +14,7 @@ import { discordFetch, DiscordAPIError } from "@/server/discord/discordClient";
 import { getSingleGuildById } from "@/server/db";
 import type { DiscordGuild } from "@/server/discord/types";
 import type { DbGuild } from "@/server/db/types";
+import { jsonError } from "@/server/http";
 
 // ============================================================================
 // Types
@@ -181,9 +182,15 @@ export async function requireGuildAccess(
 	if (authContext instanceof NextResponse) return authContext;
 
 	// Check if guild exists in database
-	const guild = await getSingleGuildById(guildId);
+	let guild = null;
+	try {
+		guild = await getSingleGuildById(guildId);
+	} catch (err) {
+		return jsonError(err);
+	}
+
 	if (!guild) {
-		return NextResponse.json({ error: "Guild not found" }, { status: 404 });
+		return guildNotFoundOrNoAccessResponse();
 	}
 
 	// Check if user has access to this guild on Discord
@@ -191,10 +198,7 @@ export async function requireGuildAccess(
 	const hasAccess = !!discordGuild;
 
 	if (!hasAccess) {
-		return NextResponse.json(
-			{ error: "You do not have access to this guild" },
-			{ status: 403 }
-		);
+		return guildNotFoundOrNoAccessResponse();
 	}
 
 	// Check ownership if required
@@ -213,6 +217,19 @@ export async function requireGuildAccess(
 		isOwner,
 		hasAccess,
 	};
+}
+
+export function guildNotFoundOrNoAccessResponse(): NextResponse {
+	const message =
+		"The server you are trying to view doesn't exist or you don't have access";
+	return NextResponse.json(
+		{
+			error: message,
+			code: "GUILD_NOT_FOUND_OR_NO_ACCESS",
+			userMessage: message,
+		},
+		{ status: 404 }
+	);
 }
 
 // ============================================================================

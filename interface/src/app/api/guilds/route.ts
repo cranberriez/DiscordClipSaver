@@ -3,6 +3,7 @@ import { requireAuth } from "@/server/middleware/auth";
 import { DataService } from "@/server/services/data-service";
 import type { GuildResponse, GuildWithClipCount } from "@/lib/api/guild";
 import { rateLimit } from "@/server/rate-limit";
+import { jsonError } from "@/server/http";
 
 /**
  * GET /api/guilds
@@ -15,27 +16,27 @@ import { rateLimit } from "@/server/rate-limit";
  * - withClipCount: Include clip count for each guild
  */
 export async function GET(req: NextRequest) {
-	// Verify authentication and get user's Discord guilds
-	const auth = await requireAuth(req);
-	if (auth instanceof NextResponse) return auth;
-
-	// Rate Limit: 30 requests per minute
-	const limitResult = await rateLimit(
-		`list_guilds:${auth.discordUserId}`,
-		30,
-		"1 m"
-	);
-	if (!limitResult.success) {
-		return NextResponse.json(
-			{ error: "Rate limit exceeded" },
-			{ status: 429 }
-		);
-	}
-
-	const includePerms = req.nextUrl.searchParams.get("includePerms");
-	const withClipCount = req.nextUrl.searchParams.get("withClipCount");
-
 	try {
+		// Verify authentication and get user's Discord guilds
+		const auth = await requireAuth(req);
+		if (auth instanceof NextResponse) return auth;
+
+		// Rate Limit: 30 requests per minute
+		const limitResult = await rateLimit(
+			`list_guilds:${auth.discordUserId}`,
+			30,
+			"1 m"
+		);
+		if (!limitResult.success) {
+			return NextResponse.json(
+				{ error: "Rate limit exceeded" },
+				{ status: 429 }
+			);
+		}
+
+		const includePerms = req.nextUrl.searchParams.get("includePerms");
+		const withClipCount = req.nextUrl.searchParams.get("withClipCount");
+
 		// Get Discord guild IDs user has access to
 		const discordGuildIds = auth.userGuilds.map((g) => g.id);
 
@@ -85,9 +86,6 @@ export async function GET(req: NextRequest) {
 		return NextResponse.json(dbGuilds);
 	} catch (error) {
 		console.error("Failed to fetch guilds:", error);
-		return NextResponse.json(
-			{ error: "Failed to fetch guilds" },
-			{ status: 500 }
-		);
+		return jsonError(error);
 	}
 }

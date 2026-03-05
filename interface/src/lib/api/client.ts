@@ -59,6 +59,10 @@ async function apiRequest<T>(
 		...options,
 	});
 
+	const errorData = !response.ok
+		? await response.json().catch(() => ({}))
+		: undefined;
+
 	// Handle authentication errors
 	if (response.status === 401) {
 		// Prevent multiple sign-out triggers
@@ -68,18 +72,21 @@ async function apiRequest<T>(
 			// Session expired or invalid - sign out and redirect
 			await signOut({ callbackUrl: "/login" });
 		}
-		throw new APIError("Authentication required", 401);
+		throw new APIError("Authentication required", 401, errorData);
 	}
 
 	if (response.status === 403) {
 		// Authenticated but not authorized
-		throw new APIError("Access denied", 403);
+		throw new APIError(
+			(errorData as any)?.error || "Access denied",
+			403,
+			errorData
+		);
 	}
 
 	if (!response.ok) {
-		const errorData = await response.json().catch(() => ({}));
 		throw new APIError(
-			errorData.error || "Request failed",
+			(errorData as any)?.error || "Request failed",
 			response.status,
 			errorData
 		);

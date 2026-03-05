@@ -1,7 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
-import { requireGuildAccess, canManageGuild } from "@/server/middleware/auth";
+import {
+	requireGuildAccess,
+	canManageGuild,
+	guildNotFoundOrNoAccessResponse,
+} from "@/server/middleware/auth";
 import { DataService } from "@/server/services/data-service";
 import { rateLimit } from "@/server/rate-limit";
+import { jsonError } from "@/server/http";
 
 /**
  * GET /api/guilds/[guildId]
@@ -34,28 +39,19 @@ export async function GET(
 
 	// Check permissions (Admin or Manage Guild)
 	if (!canManageGuild(auth.discordGuild)) {
-		return NextResponse.json(
-			{ error: "You do not have permission to view this guild" },
-			{ status: 403 }
-		);
+		return guildNotFoundOrNoAccessResponse();
 	}
 
 	try {
 		const guild = await DataService.getSingleGuildById(guildId);
 
 		if (!guild) {
-			return NextResponse.json(
-				{ error: "Guild not found" },
-				{ status: 404 }
-			);
+			return guildNotFoundOrNoAccessResponse();
 		}
 
 		return NextResponse.json(guild);
 	} catch (error) {
 		console.error("Failed to fetch guild:", error);
-		return NextResponse.json(
-			{ error: "Failed to fetch guild" },
-			{ status: 500 }
-		);
+		return jsonError(error);
 	}
 }

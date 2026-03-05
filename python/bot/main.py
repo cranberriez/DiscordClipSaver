@@ -27,7 +27,10 @@ async def main():
         consumer_group=None,  # Bot doesn't consume jobs
         consumer_name=None    # Bot only produces jobs
     )
-    await redis_client.connect()
+    try:
+        await redis_client.connect()
+    except Exception as e:
+        logger.error(f"Initial Redis connection failed; bot will keep running and retry on demand. Error: {e}")
     
     # Configure scan service with Redis client
     scan_service = get_scan_service(redis_client=redis_client)

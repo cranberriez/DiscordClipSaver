@@ -3,7 +3,7 @@
  * Interface is a producer - pushes jobs to queue for worker to consume
  */
 import "server-only";
-import { getRedis } from "./client";
+import { withRedis } from "./client";
 import type {
 	BatchScanJob,
 	MessageScanJob,
@@ -28,22 +28,22 @@ function buildStreamName(guildId: string, jobType: string): string {
  * This is idempotent - won't error if group already exists
  */
 async function ensureConsumerGroup(streamName: string): Promise<void> {
-	const redis = getRedis();
-
-	try {
-		await redis.xgroup(
-			"CREATE",
-			streamName,
-			"worker_group",
-			"0",
-			"MKSTREAM"
-		);
-	} catch (error: any) {
-		// Ignore BUSYGROUP error (group already exists)
-		if (!error.message?.includes("BUSYGROUP")) {
-			throw error;
+	await withRedis(async (redis) => {
+		try {
+			await redis.xgroup(
+				"CREATE",
+				streamName,
+				"worker_group",
+				"0",
+				"MKSTREAM"
+			);
+		} catch (error: any) {
+			// Ignore BUSYGROUP error (group already exists)
+			if (!error.message?.includes("BUSYGROUP")) {
+				throw error;
+			}
 		}
-	}
+	});
 }
 
 /**
@@ -57,30 +57,30 @@ async function pushJob(
 		| PurgeGuildJob
 		| ThumbnailCleanupJob
 ): Promise<string> {
-	const redis = getRedis();
-
 	const streamName = buildStreamName(job.guild_id, job.type);
 
 	// Ensure consumer group exists
 	await ensureConsumerGroup(streamName);
 
-	// Serialize job data
-	const jobData = {
-		job: JSON.stringify(job),
-		guild_id: job.guild_id,
-		channel_id: job.channel_id,
-		job_type: job.type,
-		job_id: job.job_id,
-	};
+	return withRedis(async (redis) => {
+		// Serialize job data
+		const jobData = {
+			job: JSON.stringify(job),
+			guild_id: job.guild_id,
+			channel_id: job.channel_id,
+			job_type: job.type,
+			job_id: job.job_id,
+		};
 
-	// Push to stream
-	const messageId = await redis.xadd(
-		streamName,
-		"*",
-		...Object.entries(jobData).flat()
-	);
+		// Push to stream
+		const messageId = await redis.xadd(
+			streamName,
+			"*",
+			...Object.entries(jobData).flat()
+		);
 
-	return messageId as string;
+		return messageId as string;
+	});
 }
 
 /**
@@ -228,20 +228,21 @@ export async function getStreamInfo(
 	length: number;
 	exists: boolean;
 }> {
-	const redis = getRedis();
 	const streamName = buildStreamName(guildId, jobType);
 
-	try {
-		const info = (await redis.xinfo("STREAM", streamName)) as any[];
+	return withRedis(async (redis) => {
+		try {
+			const info = (await redis.xinfo("STREAM", streamName)) as any[];
 
-		// Parse Redis response (array format)
-		const length = info[1] as number;
+			// Parse Redis response (array format)
+			const length = info[1] as number;
 
-		return { length, exists: true };
-	} catch (error: any) {
-		if (error.message?.includes("no such key")) {
-			return { length: 0, exists: false };
+			return { length, exists: true };
+		} catch (error: any) {
+			if (error.message?.includes("no such key")) {
+				return { length: 0, exists: false };
+			}
+			throw error;
 		}
-		throw error;
-	}
+	});
 }

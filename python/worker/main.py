@@ -8,7 +8,7 @@ from dotenv import load_dotenv
 from shared.db.utils import init_db, close_db, start_health_check_loop
 from shared.db.models import ScanStatus
 from worker.discord.bot import WorkerBot
-from shared.redis.redis_client import RedisStreamClient
+from shared.redis.redis_client import RedisStreamClient, RedisUnavailableError
 from worker.processor import JobProcessor
 from worker.logger import logger  # Centralized logger setup
 
@@ -47,7 +47,10 @@ class Worker:
     async def initialize(self):
         """Initialize database and Redis."""
         await init_db()
-        await self.redis.connect()
+        try:
+            await self.redis.connect()
+        except Exception as e:
+            logger.error(f"Initial Redis connection failed; worker will keep running and retry on demand. Error: {e}")
         self.processor = JobProcessor(bot=self.bot, redis_client=self.redis)
         logger.info("Worker components initialized successfully")
 
@@ -238,6 +241,11 @@ class Worker:
             except asyncio.CancelledError:
                 logger.info("Job processing loop cancelled")
                 break
+            except RedisUnavailableError as e:
+                # Redis is down; back off according to the client's schedule to avoid busy looping.
+                wait_seconds = max(1.0, float(getattr(e, "retry_after_seconds", 0.0) or 0.0))
+                logger.warning(f"Redis unavailable; retrying in {wait_seconds:.2f}s")
+                await asyncio.sleep(wait_seconds)
             except Exception as e:
                 logger.error(f"Error in job processing loop: {e}", exc_info=True)
                 # Wait a bit before retrying to avoid tight error loop

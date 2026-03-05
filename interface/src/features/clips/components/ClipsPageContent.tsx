@@ -35,7 +35,9 @@ export function ClipsPageContent() {
 		guildsLoading,
 		channels,
 		channelsLoading,
+		channelsError,
 		authors,
+		authorsError,
 		authorMap,
 		channelMap,
 		selectedGuild,
@@ -219,8 +221,13 @@ export function ClipsPageContent() {
 			{/* Content overlays for states (when no clips or loading) */}
 			<ErrorOverlay
 				selectedGuildId={selectedGuildId}
-				clipsLoading={clipsQuery.isLoading}
-				clipsError={clipsQuery.error}
+				isLoading={
+					clipsQuery.isLoading ||
+					channelsLoading ||
+					// authors query doesn't currently expose isLoading in useClipsData
+					false
+				}
+				error={channelsError || authorsError || clipsQuery.error}
 				filteredClips={filteredClips}
 				openGuildModal={openGuildModal}
 				allClipCount={allClipCount}
@@ -330,15 +337,15 @@ export function ClipsPageContent() {
 
 function ErrorOverlay({
 	selectedGuildId,
-	clipsLoading,
-	clipsError,
+	isLoading,
+	error,
 	filteredClips,
 	openGuildModal,
 	allClipCount,
 }: {
 	selectedGuildId: string | null;
-	clipsLoading: boolean;
-	clipsError: Error | null;
+	isLoading: boolean;
+	error: Error | null;
 	filteredClips: FullClip[];
 	openGuildModal: () => void;
 	allClipCount: number;
@@ -359,7 +366,7 @@ function ErrorOverlay({
 		);
 	}
 
-	if (clipsLoading) {
+	if (isLoading) {
 		return (
 			<div className="bg-background/80 pointer-events-auto absolute inset-0 z-[5] flex flex-col items-center justify-center backdrop-blur-sm">
 				<div className="border-primary/30 border-t-primary mb-4 h-16 w-16 animate-spin rounded-full border-4"></div>
@@ -370,11 +377,19 @@ function ErrorOverlay({
 		);
 	}
 
-	if (clipsError) {
+	if (error) {
+		const userMessage = (error as any)?.data?.userMessage as
+			| string
+			| undefined;
 		return (
 			<div className="bg-background/80 pointer-events-auto absolute inset-0 flex items-center justify-center backdrop-blur-sm">
 				<div className="text-destructive py-24 text-center">
-					Error loading clips. Please try again.
+					<div>Error loading clips. Please try again.</div>
+					{userMessage ? (
+						<div className="mt-2 text-sm opacity-80">
+							{userMessage}
+						</div>
+					) : null}
 				</div>
 			</div>
 		);

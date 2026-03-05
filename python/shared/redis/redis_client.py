@@ -4,10 +4,18 @@ Redis Stream client for job queue management
 import os
 import json
 import logging
+import asyncio
+import time
 import redis.asyncio as redis_async
 from typing import Optional, Dict, Any, List
 
 logger = logging.getLogger(__name__)
+
+
+class RedisUnavailableError(RuntimeError):
+    def __init__(self, message: str, *, retry_after_seconds: float):
+        super().__init__(message)
+        self.retry_after_seconds = retry_after_seconds
 
 
 class RedisStreamClient:
@@ -39,26 +47,108 @@ class RedisStreamClient:
         self.consumer_group = consumer_group
         self.consumer_name = consumer_name
         self.is_consumer = consumer_group is not None and consumer_name is not None
+
+        self._connect_backoff_initial_seconds = float(os.getenv("REDIS_CONNECT_BACKOFF_INITIAL_SECONDS", "0.5"))
+        self._connect_backoff_max_seconds = float(os.getenv("REDIS_CONNECT_BACKOFF_MAX_SECONDS", "30"))
+        self._connect_backoff_multiplier = float(os.getenv("REDIS_CONNECT_BACKOFF_MULTIPLIER", "2"))
+        self._connect_max_attempts = int(os.getenv("REDIS_CONNECT_MAX_ATTEMPTS", "5"))
+        self._connect_timeout_seconds = float(os.getenv("REDIS_CONNECT_TIMEOUT_SECONDS", "2"))
+
+        self._next_connect_attempt_at: float = 0.0
+        self._current_backoff_seconds: float = self._connect_backoff_initial_seconds
+        self._consecutive_connect_failures: int = 0
     
-    async def connect(self):
-        """Connect to Redis"""
+    async def connect(self, *, max_attempts: Optional[int] = None):
+        """Connect to Redis.
+
+        Uses bounded exponential backoff to avoid tight reconnect loops when Redis is unavailable.
+
+        Args:
+            max_attempts: Overrides REDIS_CONNECT_MAX_ATTEMPTS for this call.
+        """
         redis_url = os.getenv("REDIS_URL", "redis://localhost:6379")
-        
-        logger.info(f"Connecting to Redis...")
-        
-        self.client = await redis_async.from_url(
-            redis_url,
-            encoding="utf-8",
-            decode_responses=True
-        )
-        
-        # Test connection
-        await self.client.ping()
-        
-        # Consumer groups will be created on-demand when streams are accessed
-        
-        self.connected = True
-        logger.info("Redis connected successfully")
+        attempts_allowed = self._connect_max_attempts if max_attempts is None else max_attempts
+
+        if attempts_allowed < 1:
+            attempts_allowed = 1
+
+        last_error: Optional[Exception] = None
+        for attempt in range(1, attempts_allowed + 1):
+            try:
+                logger.info("Connecting to Redis...")
+
+                self.client = await redis_async.from_url(
+                    redis_url,
+                    encoding="utf-8",
+                    decode_responses=True,
+                    socket_connect_timeout=self._connect_timeout_seconds,
+                )
+
+                # Test connection
+                await self.client.ping()
+
+                self.connected = True
+                self._consecutive_connect_failures = 0
+                self._current_backoff_seconds = self._connect_backoff_initial_seconds
+                self._next_connect_attempt_at = 0.0
+
+                logger.info("Redis connected successfully")
+                return
+            except Exception as e:
+                last_error = e
+                self.connected = False
+                self._consecutive_connect_failures += 1
+
+                if self.client:
+                    try:
+                        await self.client.close()
+                    except Exception:
+                        pass
+                    self.client = None
+
+                delay = min(self._current_backoff_seconds, self._connect_backoff_max_seconds)
+                self._next_connect_attempt_at = time.monotonic() + delay
+                self._current_backoff_seconds = min(
+                    self._current_backoff_seconds * self._connect_backoff_multiplier,
+                    self._connect_backoff_max_seconds,
+                )
+
+                logger.warning(
+                    "Redis connect failed (attempt %s/%s). Next attempt in %.2fs. Error: %s",
+                    attempt,
+                    attempts_allowed,
+                    delay,
+                    str(e),
+                )
+
+                if attempt < attempts_allowed:
+                    await asyncio.sleep(delay)
+
+        raise RuntimeError(f"Failed to connect to Redis after {attempts_allowed} attempt(s): {last_error}")
+
+    async def ensure_connected(self) -> None:
+        """Ensure a usable Redis connection.
+
+        If Redis is down, this will only attempt reconnection when the backoff window allows.
+        Otherwise it fails fast so callers can return a generic API error without busy looping.
+        """
+        if self.connected and self.client is not None:
+            return
+
+        now = time.monotonic()
+        if self._next_connect_attempt_at and now < self._next_connect_attempt_at:
+            raise RedisUnavailableError(
+                "Redis unavailable",
+                retry_after_seconds=max(0.0, self._next_connect_attempt_at - now),
+            )
+
+        # Single attempt; backoff scheduling is handled in connect().
+        try:
+            await self.connect(max_attempts=1)
+        except Exception:
+            now = time.monotonic()
+            retry_after = max(0.0, self._next_connect_attempt_at - now) if self._next_connect_attempt_at else 0.0
+            raise RedisUnavailableError("Redis unavailable", retry_after_seconds=retry_after)
     
     async def disconnect(self):
         """Close Redis connection"""
@@ -97,8 +187,7 @@ class RedisStreamClient:
         Returns:
             Message ID
         """
-        if not self.connected:
-            raise RuntimeError("Redis not connected")
+        await self.ensure_connected()
         
         # Build stream name from job data if not provided
         if not stream_name:
@@ -269,8 +358,7 @@ class RedisStreamClient:
         Returns:
             List of job dictionaries with metadata
         """
-        if not self.connected:
-            raise RuntimeError("Redis not connected")
+        await self.ensure_connected()
         
         if not self.is_consumer:
             raise RuntimeError("read_jobs requires consumer_group and consumer_name to be set")
@@ -342,8 +430,7 @@ class RedisStreamClient:
             stream_name: Redis stream name
             message_id: Redis stream message ID
         """
-        if not self.connected:
-            raise RuntimeError("Redis not connected")
+        await self.ensure_connected()
         
         if not self.is_consumer:
             raise RuntimeError("acknowledge_job requires consumer_group to be set")
@@ -372,8 +459,7 @@ class RedisStreamClient:
         Returns:
             List of stream names
         """
-        if not self.connected:
-            raise RuntimeError("Redis not connected")
+        await self.ensure_connected()
         
         pattern = self._build_stream_name(guild_id=guild_id, job_type=job_type) + "*"
         keys = await self._scan_keys(pattern)
@@ -389,8 +475,7 @@ class RedisStreamClient:
         Returns:
             Dictionary with stream info (length, first/last entry, etc.)
         """
-        if not self.connected:
-            raise RuntimeError("Redis not connected")
+        await self.ensure_connected()
         
         try:
             info = await self.client.xinfo_stream(stream_name)
@@ -415,8 +500,7 @@ class RedisStreamClient:
         Returns:
             List of job data with metadata
         """
-        if not self.connected:
-            raise RuntimeError("Redis not connected")
+        await self.ensure_connected()
         
         try:
             # Use XRANGE (oldest first) or XREVRANGE (newest first) to read without consuming
@@ -461,8 +545,7 @@ class RedisStreamClient:
         Returns:
             Dictionary with pending job statistics
         """
-        if not self.connected:
-            raise RuntimeError("Redis not connected")
+        await self.ensure_connected()
         
         group = consumer_group or self.consumer_group
         if not group:
@@ -504,8 +587,7 @@ class RedisStreamClient:
         Returns:
             Dictionary with job statistics across all job types
         """
-        if not self.connected:
-            raise RuntimeError("Redis not connected")
+        await self.ensure_connected()
         
         # Find all streams for this guild using SCAN (non-blocking)
         pattern = f"{self.STREAM_PREFIX}:guild:{guild_id}:*"
