@@ -18,6 +18,7 @@ COPY --from=builder /app/package.json ./package.json
 COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/.next ./.next
 COPY --from=builder /app/public ./public
+COPY --from=builder /app/src/features/docs/content ./src/features/docs/content
 COPY --from=builder /app/next.config.* ./
 COPY settings.default.jsonc /app/settings.default.jsonc
 ENV DEFAULT_SETTINGS_PATH=/app/settings.default.jsonc
