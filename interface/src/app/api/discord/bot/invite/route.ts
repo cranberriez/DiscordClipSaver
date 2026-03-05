@@ -15,10 +15,13 @@ import { rateLimit } from "@/server/rate-limit";
  */
 export async function GET(req: NextRequest) {
 	if (process.env.DISCORD_INVITES_DISABLED === "1") {
-		return NextResponse.json(
-			{ error: "Bot invites are temporarily disabled" },
-			{ status: 403 }
-		);
+		const url = new URL(req.url);
+		const guildId = url.searchParams.get("guildId") || undefined;
+
+		const redirectUrl = new URL("/invite", url.origin);
+		redirectUrl.searchParams.set("error", "invites_disabled");
+		if (guildId) redirectUrl.searchParams.set("guildId", guildId);
+		return NextResponse.redirect(redirectUrl);
 	}
 
 	const url = new URL(req.url);
@@ -43,10 +46,10 @@ export async function GET(req: NextRequest) {
 
 	const ownerDiscordId = process.env.OWNER_DISCORD_ID;
 	if (ownerDiscordId && auth.discordUserId !== ownerDiscordId) {
-		return NextResponse.json(
-			{ error: "Bot invites are restricted" },
-			{ status: 403 }
-		);
+		const redirectUrl = new URL("/invite", url.origin);
+		redirectUrl.searchParams.set("error", "invites_restricted");
+		if (guildId) redirectUrl.searchParams.set("guildId", guildId);
+		return NextResponse.redirect(redirectUrl);
 	}
 
 	// Generate a cryptographically strong state token
