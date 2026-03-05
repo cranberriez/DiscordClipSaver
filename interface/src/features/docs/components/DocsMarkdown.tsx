@@ -5,7 +5,10 @@ import rehypeSlug from "rehype-slug";
 import rehypeAutolinkHeadings from "rehype-autolink-headings";
 
 export function DocsMarkdown({ markdown }: { markdown: string }) {
-	type CodeProps = Parameters<NonNullable<Components["code"]>>[0];
+	type CodeProps = React.ComponentPropsWithoutRef<"code"> & {
+		inline?: boolean;
+		node?: unknown;
+	};
 
 	const components: Components = {
 		h1: (props: React.ComponentPropsWithoutRef<"h1">) => (
