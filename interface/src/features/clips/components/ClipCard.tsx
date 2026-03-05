@@ -170,7 +170,7 @@ export function ClipCard({
 				) : null}
 
 				{/* Duration overlay */}
-				{clipData.duration && (
+				{clipData.duration > 0 && (
 					<div className="absolute right-2 bottom-2 rounded bg-black/75 px-2 py-1 text-xs text-white">
 						{formatDuration(clipData.duration)}
 					</div>
