@@ -14,8 +14,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-	title: "Discord Clip Saver",
-	description: "Discord Clip Saver",
+	title: "Guild Moments",
+	description: "Guild Moments",
 };
 
 export default function RootLayout({

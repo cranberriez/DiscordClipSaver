@@ -44,7 +44,7 @@ export default async function LoginPage(props: {
 				</div>
 				<div className="space-y-2">
 					<CardTitle className="text-3xl font-bold tracking-tight">
-						{session ? "Welcome Back" : "Discord Clip Saver"}
+						{session ? "Welcome Back" : "Guild Moments"}
 					</CardTitle>
 					<CardDescription className="text-base">
 						{session

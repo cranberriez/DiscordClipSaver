@@ -105,7 +105,7 @@ const DEFAULT_STEPS: Record<SetupStep, Omit<SetupStepData, "state">> = {
 	complete: {
 		id: "complete",
 		title: "Setup Complete",
-		description: "Your Discord Clip Saver is ready to use!",
+		description: "Your Clip Saver is ready to use!",
 	},
 };
 
