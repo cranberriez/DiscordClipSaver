@@ -1,29 +1,32 @@
-# Docs
+# Welcome to Guild Moments
 
-Welcome to the Guild Moments documentation.
+Guild Moments is a platform designed to save, search, and organize your Discord server's video clips. Whether you're capturing funny moments, clutch gameplay, or important server events, Guild Moments makes it easy to preserve them forever.
 
 ## Choose your setup path
 
-### Using our hosted version
+You have a few ways to get started depending on your technical expertise and needs.
 
-If you're using our hosted version, follow the hosted setup guide.
+### 1. Using our Hosted Version (Recommended)
 
-- Go to [Hosted Setup](/docs/getting-started/hosted)
+If you just want to use the bot without worrying about servers, databases, or uptime, use our official hosted version. This is the fastest way to get started.
 
-### Self-hosting
+- [Hosted Setup Guide](/docs/getting-started/hosted)
 
-If you're deploying Guild Moments yourself, follow the self-hosted setup guide.
+### 2. Self-hosting
 
-- Go to [Self-hosted Setup](/docs/getting-started/self-hosted)
+If you prefer to maintain full control over your data and infrastructure, you can host Guild Moments yourself. This requires setting up your own Discord Bot application and having a server/VPS to run the Docker containers.
 
-### Local development / testing
+- [Self-hosted Setup Guide](/docs/getting-started/self-hosted)
 
-If you're contributing or running the project locally for development/testing, follow the local development guide.
+### 3. Local Development
 
-- Go to [Local Development](/docs/getting-started/local-dev)
+If you're a developer looking to contribute to the project, or you just want to test it out on your local machine before deploying, follow the local development guide.
 
-## What you’ll find in the docs
+- [Local Development Guide](/docs/getting-started/local-dev)
 
-- Getting started guides for each setup type
-- Deeper self-hosting reference (env vars, deployment options)
-- Developer guidelines (contributing, local testing)
+## What you'll find in the docs
+
+We've organized the documentation to help you get up and running quickly:
+
+- **Getting Started**: Step-by-step guides for each deployment method.
+- **Features & Usage**: Learn how to manage channels, tags, settings, and view your clips.

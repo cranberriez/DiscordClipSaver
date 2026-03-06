@@ -29,7 +29,12 @@ services:
         container_name: dcs-bot
         env_file:
             # - ./python/bot/.env
+            - ./.env
             - ./.env.global
+        environment:
+            - DB_USER=${POSTGRES_USER}
+            - DB_PASSWORD=${POSTGRES_PASSWORD}
+            - DB_NAME=${POSTGRES_DB}
         depends_on:
             - dcs-postgres
             - dcs-redis
@@ -45,7 +50,12 @@ services:
         # No container_name - allows scaling with --scale worker=N
         env_file:
             # - ./python/worker/.env
+            - ./.env
             - ./.env.global
+        environment:
+            - DB_USER=${POSTGRES_USER}
+            - DB_PASSWORD=${POSTGRES_PASSWORD}
+            - DB_NAME=${POSTGRES_DB}
         depends_on:
             - dcs-postgres
             - dcs-redis
@@ -61,10 +71,15 @@ services:
         container_name: dcs-interface
         env_file:
             # - ./interface/.env
+            - ./.env
             - ./.env.global
         environment:
             - BOT_API_URL=http://bot:8000
             - INTERNAL_HEALTH_TOKEN=${INTERNAL_HEALTH_TOKEN}
+            - DB_USER=${POSTGRES_USER}
+            - DB_PASSWORD=${POSTGRES_PASSWORD}
+            - DB_NAME=${POSTGRES_DB}
+            - NEXTAUTH_URL=https://${PUBLIC_DOMAIN}
         depends_on:
             - bot
             - dcs-postgres
@@ -155,6 +170,7 @@ services:
         image: amir20/dozzle:latest
         container_name: dcs-dozzle
         env_file:
+            - ./.env
             - ./.env.global
         restart: unless-stopped
         volumes:
@@ -168,6 +184,7 @@ services:
         image: louislam/uptime-kuma:1
         container_name: dcs-uptime-kuma
         env_file:
+            - ./.env
             - ./.env.global
         restart: unless-stopped
         volumes:
@@ -191,3 +208,4 @@ volumes:
     worker_storage:
     traefik_letsencrypt:
     kuma_data:
+

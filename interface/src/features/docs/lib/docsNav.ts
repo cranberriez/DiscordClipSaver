@@ -13,4 +13,11 @@ export const docsNav: DocsNavGroup[] = [
 			{ title: "Local Development", href: "/docs/getting-started/local-dev" },
 		],
 	},
+	{
+		label: "Features & Usage",
+		items: [
+			{ title: "Using the Dashboard", href: "/docs/features/dashboard" },
+			{ title: "Viewing & Managing Clips", href: "/docs/features/clips" },
+		],
+	},
 ];
