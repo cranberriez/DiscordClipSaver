@@ -298,20 +298,6 @@ export function ScansPanel({
 						</p>
 					</CardContent>
 				</Card>
-				<Card>
-					<details className="px-6 py-4">
-						<summary className="cursor-pointer text-sm font-medium">
-							Debug Info
-						</summary>
-						<pre className="text-muted-foreground mt-2 overflow-auto text-xs">
-							{JSON.stringify(
-								{ guildId, channels, loading, error },
-								null,
-								2
-							)}
-						</pre>
-					</details>
-				</Card>
 			</div>
 		);
 	}
