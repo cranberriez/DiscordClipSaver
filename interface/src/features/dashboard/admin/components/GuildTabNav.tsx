@@ -24,7 +24,12 @@ export function GuildTabNav({ guildId }: GuildTabNavProps) {
 			label: "Settings",
 			href: `/dashboard/${guildId}/settings`,
 		},
-		{ id: "debug", label: "Debug", href: `/dashboard/${guildId}/debug` },
+		{
+			id: "debug",
+			label: "Debug",
+			href: `/dashboard/${guildId}/debug`,
+			hidden: true,
+		},
 	];
 
 	return (
@@ -45,7 +50,11 @@ export function GuildTabNav({ guildId }: GuildTabNavProps) {
 								"border-b-2 border-transparent disabled:pointer-events-none disabled:opacity-50",
 								isActive
 									? "bg-background text-foreground border-primary shadow-sm"
-									: "text-muted-foreground hover:text-foreground hover:bg-muted/50"
+									: "text-muted-foreground hover:text-foreground hover:bg-muted/50",
+								tab.hidden &&
+									process.env.NODE_ENV === "production"
+									? "hidden"
+									: ""
 							)}
 						>
 							{tab.label}

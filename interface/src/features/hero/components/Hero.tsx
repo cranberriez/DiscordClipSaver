@@ -139,7 +139,7 @@ const ClipItem = ({ title, date, color, imageUrl }: ClipProps) => (
 // --- Main Page ---
 export const Hero = ({ isAuthenticated }: { isAuthenticated: boolean }) => {
 	return (
-		<div className="relative flex min-h-screen items-center justify-center overflow-x-hidden overflow-y-visible bg-[#0d0d12] p-10 text-white selection:bg-indigo-500/30 min-[1620px]:overflow-visible">
+		<div className="relative flex min-h-screen items-center justify-center overflow-x-hidden overflow-y-visible bg-[#0d0d12] p-4 text-white selection:bg-indigo-500/30 min-[1620px]:overflow-visible sm:p-10">
 			<style>{`
         @keyframes scroll {
           from { transform: translateY(0); }
@@ -206,7 +206,7 @@ export const Hero = ({ isAuthenticated }: { isAuthenticated: boolean }) => {
 				</div>
 
 				{/* Right Preview: Wider, Glassy, and Proper Infinite Scroll */}
-				<div className="relative isolate w-full overflow-visible pr-16 perspective-[2000px] xl:-ml-4">
+				<div className="relative isolate w-full overflow-visible pr-4 perspective-[2000px] lg:pr-16 xl:-ml-4">
 					<div className="pointer-events-none absolute -inset-12 -z-20 rounded-full bg-[radial-gradient(circle_at_center,rgba(13,13,18,0)_0%,rgba(13,13,18,0.25)_55%,rgba(13,13,18,0.55)_75%,rgba(13,13,18,0.75)_100%)]" />
 					<div className="pointer-events-none absolute -inset-12 -z-10 rounded-full bg-[radial-gradient(circle_at_center,rgba(99,102,241,0.34)_0%,rgba(139,92,246,0.22)_24%,rgba(99,102,241,0.14)_42%,rgba(99,102,241,0.08)_58%,rgba(13,13,18,0)_88%)] blur-[170px]" />
 					<div className="pointer-events-none absolute -inset-12 -z-10 rounded-full bg-[url('/landing/noise.png')] bg-repeat opacity-[0.22] mix-blend-soft-light" />

@@ -20,15 +20,6 @@ export function FaqSection() {
 							Frequently asked questions
 						</h2>
 					</div>
-					<p className="text-[16px] text-zinc-400">
-						Can&apos;t find what you&apos;re looking for?{" "}
-						<Link
-							href="/docs"
-							className="text-zinc-300 transition-colors hover:text-white hover:underline"
-						>
-							Check the docs.
-						</Link>
-					</p>
 				</div>
 
 				<div className="mx-auto w-full max-w-3xl px-4">
@@ -134,6 +125,15 @@ export function FaqSection() {
 						</AccordionItem>
 					</Accordion>
 				</div>
+				<p className="text-[16px] text-zinc-400">
+					Can&apos;t find what you&apos;re looking for?{" "}
+					<Link
+						href="/docs"
+						className="text-zinc-300 transition-colors hover:text-white hover:underline"
+					>
+						Check the docs.
+					</Link>
+				</p>
 			</div>
 		</SectionLayout>
 	);

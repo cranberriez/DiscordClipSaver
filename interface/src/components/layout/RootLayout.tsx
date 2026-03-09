@@ -8,7 +8,7 @@ export function RootLayout({
 	hideNavbar?: boolean;
 }) {
 	return (
-		<div className="bg-background relative flex min-h-screen flex-col">
+		<div className="bg-background relative flex min-h-screen flex-col overflow-x-hidden">
 			{!hideNavbar && <Navbar />}
 			<main className="flex flex-1 flex-col">{children}</main>
 		</div>

@@ -18,6 +18,11 @@ const plans = [
 		href: "/login",
 		disabled: false,
 		highlight: false,
+		// Mobile accent
+		accent: "#5ac8a0",
+		accentBg: "rgba(90,200,160,0.08)",
+		accentBorder: "rgba(90,200,160,0.25)",
+		badge: "Recommended",
 	},
 	{
 		id: "premium",
@@ -27,6 +32,10 @@ const plans = [
 		href: "#",
 		disabled: true,
 		highlight: false,
+		accent: "#f0a050",
+		accentBg: "rgba(240,160,80,0.08)",
+		accentBorder: "rgba(240,160,80,0.2)",
+		badge: "Most Popular",
 	},
 	{
 		id: "pro",
@@ -36,6 +45,10 @@ const plans = [
 		href: "#",
 		disabled: true,
 		highlight: false,
+		accent: "#e05a7a",
+		accentBg: "rgba(224,90,122,0.08)",
+		accentBorder: "rgba(224,90,122,0.2)",
+		badge: "Power Users",
 	},
 	{
 		id: "selfHosted",
@@ -45,6 +58,10 @@ const plans = [
 		href: "/docs/self-hosting",
 		disabled: false,
 		highlight: true,
+		accent: "#818cf8",
+		accentBg: "rgba(129,140,248,0.08)",
+		accentBorder: "rgba(129,140,248,0.3)",
+		badge: "Full Control",
 	},
 ];
 
@@ -119,7 +136,7 @@ function FeatureCell({ value }: { value: FeatureValue }) {
 		);
 	}
 	return (
-		<span className="leading-tight whitespace-pre-line text-zinc-400">
+		<span className="leading-tight whitespace-pre-line text-zinc-300">
 			{value}
 		</span>
 	);
@@ -129,13 +146,14 @@ export function PricingSection() {
 	return (
 		<SectionLayout>
 			<TooltipProvider delayDuration={300}>
-				<div className="flex flex-col items-center gap-12 md:gap-16">
+				<div className="flex flex-col items-center gap-12 lg:gap-16">
+					{/* Heading — shared */}
 					<div className="max-w-2xl space-y-5 px-4 text-center">
 						<div className="space-y-3">
 							<div className="text-[11px] font-bold tracking-[0.2em] text-indigo-500 uppercase">
 								PRICING
 							</div>
-							<h2 className="text-3xl font-bold tracking-tight md:text-4xl md:leading-[1.15]">
+							<h2 className="text-3xl font-bold tracking-tight lg:text-4xl lg:leading-[1.15]">
 								Choose your plan
 							</h2>
 						</div>
@@ -145,8 +163,9 @@ export function PricingSection() {
 						</p>
 					</div>
 
-					<div className="mx-auto w-full max-w-[900px] overflow-x-auto">
-						<div className="relative flex min-w-[600px] gap-4 px-2 pb-4">
+					{/* ── DESKTOP TABLE (hidden below lg) ── */}
+					<div className="mx-auto hidden w-full max-w-[900px] overflow-x-auto lg:block">
+						<div className="relative flex min-w-[600px] gap-1 px-2 pb-4 lg:gap-4">
 							{/* Features Labels Column */}
 							<div className="flex w-[180px] shrink-0 flex-col pt-8 pb-8">
 								<div className="mb-6 flex h-[80px] items-center">
@@ -191,7 +210,7 @@ export function PricingSection() {
 							</div>
 
 							{/* Plan Columns Grid */}
-							<div className="flex flex-1 gap-4">
+							<div className="flex flex-1 gap-1 lg:gap-4">
 								{plans.map((plan) => (
 									<div
 										key={plan.id}
@@ -201,7 +220,6 @@ export function PricingSection() {
 												: "border border-white/[0.03] bg-[#0c0c10]"
 										}`}
 									>
-										{/* Plan Header */}
 										<div className="mb-6 flex h-[80px] flex-col items-center justify-center text-center">
 											<h4
 												className={`text-[16px] font-bold ${plan.highlight ? "text-[#818cf8]" : "text-zinc-100"}`}
@@ -213,7 +231,6 @@ export function PricingSection() {
 											</span>
 										</div>
 
-										{/* Plan Features */}
 										<div className="space-y-4 px-2">
 											{features.map((feature, i) => (
 												<div
@@ -236,10 +253,9 @@ export function PricingSection() {
 											))}
 										</div>
 
-										{/* Plan Action */}
 										<div className="mt-8 flex justify-center px-4">
 											<Button
-												className={`w-full max-w-[140px] rounded-xl text-[14px] font-medium`}
+												className="w-full max-w-[140px] rounded-xl text-[14px] font-medium"
 												variant={
 													plan.highlight
 														? "default"
@@ -265,6 +281,221 @@ export function PricingSection() {
 						</div>
 					</div>
 
+					{/* ── MOBILE TABS + CARDS (hidden at lg and above) ── */}
+					<div className="w-full px-4 lg:hidden">
+						{/*
+						 * Pure-CSS tab switching.
+						 * All radio inputs, the tab bar, and all cards are DIRECT children
+						 * of .pricing-tabs-root so the general sibling combinator (~) works
+						 * without needing to pierce nested wrappers.
+						 *
+						 * Structure (flat siblings inside .pricing-tabs-root):
+						 *   <input id="tab-hosted" />        ← sibling 1
+						 *   <input id="tab-premium" />       ← sibling 2
+						 *   <input id="tab-pro" />           ← sibling 3
+						 *   <input id="tab-selfHosted" />    ← sibling 4
+						 *   <div class="tab-bar">            ← sibling 5 (labels inside)
+						 *   <div data-card="hosted">         ← sibling 6
+						 *   <div data-card="premium">        ← sibling 7
+						 *   …
+						 *
+						 * CSS: #tab-hosted:checked ~ [data-card="hosted"] { display: block }
+						 * This works because both the input and the card are direct siblings.
+						 */}
+						<style>{`
+							.pricing-tabs-root [data-card] { display: none; }
+
+							.pricing-tabs-root #tab-hosted:checked    ~ [data-card="hosted"]     { display: block; }
+							.pricing-tabs-root #tab-premium:checked   ~ [data-card="premium"]    { display: block; }
+							.pricing-tabs-root #tab-pro:checked       ~ [data-card="pro"]        { display: block; }
+							.pricing-tabs-root #tab-selfHosted:checked ~ [data-card="selfHosted"] { display: block; }
+
+							.pricing-tabs-root #tab-hosted:checked    ~ .tab-bar label[for="tab-hosted"]     { background: rgba(255,255,255,0.07); }
+							.pricing-tabs-root #tab-premium:checked   ~ .tab-bar label[for="tab-premium"]    { background: rgba(255,255,255,0.07); }
+							.pricing-tabs-root #tab-pro:checked       ~ .tab-bar label[for="tab-pro"]        { background: rgba(255,255,255,0.07); }
+							.pricing-tabs-root #tab-selfHosted:checked ~ .tab-bar label[for="tab-selfHosted"] { background: rgba(255,255,255,0.07); }
+						`}</style>
+
+						<div className="pricing-tabs-root">
+							{/* Radio inputs — flat, direct children, visually hidden */}
+							{plans.map((plan, i) => (
+								<input
+									key={plan.id}
+									type="radio"
+									id={`tab-${plan.id}`}
+									name="pricing-tab"
+									className="sr-only"
+									defaultChecked={i === 0}
+								/>
+							))}
+
+							{/* Tab bar — also a direct child so radios above are true siblings */}
+							<div className="tab-bar mb-5 flex gap-1.5 rounded-2xl border border-white/[0.06] bg-[#0c0c10] p-1.5">
+								{plans.map((plan) => (
+									<label
+										key={plan.id}
+										htmlFor={`tab-${plan.id}`}
+										className="flex-1 cursor-pointer rounded-xl px-1 py-2 text-center text-[11px] font-bold tracking-wide whitespace-nowrap text-zinc-500"
+									>
+										{plan.name
+											.replace(" (Free)", "")
+											.replace(
+												"Self-Hosted",
+												"Self-Host"
+											)}
+									</label>
+								))}
+							</div>
+
+							{/* Cards — direct children, each toggled by its matching radio */}
+							{plans.map((plan) => {
+								const planKey = plan.id as keyof Omit<
+									Feature,
+									"name" | "subtext" | "tooltip"
+								>;
+								return (
+									<div key={plan.id} data-card={plan.id}>
+										<div
+											className="rounded-3xl border px-5 pt-6 pb-5"
+											style={{
+												borderColor: plan.accentBorder,
+												background: plan.accentBg,
+											}}
+										>
+											{/* Header */}
+											<div className="mb-5 flex items-start justify-between">
+												<div>
+													<h4
+														className="text-[18px] leading-tight font-bold"
+														style={{
+															color: plan.accent,
+														}}
+													>
+														{plan.name}
+													</h4>
+													<div className="mt-1 flex items-center gap-2">
+														<span className="text-[15px] font-semibold text-zinc-200">
+															{plan.price}
+														</span>
+														<span
+															className="rounded-full px-2 py-0.5 text-[10px] font-bold tracking-wider uppercase"
+															style={{
+																color: plan.accent,
+																background:
+																	plan.accentBg,
+																border: `1px solid ${plan.accentBorder}`,
+															}}
+														>
+															{plan.badge}
+														</span>
+													</div>
+												</div>
+											</div>
+
+											{/* Feature rows */}
+											<div className="divide-y divide-white/[0.05]">
+												{features.map((feature, i) => (
+													<div
+														key={i}
+														className="flex items-center justify-between gap-3 py-3"
+													>
+														<div className="flex min-w-0 items-center gap-1.5">
+															<span className="text-[12px] leading-tight font-medium text-zinc-100">
+																{feature.name}
+																{feature.subtext && (
+																	<span className="ml-1 text-[11px] text-zinc-400">
+																		{
+																			feature.subtext
+																		}
+																	</span>
+																)}
+															</span>
+															{feature.tooltip && (
+																<Tooltip>
+																	<TooltipTrigger
+																		asChild
+																	>
+																		<Info className="h-3 w-3 shrink-0 text-zinc-500 hover:text-zinc-300" />
+																	</TooltipTrigger>
+																	<TooltipContent
+																		side="top"
+																		className="max-w-[180px] text-center"
+																	>
+																		<p>
+																			{
+																				feature.tooltip
+																			}
+																		</p>
+																	</TooltipContent>
+																</Tooltip>
+															)}
+														</div>
+														<div
+															className="shrink-0 text-right text-[12px] font-semibold whitespace-pre-line"
+															style={{
+																color:
+																	feature[
+																		planKey
+																	] ===
+																	"Unlimited"
+																		? plan.accent
+																		: undefined,
+															}}
+														>
+															<FeatureCell
+																value={
+																	feature[
+																		planKey
+																	]
+																}
+															/>
+														</div>
+													</div>
+												))}
+											</div>
+
+											{/* CTA */}
+											<div className="mt-5">
+												<Button
+													className="w-full rounded-xl text-[14px] font-semibold"
+													variant={
+														plan.highlight
+															? "default"
+															: "outline"
+													}
+													style={
+														!plan.highlight
+															? {
+																	borderColor:
+																		plan.accent,
+																	color: plan.accent,
+																	background:
+																		"transparent",
+																}
+															: undefined
+													}
+													disabled={plan.disabled}
+													asChild={!plan.disabled}
+												>
+													{plan.disabled ? (
+														<span className="opacity-50">
+															{plan.cta}
+														</span>
+													) : (
+														<Link href={plan.href}>
+															{plan.cta}
+														</Link>
+													)}
+												</Button>
+											</div>
+										</div>
+									</div>
+								);
+							})}
+						</div>
+					</div>
+
+					{/* Footer note — shared */}
 					<div className="max-w-2xl space-y-2 px-4 text-center text-[13px] text-zinc-500">
 						<p>
 							Thumbnails are included with all clips. Failed
