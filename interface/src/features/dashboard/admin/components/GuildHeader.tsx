@@ -58,18 +58,6 @@ export function GuildHeader({ guild: initialGuild }: GuildHeaderProps) {
 				</div>
 			</div>
 
-			{toggleMutation.isError && (
-				<Card className="border-destructive/50 bg-destructive/10">
-					<CardContent className="pt-6">
-						<p className="text-destructive text-sm">
-							{toggleMutation.error instanceof Error
-								? toggleMutation.error.message
-								: "Failed to toggle scanning"}
-						</p>
-					</CardContent>
-				</Card>
-			)}
-
 			<GuildScanningCard
 				messageScanEnabled={messageScanEnabled}
 				handleToggle={handleToggle}
@@ -88,11 +76,18 @@ function GuildScanningCard({
 	handleToggle: () => void;
 	toggleMutation: any;
 }) {
+	const error = toggleMutation.error as Error | null;
+
 	return (
 		<Card className="flex-1 gap-3 py-4 md:h-32">
-			<CardHeader>
+			<CardHeader className="flex flex-wrap justify-between">
 				<CardTitle className="text-lg">Message Scanning</CardTitle>
-				<CardAction>
+				<CardAction className="flex items-center gap-2">
+					{error && (
+						<p className="text-destructive text-sm">
+							{error.message}
+						</p>
+					)}
 					<ToggleGuildScanning
 						messageScanEnabled={messageScanEnabled}
 						handleToggle={handleToggle}
@@ -120,15 +115,19 @@ function ToggleGuildScanning({
 	handleToggle: () => void;
 	toggleMutation: any;
 }) {
+	const error = toggleMutation.error as Error | null;
+
 	return (
 		<Button
 			onClick={handleToggle}
-			disabled={toggleMutation.isPending}
+			disabled={toggleMutation.isPending || error}
 			variant="ghost"
 			className={`relative min-w-[140px] cursor-pointer px-4 transition-all ${
-				messageScanEnabled
-					? "border border-green-400/40 bg-green-950/30 text-green-400 shadow-[0_0_12px_rgba(74,222,128,0.15)] hover:bg-green-950/30! hover:shadow-[0_0_16px_rgba(74,222,128,0.25)]"
-					: "border border-red-400/40 bg-red-950/30 text-red-400 shadow-[0_0_12px_rgba(248,113,113,0.15)] hover:bg-red-950/30! hover:shadow-[0_0_16px_rgba(248,113,113,0.25)]"
+				error
+					? "border-destructive/40 bg-destructive/10 text-destructive border"
+					: messageScanEnabled
+						? "border border-green-400/40 bg-green-950/30 text-green-400 shadow-[0_0_12px_rgba(74,222,128,0.15)] hover:bg-green-950/30! hover:shadow-[0_0_16px_rgba(74,222,128,0.25)]"
+						: "border border-red-400/40 bg-red-950/30 text-red-400 shadow-[0_0_12px_rgba(248,113,113,0.15)] hover:bg-red-950/30! hover:shadow-[0_0_16px_rgba(248,113,113,0.25)]"
 			}`}
 		>
 			<div className="absolute top-1/2 left-3 -translate-y-1/2">
