@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import Optional
 from datetime import datetime
 
-from shared.db.models import ChannelScanStatus, Channel, Guild, ScanStatus
+from shared.db.models import ChannelScanStatus, Channel, Guild, ScanStatus, Clip
 
 
 async def get_or_create_scan_status(
@@ -88,13 +88,13 @@ async def increment_scan_counts(
     clips_found: int = 0,
 ) -> ChannelScanStatus:
     """
-    Increment scan counts for a channel.
+    Update scan counts for a channel.
     
     Args:
         guild_id: Discord guild snowflake
         channel_id: Discord channel snowflake
         messages_scanned: Number of messages scanned to add
-        clips_found: Number of clips found to add
+        clips_found: Unused - kept for call-site compatibility
         
     Returns:
         Updated ChannelScanStatus instance
@@ -103,8 +103,13 @@ async def increment_scan_counts(
     
     if messages_scanned > 0:
         scan_status.total_messages_scanned += messages_scanned
-    if clips_found > 0:
-        scan_status.message_count += clips_found
+
+    # Set message_count to the real clip count from DB to avoid cumulative drift
+    # across multiple scan passes (re-scans, continuations, CDN refreshes, etc.)
+    scan_status.message_count = await Clip.filter(
+        channel_id=channel_id,
+        deleted_at=None,
+    ).count()
     
     await scan_status.save()
     return scan_status
