@@ -1,8 +1,6 @@
 "use client";
 
-import { useScanStatuses, useStartBulkScan } from "@/lib/hooks";
 import { Channel } from "@/lib/api/channel";
-import type { MultiScanResult } from "@/lib/api/scan";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
 	InfoPanel,
@@ -10,12 +8,10 @@ import {
 	HistoricalScanPanel,
 	ScanStatusTable,
 } from "../index";
-import { ChannelWithStatus } from "../types";
-import { mergeChannelsWithStatuses } from "../lib/mergeChannelsWithStatuses";
 import { toast } from "sonner";
 import { useScanStatusNotifications } from "../lib/useScanStatusNotifications";
-import { useGuildSettings } from "@/lib/hooks/useSettings";
-import type { DefaultChannelSettings } from "@/lib/schema/guild-settings.schema";
+import { useScanStats } from "../lib/useScanStats";
+import { useBulkScanActions } from "../lib/useBulkScanActions";
 
 interface ScansPanelProps {
 	guildId: string;
@@ -27,232 +23,71 @@ export function ScansPanel({
 	channels: serverChannels,
 }: ScansPanelProps) {
 	const {
-		data: scanStatuses = [],
-		isLoading: loading,
+		channels,
+		unscannedOrFailedCount,
+		activeScans,
+		successfulScans,
+		enabledChannelsCount,
+		isLoading,
 		error,
 		refetch,
-	} = useScanStatuses(guildId);
+	} = useScanStats(guildId, serverChannels);
 
-	const { data: guildSettings } = useGuildSettings(guildId);
+	const {
+		scanUnscannedOrFailed,
+		updateAllChannels,
+		historicalScan,
+		isPending,
+	} = useBulkScanActions(guildId, channels);
 
-	// Get limit from settings or default to 1000, capped at 10000
-	const defaultSettings =
-		guildSettings?.default_channel_settings as unknown as DefaultChannelSettings | null;
-	const limit = Math.max(
-		Math.min(defaultSettings?.max_messages_per_pass ?? 1000, 10000),
-		100
+	useScanStatusNotifications(
+		channels.map((ch) => ch.scanStatus).filter(Boolean) as NonNullable<
+			(typeof channels)[number]["scanStatus"]
+		>[],
+		{
+			onSuccess: (scans) => {
+				if (scans.length === 1) {
+					const name =
+						serverChannels.find(
+							(ch) => ch.id === scans[0].channel_id
+						)?.name ?? "Unknown";
+					toast.success(
+						`Scan for channel ${name} completed successfully`
+					);
+				} else {
+					toast.success(
+						`${scans.length} scans completed successfully`
+					);
+				}
+			},
+			onFailure: (scans) => {
+				if (scans.length === 1) {
+					const scan = scans[0];
+					const name =
+						serverChannels.find((ch) => ch.id === scan.channel_id)
+							?.name ?? "Unknown";
+					toast.error(
+						`Scan for channel ${name} failed${scan.error_message ? `: ${scan.error_message}` : ""}`
+					);
+				} else {
+					toast.error(`${scans.length} scans failed`);
+				}
+			},
+			onCancelled: (scans) => {
+				if (scans.length === 1) {
+					const name =
+						serverChannels.find(
+							(ch) => ch.id === scans[0].channel_id
+						)?.name ?? "Unknown";
+					toast.info(`Scan for channel ${name} was cancelled`);
+				} else {
+					toast.info(`${scans.length} scans were cancelled`);
+				}
+			},
+		}
 	);
 
-	const startBulkScanMutation = useStartBulkScan(guildId);
-	// Merge all channels with their scan statuses (channels without statuses will have scanStatus: null)
-	const channels: ChannelWithStatus[] = mergeChannelsWithStatuses(
-		serverChannels,
-		scanStatuses
-	);
-
-	const getChannelName = (channelId: string) => {
-		const channel = serverChannels.find((ch) => ch.id === channelId);
-		return channel?.name || "Unknown";
-	};
-
-	// Show toast notifications when scans complete
-	useScanStatusNotifications(scanStatuses, {
-		onSuccess: (scans) => {
-			if (scans.length === 1) {
-				toast.success(
-					`Scan for channel ${getChannelName(
-						scans[0].channel_id
-					)} completed successfully`
-				);
-			} else {
-				toast.success(`${scans.length} scans completed successfully`);
-			}
-		},
-		onFailure: (scans) => {
-			if (scans.length === 1) {
-				const scan = scans[0];
-				toast.error(
-					`Scan for channel ${getChannelName(
-						scan.channel_id
-					)} failed${
-						scan.error_message ? `: ${scan.error_message}` : ""
-					}`
-				);
-			} else {
-				toast.error(`${scans.length} scans failed`);
-			}
-		},
-		onCancelled: (scans) => {
-			if (scans.length === 1) {
-				toast.info(
-					`Scan for channel ${getChannelName(
-						scans[0].channel_id
-					)} was cancelled`
-				);
-			} else {
-				toast.info(`${scans.length} scans were cancelled`);
-			}
-		},
-	});
-
-	const unscannedOrFailedCount = channels.filter(
-		(ch) =>
-			(!ch.scanStatus || ch.scanStatus.status === "FAILED") &&
-			ch.message_scan_enabled
-	).length;
-	const activeScans = channels.filter(
-		(ch) =>
-			ch.scanStatus?.status === "RUNNING" ||
-			ch.scanStatus?.status === "QUEUED"
-	).length;
-	const successfulScans = channels.filter(
-		(ch) => ch.scanStatus?.status === "SUCCEEDED" && ch.message_scan_enabled
-	).length;
-	const enabledChannelsCount = channels.filter(
-		(ch) => ch.message_scan_enabled
-	).length;
-
-	const handleScanUnscannedOrFailed = () => {
-		// Scan channels that are unscanned or failed
-		const toScan = channels.filter(
-			(ch) =>
-				(!ch.scanStatus || ch.scanStatus.status === "FAILED") &&
-				ch.message_scan_enabled
-		);
-
-		const channelIds = toScan.map((ch) => ch.id);
-
-		if (channelIds.length === 0) {
-			alert("No unscanned or failed channels found");
-			return;
-		}
-
-		// Start the scans (isUpdate: false = initial/continuation scan, rescan: "stop")
-		startBulkScanMutation.mutate(
-			{
-				channelIds,
-				options: {
-					isUpdate: false,
-					limit,
-					autoContinue: true,
-					rescan: "stop",
-				},
-			},
-			{
-				onSuccess: (result: MultiScanResult) => {
-					alert(
-						`Started ${result.success} scans, ${result.failed} failed`
-					);
-				},
-			}
-		);
-	};
-
-	const handleUpdateAllChannels = () => {
-		// Update scan for all enabled channels (forward scan from last known position)
-		const toUpdate = channels.filter((ch) => ch.message_scan_enabled);
-
-		const channelIds = toUpdate.map((ch) => ch.id);
-
-		if (channelIds.length === 0) {
-			alert("No channels enabled for scanning");
-			return;
-		}
-
-		// Start the scans (isUpdate: true = forward scan from last position, rescan: "stop")
-		startBulkScanMutation.mutate(
-			{
-				channelIds,
-				options: {
-					isUpdate: true,
-					limit,
-					autoContinue: true,
-					rescan: "stop",
-				},
-			},
-			{
-				onSuccess: (result: MultiScanResult) => {
-					alert(
-						`Started ${result.success} update scans, ${result.failed} failed`
-					);
-				},
-			}
-		);
-	};
-
-	const handleHistoricalScan = (
-		scanType: "backfill" | "integrity" | "force"
-	) => {
-		// Historical scan: backward from the beginning for all enabled channels
-		const toScan = channels.filter((ch) => ch.message_scan_enabled);
-
-		const channelIds = toScan.map((ch) => ch.id);
-
-		if (channelIds.length === 0) {
-			alert("No channels enabled for scanning");
-			return;
-		}
-
-		const modeLabels = {
-			backfill: "Backfill History",
-			integrity: "Deep Integrity Scan",
-			force: "Force Reprocess",
-		};
-
-		// Confirm for expensive update mode
-		if (scanType === "force") {
-			const confirmed = confirm(
-				`⚠️ FORCE UPDATE MODE\n\n` +
-					`This will reprocess ALL messages in ${channelIds.length} channels, ` +
-					`even if they've already been scanned. This is expensive and should only ` +
-					`be used if settings have changed.\n\n` +
-					`Thumbnails will NOT be regenerated if they already exist.\n\n` +
-					`Continue?`
-			);
-			if (!confirmed) {
-				return;
-			}
-		}
-
-		// Configure options based on scan type
-		const options = {
-			limit,
-			autoContinue: true,
-			isUpdate: false,
-			// Defaults
-			isHistorical: false,
-			isBackfill: false,
-			rescan: "stop" as "stop" | "continue" | "update",
-		};
-
-		if (scanType === "backfill") {
-			options.isBackfill = true;
-			options.rescan = "stop";
-		} else if (scanType === "integrity") {
-			options.isHistorical = true;
-			options.rescan = "continue";
-		} else if (scanType === "force") {
-			options.isHistorical = true;
-			options.rescan = "update";
-		}
-
-		// Start scans
-		startBulkScanMutation.mutate(
-			{
-				channelIds,
-				options,
-			},
-			{
-				onSuccess: (result: MultiScanResult) => {
-					alert(
-						`Started ${result.success} scans (${modeLabels[scanType]}), ${result.failed} failed`
-					);
-				},
-			}
-		);
-	};
-
-	if (loading) {
+	if (isLoading) {
 		return (
 			<Card>
 				<CardContent className="pt-6">
@@ -277,7 +112,6 @@ export function ScansPanel({
 		);
 	}
 
-	// Debug: Show if no channels found
 	if (channels.length === 0) {
 		return (
 			<div className="space-y-4">
@@ -313,19 +147,15 @@ export function ScansPanel({
 			<BulkScanActions
 				unscannedOrFailedCount={unscannedOrFailedCount}
 				enabledChannelsCount={enabledChannelsCount}
-				startingUnscanned={startBulkScanMutation.isPending}
-				startingUpdate={startBulkScanMutation.isPending}
-				startingHistorical={startBulkScanMutation.isPending}
-				onScanUnscannedOrFailed={handleScanUnscannedOrFailed}
-				onUpdateAllChannels={handleUpdateAllChannels}
+				isPending={isPending}
+				onScanUnscannedOrFailed={scanUnscannedOrFailed}
+				onUpdateAllChannels={updateAllChannels}
 			/>
 
 			<HistoricalScanPanel
 				enabledChannelsCount={enabledChannelsCount}
-				startingUnscanned={startBulkScanMutation.isPending}
-				startingUpdate={startBulkScanMutation.isPending}
-				startingHistorical={startBulkScanMutation.isPending}
-				onHistoricalScan={handleHistoricalScan}
+				isPending={isPending}
+				onHistoricalScan={historicalScan}
 			/>
 
 			<ScanStatusTable channels={channels} onRefresh={refetch} />

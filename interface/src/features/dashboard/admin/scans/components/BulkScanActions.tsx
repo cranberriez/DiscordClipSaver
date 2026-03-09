@@ -11,9 +11,7 @@ import { Play, RefreshCw } from "lucide-react";
 interface BulkScanActionsProps {
 	unscannedOrFailedCount: number;
 	enabledChannelsCount: number;
-	startingUnscanned: boolean;
-	startingUpdate: boolean;
-	startingHistorical: boolean;
+	isPending: boolean;
 	onScanUnscannedOrFailed: () => void;
 	onUpdateAllChannels: () => void;
 }
@@ -21,15 +19,10 @@ interface BulkScanActionsProps {
 export function BulkScanActions({
 	unscannedOrFailedCount,
 	enabledChannelsCount,
-	startingUnscanned,
-	startingUpdate,
-	startingHistorical,
+	isPending,
 	onScanUnscannedOrFailed,
 	onUpdateAllChannels,
 }: BulkScanActionsProps) {
-	const isAnyOperationRunning =
-		startingUnscanned || startingUpdate || startingHistorical;
-
 	return (
 		<Card>
 			<CardHeader>
@@ -42,15 +35,13 @@ export function BulkScanActions({
 				{/* Scan Unscanned/Failed Button */}
 				<Button
 					onClick={onScanUnscannedOrFailed}
-					disabled={
-						isAnyOperationRunning || unscannedOrFailedCount === 0
-					}
+					disabled={isPending || unscannedOrFailedCount === 0}
 					className="w-full"
 					size="lg"
 					variant="default"
 				>
 					<Play className="h-4 w-4" />
-					{startingUnscanned
+					{isPending
 						? "Starting..."
 						: `Scan Unscanned or Failed Channels (${unscannedOrFailedCount})`}
 				</Button>
@@ -63,15 +54,13 @@ export function BulkScanActions({
 				{/* Update All Channels Button */}
 				<Button
 					onClick={onUpdateAllChannels}
-					disabled={
-						isAnyOperationRunning || enabledChannelsCount === 0
-					}
+					disabled={isPending || enabledChannelsCount === 0}
 					className="w-full"
 					size="lg"
 					variant="secondary"
 				>
 					<RefreshCw className="h-4 w-4" />
-					{startingUpdate
+					{isPending
 						? "Starting..."
 						: `Scan and Update All Channels (${enabledChannelsCount})`}
 				</Button>

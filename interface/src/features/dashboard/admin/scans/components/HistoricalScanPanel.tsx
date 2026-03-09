@@ -9,22 +9,15 @@ import { Button } from "@/components/ui/button";
 
 interface HistoricalScanPanelProps {
 	enabledChannelsCount: number;
-	startingUnscanned: boolean;
-	startingUpdate: boolean;
-	startingHistorical: boolean;
+	isPending: boolean;
 	onHistoricalScan: (scanType: "backfill" | "integrity" | "force") => void;
 }
 
 export function HistoricalScanPanel({
 	enabledChannelsCount,
-	startingUnscanned,
-	startingUpdate,
-	startingHistorical,
+	isPending,
 	onHistoricalScan,
 }: HistoricalScanPanelProps) {
-	const isAnyOperationRunning =
-		startingUnscanned || startingUpdate || startingHistorical;
-
 	return (
 		<Card>
 			<CardHeader>
@@ -38,16 +31,12 @@ export function HistoricalScanPanel({
 				<div>
 					<Button
 						onClick={() => onHistoricalScan("backfill")}
-						disabled={
-							isAnyOperationRunning || enabledChannelsCount === 0
-						}
+						disabled={isPending || enabledChannelsCount === 0}
 						className="mb-1 w-full"
 						size="lg"
 						variant="outline"
 					>
-						{startingHistorical
-							? "Starting..."
-							: "Backfill History"}
+						{isPending ? "Starting..." : "Backfill History"}
 					</Button>
 					<p className="text-muted-foreground text-center text-xs">
 						Scans backward from the oldest known message to fill in
@@ -60,14 +49,12 @@ export function HistoricalScanPanel({
 				<div>
 					<Button
 						onClick={() => onHistoricalScan("integrity")}
-						disabled={
-							isAnyOperationRunning || enabledChannelsCount === 0
-						}
+						disabled={isPending || enabledChannelsCount === 0}
 						className="mb-1 w-full"
 						size="lg"
 						variant="outline"
 					>
-						{startingHistorical
+						{isPending
 							? "Starting..."
 							: "Deep Integrity Scan (Skip Existing)"}
 					</Button>
@@ -82,14 +69,12 @@ export function HistoricalScanPanel({
 				<div>
 					<Button
 						onClick={() => onHistoricalScan("force")}
-						disabled={
-							isAnyOperationRunning || enabledChannelsCount === 0
-						}
+						disabled={isPending || enabledChannelsCount === 0}
 						className="mb-1 w-full"
 						size="lg"
 						variant="destructive"
 					>
-						{startingHistorical
+						{isPending
 							? "Starting..."
 							: "⚠️ Force Reprocess (Update All)"}
 					</Button>
