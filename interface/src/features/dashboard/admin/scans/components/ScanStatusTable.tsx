@@ -21,33 +21,14 @@ interface ScanStatusTableProps {
 export function ScanStatusTable({ channels, onRefresh }: ScanStatusTableProps) {
 	const { simpleView, sortBy } = useScanVisibilityStore();
 
-	const {
-		processedChannels,
-		groupedChannels,
-		selectedIds,
-		allSelected,
-		someSelected,
-		bulkPending,
-		handleGlobalCheckbox,
-		handleRowCheck,
-		handleChannelToggle,
-		handleBulkToggle,
-	} = useScanTableState(channels, onRefresh);
+	const { processedChannels, groupedChannels, selectedIds } =
+		useScanTableState(channels, onRefresh);
 
 	const sortedChannelTypes = getSortedChannelTypes();
 
 	return (
 		<div className="space-y-3">
-			<ScanToolbar
-				allSelected={allSelected}
-				someSelected={someSelected}
-				selectedCount={selectedIds.size}
-				bulkPending={bulkPending}
-				onGlobalCheckbox={handleGlobalCheckbox}
-				onBulkEnable={() => handleBulkToggle(true)}
-				onBulkDisable={() => handleBulkToggle(false)}
-				onRefresh={onRefresh}
-			/>
+			<ScanToolbar onRefresh={onRefresh} />
 
 			<div className="space-y-0">
 				{sortedChannelTypes.map((type) => {
@@ -84,8 +65,7 @@ export function ScanStatusTable({ channels, onRefresh }: ScanStatusTableProps) {
 										channel={channel}
 										simpleView={simpleView}
 										checked={selectedIds.has(channel.id)}
-										onCheck={handleRowCheck}
-										onToggleEnabled={handleChannelToggle}
+										guildId={channel.guild_id}
 									/>
 								))}
 							</div>

@@ -1,6 +1,6 @@
 import { AlertCircle, Link } from "lucide-react";
 import { StatusBadge } from "./StatusBadge";
-import { EnabledToggleBadge } from "./EnabledToggleBadge";
+import { EnabledBadge } from "./EnabledBadge";
 import { ChannelScanButton } from "./ChannelScanButton";
 import type { ChannelWithStatus } from "../types";
 import { formatRelativeTime } from "@/lib/utils/time-helpers";
@@ -30,17 +30,10 @@ export interface ChannelRowProps {
 	channel: ChannelWithStatus;
 	simpleView: boolean;
 	checked: boolean;
-	onCheck: (id: string, e: React.MouseEvent) => void;
-	onToggleEnabled: (channelId: string, enabled: boolean) => void;
+	guildId: string;
 }
 
-export function ChannelRow({
-	channel,
-	simpleView,
-	checked,
-	onCheck,
-	onToggleEnabled,
-}: ChannelRowProps) {
+export function ChannelRow({ channel, simpleView, checked }: ChannelRowProps) {
 	const status = channel.scanStatus?.status;
 	const clips = channel.scanStatus?.message_count ?? 0;
 	const scanned = channel.scanStatus?.total_messages_scanned ?? 0;
@@ -56,21 +49,12 @@ export function ChannelRow({
 		>
 			{/* Main row */}
 			<div className="flex items-center gap-3 px-3 py-2.5">
-				<input
-					type="checkbox"
-					checked={checked}
-					onClick={(e) => onCheck(channel.id, e)}
-					onChange={() => {}}
-					className="accent-primary h-4 w-4 shrink-0 cursor-pointer"
-				/>
-
-				<EnabledToggleBadge
-					enabled={isEnabled}
-					onToggle={() => onToggleEnabled(channel.id, !isEnabled)}
-				/>
+				<EnabledBadge enabled={isEnabled} />
 
 				<div className="flex min-w-0 flex-1 items-baseline gap-2">
-					<span className="text-muted-foreground text-sm leading-none">#</span>
+					<span className="text-muted-foreground text-sm leading-none">
+						#
+					</span>
 					<span className="truncate text-sm leading-none font-semibold">
 						{channel.name}
 					</span>
@@ -114,15 +98,25 @@ export function ChannelRow({
 					/>
 					{hitRate !== null && (
 						<span className="flex items-center gap-1">
-							<span className="text-muted-foreground/60 uppercase">HIT RATE</span>
-							<span className={`font-medium ${getHitRateColor(hitRate)}`}>●</span>
-							<span className="font-medium">{hitRate.toFixed(1)}%</span>
+							<span className="text-muted-foreground/60 uppercase">
+								HIT RATE
+							</span>
+							<span
+								className={`font-medium ${getHitRateColor(hitRate)}`}
+							>
+								●
+							</span>
+							<span className="font-medium">
+								{hitRate.toFixed(1)}%
+							</span>
 						</span>
 					)}
 					{channel.scanStatus?.updated_at && (
 						<StatItem
 							label="LAST SCAN"
-							value={formatRelativeTime(channel.scanStatus.updated_at)}
+							value={formatRelativeTime(
+								channel.scanStatus.updated_at
+							)}
 						/>
 					)}
 
@@ -130,7 +124,11 @@ export function ChannelRow({
 
 					{backwardId && (
 						<a
-							href={makeDiscordMessageLink(channel.guild_id, channel.id, backwardId)}
+							href={makeDiscordMessageLink(
+								channel.guild_id,
+								channel.id,
+								backwardId
+							)}
 							target="_blank"
 							rel="noopener noreferrer"
 							className="hover:text-foreground flex items-center gap-1 transition-colors"
@@ -141,7 +139,11 @@ export function ChannelRow({
 					)}
 					{forwardId && (
 						<a
-							href={makeDiscordMessageLink(channel.guild_id, channel.id, forwardId)}
+							href={makeDiscordMessageLink(
+								channel.guild_id,
+								channel.id,
+								forwardId
+							)}
 							target="_blank"
 							rel="noopener noreferrer"
 							className="hover:text-foreground flex items-center gap-1 transition-colors"

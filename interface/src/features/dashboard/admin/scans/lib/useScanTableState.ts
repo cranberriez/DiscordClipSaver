@@ -9,10 +9,7 @@ import {
 import { api } from "@/lib/api/client";
 import type { ChannelWithStatus } from "../types";
 import { useScanVisibilityStore } from "../stores/useScanVisibilityStore";
-import {
-	channelMatchesFilter,
-	sortChannels,
-} from "./scanStatusTableHelpers";
+import { channelMatchesFilter, sortChannels } from "./scanStatusTableHelpers";
 
 export function useScanTableState(
 	channels: ChannelWithStatus[],
@@ -36,7 +33,10 @@ export function useScanTableState(
 		() =>
 			channels.map((ch) =>
 				enabledOverrides.has(ch.id)
-					? { ...ch, message_scan_enabled: enabledOverrides.get(ch.id)! }
+					? {
+							...ch,
+							message_scan_enabled: enabledOverrides.get(ch.id)!,
+						}
 					: ch
 			),
 		[channels, enabledOverrides]
@@ -55,7 +55,12 @@ export function useScanTableState(
 		}
 		result = result.filter((ch) => channelMatchesFilter(ch, statusFilter));
 		return result;
-	}, [channelsWithOverrides, showDisabledChannels, searchQuery, statusFilter]);
+	}, [
+		channelsWithOverrides,
+		showDisabledChannels,
+		searchQuery,
+		statusFilter,
+	]);
 
 	// Flat ordered list for shift-select range calculation
 	const orderedChannels = useMemo(() => {
@@ -91,6 +96,10 @@ export function useScanTableState(
 		setLastSelectedId(null);
 	}, [allSelected, someSelected, orderedChannels]);
 
+	// Handles row selection with support for shift-click range selection
+	// - Single click toggles individual channel selection
+	// - Shift+click selects/deselects a range between the last clicked item and current item
+	// - The action (select/deselect) is based on the current state of the target item
 	const handleRowCheck = useCallback(
 		(id: string, e: React.MouseEvent) => {
 			setSelectedIds((prev) => {
@@ -120,10 +129,14 @@ export function useScanTableState(
 	// Toggle a single channel with optimistic update
 	const handleChannelToggle = useCallback(
 		async (channelId: string, enabled: boolean) => {
-			const guildId = channels.find((ch) => ch.id === channelId)?.guild_id;
+			const guildId = channels.find(
+				(ch) => ch.id === channelId
+			)?.guild_id;
 			if (!guildId) return;
 			// Optimistically update
-			setEnabledOverrides((prev) => new Map(prev).set(channelId, enabled));
+			setEnabledOverrides((prev) =>
+				new Map(prev).set(channelId, enabled)
+			);
 			try {
 				await api.channels.toggleChannel(guildId, channelId, enabled);
 				onRefresh();
