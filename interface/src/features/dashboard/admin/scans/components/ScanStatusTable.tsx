@@ -1,5 +1,6 @@
-import React, { useMemo } from "react";
-import { Card } from "@/components/ui/card";
+"use client";
+
+import React, { useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -8,24 +9,17 @@ import {
 	EyeOff,
 	Eye,
 	Search,
-	ArrowUp,
-	ArrowDown,
+	Link,
 	Layers,
 } from "lucide-react";
 import { StatusBadge } from "./StatusBadge";
 import type { ChannelWithStatus } from "../types";
 import { formatRelativeTime } from "@/lib/utils/time-helpers";
 import {
-	groupChannelsByType,
 	getSortedChannelTypes,
 	ChannelTypeHeader,
 } from "@/components/composite/ChannelOrganizer";
 import { ChannelScanButton } from "./ChannelScanButton";
-import {
-	useScanVisibilityStore,
-	type ScanStatusFilter,
-	type ScanSortBy,
-} from "../stores/useScanVisibilityStore";
 import { Input } from "@/components/ui/input";
 import {
 	Select,
@@ -34,177 +28,179 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from "@/components/ui/select";
+import {
+	useScanVisibilityStore,
+	type ScanStatusFilter,
+	type ScanSortBy,
+} from "../stores/useScanVisibilityStore";
+import {
+	formatCount,
+	getHitRate,
+	getHitRateColor,
+	makeDiscordMessageLink,
+	sortChannels,
+} from "../lib/scanStatusTableHelpers";
+import { useScanTableState } from "../lib/useScanTableState";
 
 interface ScanStatusTableProps {
 	channels: ChannelWithStatus[];
 	onRefresh: () => void;
 }
 
-function formatCount(n: number): string {
-	if (n >= 1000) return `${(n / 1000).toFixed(1)}k`;
-	return String(n);
+import {
+	Tooltip,
+	TooltipContent,
+	TooltipProvider,
+	TooltipTrigger,
+} from "@/components/ui/tooltip";
+
+// ─── Sub-components ──────────────────────────────────────────────────────────
+
+function StatItem({ label, value }: { label: string; value: string }) {
+	return (
+		<span className="flex items-center gap-1">
+			<span className="text-muted-foreground/60 uppercase">{label}</span>
+			<span className="font-medium">{value}</span>
+		</span>
+	);
 }
 
-function getHitRate(channel: ChannelWithStatus): number | null {
-	const scanned = channel.scanStatus?.total_messages_scanned;
-	const clips = channel.scanStatus?.message_count;
-	if (!scanned || scanned === 0 || clips === undefined) return null;
-	return (clips / scanned) * 100;
+function IndeterminateCheckbox({
+	checked,
+	indeterminate,
+	onChange,
+}: {
+	checked: boolean;
+	indeterminate: boolean;
+	onChange: () => void;
+}) {
+	const ref = useRef<HTMLInputElement>(null);
+	React.useEffect(() => {
+		if (ref.current) ref.current.indeterminate = indeterminate;
+	}, [indeterminate]);
+	return (
+		<input
+			ref={ref}
+			type="checkbox"
+			checked={checked}
+			onChange={onChange}
+			className="accent-primary h-4 w-4 cursor-pointer"
+		/>
+	);
 }
 
-function getHitRateColor(rate: number): string {
-	if (rate >= 5) return "text-green-500";
-	if (rate >= 1) return "text-yellow-500";
-	return "text-muted-foreground";
-}
-
-function getProgressColor(status: string | undefined): string {
-	if (status === "RUNNING") return "bg-cyan-400";
-	if (status === "QUEUED") return "bg-yellow-500";
-	if (status === "FAILED") return "bg-destructive";
-	return "bg-primary/40";
-}
-
-function makeDiscordMessageLink(
-	guildId: string,
-	channelId: string,
-	messageId: string
-): string {
-	return `https://discord.com/channels/${guildId}/${channelId}/${messageId}`;
-}
-
-function channelMatchesFilter(
-	channel: ChannelWithStatus,
-	filter: ScanStatusFilter
-): boolean {
-	if (filter === "all") return true;
-	const status = channel.scanStatus?.status;
-	if (filter === "ok")
-		return (
-			status === "SUCCEEDED" ||
-			status === "RUNNING" ||
-			status === "QUEUED"
-		);
-	if (filter === "failed")
-		return status === "FAILED" || status === "CANCELLED";
-	return true;
-}
-
-function sortChannels(
-	channels: ChannelWithStatus[],
-	sortBy: ScanSortBy
-): ChannelWithStatus[] {
-	return [...channels].sort((a, b) => {
-		if (sortBy === "name") return a.name.localeCompare(b.name);
-		if (sortBy === "clips") {
-			return (
-				(b.scanStatus?.message_count ?? 0) -
-				(a.scanStatus?.message_count ?? 0)
-			);
-		}
-		if (sortBy === "scanned") {
-			return (
-				(b.scanStatus?.total_messages_scanned ?? 0) -
-				(a.scanStatus?.total_messages_scanned ?? 0)
-			);
-		}
-		if (sortBy === "last_scan") {
-			const aTime = a.scanStatus?.updated_at
-				? new Date(a.scanStatus.updated_at).getTime()
-				: 0;
-			const bTime = b.scanStatus?.updated_at
-				? new Date(b.scanStatus.updated_at).getTime()
-				: 0;
-			return bTime - aTime;
-		}
-		return 0;
-	});
+/**
+ * Clickable enabled/disabled badge.
+ * - Resting: shows current state with solid styling.
+ * - Hover: dashed border, no background, text color of the *opposite* state.
+ */
+function EnabledToggleBadge({
+	enabled,
+	onToggle,
+}: {
+	enabled: boolean;
+	onToggle: () => void;
+}) {
+	return (
+		<button
+			onClick={onToggle}
+			className={[
+				"shrink-0 cursor-pointer rounded border px-2 py-0.5 text-xs font-medium transition-all select-none",
+				enabled
+					? // Currently enabled — hover shows "would disable" style
+						"hover:border-muted-foreground/50 hover:text-muted-foreground border-green-600/40 bg-green-600/20 text-green-500 hover:border-dashed hover:bg-transparent"
+					: // Currently disabled — hover shows "would enable" style
+						"border-border text-muted-foreground hover:border-dashed hover:border-green-600/50 hover:bg-transparent hover:text-green-500",
+			].join(" ")}
+		>
+			{enabled ? "Enabled" : "Disabled"}
+		</button>
+	);
 }
 
 interface ChannelRowProps {
 	channel: ChannelWithStatus;
 	simpleView: boolean;
+	checked: boolean;
+	onCheck: (id: string, e: React.MouseEvent) => void;
+	onToggleEnabled: (channelId: string, enabled: boolean) => void;
 }
 
-function ChannelRow({ channel, simpleView }: ChannelRowProps) {
+function ChannelRow({
+	channel,
+	simpleView,
+	checked,
+	onCheck,
+	onToggleEnabled,
+}: ChannelRowProps) {
 	const status = channel.scanStatus?.status;
 	const clips = channel.scanStatus?.message_count ?? 0;
 	const scanned = channel.scanStatus?.total_messages_scanned ?? 0;
 	const hitRate = getHitRate(channel);
 	const isActive = status === "RUNNING" || status === "QUEUED";
+	const isEnabled = channel.message_scan_enabled;
 
 	const forwardId = channel.scanStatus?.forward_message_id;
 	const backwardId = channel.scanStatus?.backward_message_id;
 
 	return (
-		<div className="border-b last:border-b-0">
+		<div
+			className={`overflow-hidden rounded-md border ${checked ? "border-primary/40 bg-primary/5" : "border-border/50 bg-card"}`}
+		>
 			{/* Main row */}
-			<div className="flex items-center gap-3 px-4 py-3">
-				{/* Enabled badge */}
-				<Badge
-					variant={
-						channel.message_scan_enabled ? "default" : "outline"
-					}
-					className={
-						channel.message_scan_enabled
-							? "shrink-0 border-green-600/40 bg-green-600/20 px-2 text-xs text-green-500"
-							: "text-muted-foreground shrink-0 px-2 text-xs"
-					}
-				>
-					{channel.message_scan_enabled ? "Enabled" : "Disabled"}
-				</Badge>
+			<div className="flex items-center gap-3 px-3 py-2.5">
+				{/* Checkbox */}
+				<input
+					type="checkbox"
+					checked={checked}
+					onClick={(e) => onCheck(channel.id, e)}
+					onChange={() => {}}
+					className="accent-primary h-4 w-4 shrink-0 cursor-pointer"
+				/>
 
-				{/* Hash + name + type + id */}
-				<div className="flex min-w-0 flex-1 items-center gap-2">
-					<span className="text-muted-foreground">#</span>
-					<span className="truncate font-semibold">
+				{/* Enabled/Disabled toggle badge */}
+				<EnabledToggleBadge
+					enabled={isEnabled}
+					onToggle={() => onToggleEnabled(channel.id, !isEnabled)}
+				/>
+
+				{/* Hash + name + type + id — all baseline-aligned */}
+				<div className="flex min-w-0 flex-1 items-baseline gap-2">
+					<span className="text-muted-foreground text-sm leading-none">
+						#
+					</span>
+					<span className="truncate text-sm leading-none font-semibold">
 						{channel.name}
 					</span>
-					<span className="text-muted-foreground/60 shrink-0 text-xs">
+					<span className="text-muted-foreground/60 shrink-0 text-xs leading-none">
 						{channel.type}
 					</span>
-					<span className="text-muted-foreground/40 hidden shrink-0 font-mono text-xs lg:inline">
+					<span className="text-muted-foreground/40 hidden shrink-0 font-mono text-xs leading-none lg:inline">
 						{channel.id}
 					</span>
 				</div>
 
-				{/* Progress bar — only shown in full view or when active */}
-				{(!simpleView || isActive) && (
-					<div className="hidden w-40 items-center gap-2 sm:flex">
-						<div className="bg-muted h-1.5 flex-1 overflow-hidden rounded-full">
-							<div
-								className={`h-full rounded-full transition-all ${getProgressColor(status)}`}
-								style={{
-									width: `${isActive ? (status === "RUNNING" ? 80 : 30) : scanned > 0 ? 100 : 0}%`,
-								}}
-							/>
-						</div>
-						{isActive && (
-							<span className="text-muted-foreground w-8 text-right text-xs">
-								{status === "RUNNING" ? "80%" : "0%"}
-							</span>
-						)}
-					</div>
-				)}
-
-				{/* Status badge or OK pill */}
-				<div className="shrink-0">
-					{isActive ? (
-						<StatusBadge status={status ?? ""} />
-					) : (
-						<StatusPill status={status ?? null} />
-					)}
-				</div>
-
-				{/* Error */}
+				{/* Error — left of status badge */}
 				{channel.scanStatus?.error_message && (
-					<div className="text-destructive hidden items-center gap-1 text-xs lg:flex">
-						<AlertCircle className="h-3.5 w-3.5 shrink-0" />
-						<span className="max-w-32 truncate">
-							{channel.scanStatus.error_message}
-						</span>
-					</div>
+					<TooltipProvider>
+						<Tooltip delayDuration={300}>
+							<TooltipTrigger asChild>
+								<div className="text-destructive flex cursor-help items-center gap-1 text-xs">
+									<AlertCircle className="h-3.5 w-3.5 shrink-0" />
+									<span className="hidden max-w-[150px] truncate lg:inline xl:max-w-[250px]">
+										{channel.scanStatus.error_message}
+									</span>
+								</div>
+							</TooltipTrigger>
+							<TooltipContent className="max-w-[300px] text-wrap">
+								<p>{channel.scanStatus.error_message}</p>
+							</TooltipContent>
+						</Tooltip>
+					</TooltipProvider>
 				)}
+
+				{/* Status badge — colored when active, grayscale when idle */}
+				<StatusBadge status={status ?? null} grayscale={!isEnabled} />
 
 				{/* Scan button */}
 				<ChannelScanButton channel={channel} />
@@ -212,7 +208,7 @@ function ChannelRow({ channel, simpleView }: ChannelRowProps) {
 
 			{/* Stats row — hidden in simple view */}
 			{!simpleView && (
-				<div className="text-muted-foreground flex flex-wrap items-center gap-x-5 gap-y-1 px-4 pb-3 text-xs">
+				<div className="bg-muted/20 text-muted-foreground flex flex-wrap items-center gap-x-5 gap-y-1 px-3 py-2 text-xs">
 					<StatItem label="CLIPS" value={formatCount(clips)} />
 					<StatItem
 						label="SCANNED"
@@ -241,7 +237,6 @@ function ChannelRow({ channel, simpleView }: ChannelRowProps) {
 							)}
 						/>
 					)}
-					<StatItem label="AVG TIME" value="—" />
 
 					{/* Spacer */}
 					<div className="flex-1" />
@@ -258,7 +253,7 @@ function ChannelRow({ channel, simpleView }: ChannelRowProps) {
 							rel="noopener noreferrer"
 							className="hover:text-foreground flex items-center gap-1 transition-colors"
 						>
-							<ArrowUp className="h-3 w-3" />
+							<Link className="h-3 w-3" />
 							Oldest msg
 						</a>
 					)}
@@ -273,7 +268,7 @@ function ChannelRow({ channel, simpleView }: ChannelRowProps) {
 							rel="noopener noreferrer"
 							className="hover:text-foreground flex items-center gap-1 transition-colors"
 						>
-							<ArrowDown className="h-3 w-3" />
+							<Link className="h-3 w-3" />
 							Newest msg
 						</a>
 					)}
@@ -283,40 +278,15 @@ function ChannelRow({ channel, simpleView }: ChannelRowProps) {
 	);
 }
 
-function StatItem({ label, value }: { label: string; value: string }) {
-	return (
-		<span className="flex items-center gap-1">
-			<span className="text-muted-foreground/60 uppercase">{label}</span>
-			<span className="font-medium">{value}</span>
-		</span>
-	);
-}
-
-function StatusPill({ status }: { status: string | null }) {
-	if (!status || status === "SUCCEEDED") {
-		return (
-			<span className="rounded border border-green-600/30 bg-green-600/10 px-2 py-0.5 text-xs font-medium text-green-500">
-				OK
-			</span>
-		);
-	}
-	if (status === "FAILED" || status === "CANCELLED") {
-		return (
-			<span className="text-destructive border-destructive/30 bg-destructive/10 rounded border px-2 py-0.5 text-xs font-medium">
-				{status}
-			</span>
-		);
-	}
-	return <StatusBadge status={status} />;
-}
+// ─── Main component ───────────────────────────────────────────────────────────
 
 export function ScanStatusTable({ channels, onRefresh }: ScanStatusTableProps) {
 	const {
-		showDisabledChannels,
 		simpleView,
 		searchQuery,
 		statusFilter,
 		sortBy,
+		showDisabledChannels,
 		toggleShowDisabledChannels,
 		toggleSimpleView,
 		setSearchQuery,
@@ -324,31 +294,20 @@ export function ScanStatusTable({ channels, onRefresh }: ScanStatusTableProps) {
 		setSortBy,
 	} = useScanVisibilityStore();
 
-	const processedChannels = useMemo(() => {
-		let result = channels;
+	const {
+		processedChannels,
+		groupedChannels,
+		selectedIds,
+		allSelected,
+		someSelected,
+		bulkPending,
+		handleGlobalCheckbox,
+		handleRowCheck,
+		handleChannelToggle,
+		handleBulkToggle,
+	} = useScanTableState(channels, onRefresh);
 
-		if (!showDisabledChannels) {
-			result = result.filter((ch) => ch.message_scan_enabled);
-		}
-
-		if (searchQuery.trim()) {
-			const q = searchQuery.toLowerCase();
-			result = result.filter(
-				(ch) => ch.name.toLowerCase().includes(q) || ch.id.includes(q)
-			);
-		}
-
-		result = result.filter((ch) => channelMatchesFilter(ch, statusFilter));
-
-		return result;
-	}, [channels, showDisabledChannels, searchQuery, statusFilter]);
-
-	const groupedChannels = useMemo(
-		() => groupChannelsByType(processedChannels, "name"),
-		[processedChannels]
-	);
-
-	const sortedChannelTypes = useMemo(() => getSortedChannelTypes(), []);
+	const sortedChannelTypes = getSortedChannelTypes();
 
 	const filterButtons: { label: string; value: ScanStatusFilter }[] = [
 		{ label: "All", value: "all" },
@@ -357,9 +316,43 @@ export function ScanStatusTable({ channels, onRefresh }: ScanStatusTableProps) {
 	];
 
 	return (
-		<Card className="overflow-hidden">
+		<div className="space-y-3">
 			{/* Toolbar */}
-			<div className="flex flex-wrap items-center gap-2 border-b px-4 py-3">
+			<div className="flex flex-wrap items-center gap-2">
+				{/* Global checkbox + bulk actions */}
+				<div className="flex items-center gap-2">
+					<IndeterminateCheckbox
+						checked={allSelected}
+						indeterminate={someSelected}
+						onChange={handleGlobalCheckbox}
+					/>
+					{selectedIds.size > 0 && (
+						<>
+							<span className="text-muted-foreground text-xs">
+								{selectedIds.size} selected
+							</span>
+							<Button
+								size="sm"
+								variant="outline"
+								className="h-8 border-green-600/40 bg-green-600/10 text-xs text-green-500 hover:bg-green-600/20"
+								disabled={bulkPending}
+								onClick={() => handleBulkToggle(true)}
+							>
+								Enable
+							</Button>
+							<Button
+								size="sm"
+								variant="outline"
+								className="h-8 text-xs"
+								disabled={bulkPending}
+								onClick={() => handleBulkToggle(false)}
+							>
+								Disable
+							</Button>
+						</>
+					)}
+				</div>
+
 				{/* Search */}
 				<div className="relative min-w-40 flex-1 sm:max-w-52">
 					<Search className="text-muted-foreground absolute top-1/2 left-2.5 h-3.5 w-3.5 -translate-y-1/2" />
@@ -371,8 +364,8 @@ export function ScanStatusTable({ channels, onRefresh }: ScanStatusTableProps) {
 					/>
 				</div>
 
-				{/* Status filter buttons */}
-				<div className="flex items-center rounded-md border">
+				{/* Status filter */}
+				<div className="bg-card flex items-center rounded-md border">
 					{filterButtons.map((btn, i) => (
 						<button
 							key={btn.value}
@@ -423,13 +416,13 @@ export function ScanStatusTable({ channels, onRefresh }: ScanStatusTableProps) {
 					</Select>
 				</div>
 
-				{/* Right side controls */}
-				<div className="ml-auto flex items-center gap-2">
+				{/* Right controls */}
+				<div className="ml-auto flex items-center gap-1">
 					<Button
 						onClick={toggleShowDisabledChannels}
 						variant="ghost"
 						size="sm"
-						className="h-8 text-xs"
+						className="text-muted-foreground hover:text-foreground h-8 text-xs"
 					>
 						{showDisabledChannels ? (
 							<>
@@ -447,7 +440,7 @@ export function ScanStatusTable({ channels, onRefresh }: ScanStatusTableProps) {
 						onClick={onRefresh}
 						variant="ghost"
 						size="sm"
-						className="h-8 text-xs"
+						className="text-muted-foreground hover:text-foreground h-8 text-xs"
 					>
 						<RefreshCw className="mr-1 h-3.5 w-3.5" />
 						Refresh
@@ -465,7 +458,7 @@ export function ScanStatusTable({ channels, onRefresh }: ScanStatusTableProps) {
 			</div>
 
 			{/* Channel list */}
-			<div>
+			<div className="space-y-0">
 				{sortedChannelTypes.map((type) => {
 					const channelsOfType = groupedChannels[type];
 					if (!channelsOfType || channelsOfType.length === 0)
@@ -482,7 +475,7 @@ export function ScanStatusTable({ channels, onRefresh }: ScanStatusTableProps) {
 					return (
 						<React.Fragment key={type}>
 							{/* Group header */}
-							<div className="bg-muted/30 flex items-center gap-2 border-b px-4 py-2">
+							<div className="flex items-center gap-2 py-2 pl-1">
 								<ChannelTypeHeader type={type} />
 								<span className="text-muted-foreground/50 text-xs">
 									{typeTotal}
@@ -495,28 +488,33 @@ export function ScanStatusTable({ channels, onRefresh }: ScanStatusTableProps) {
 							</div>
 
 							{/* Channel rows */}
-							{sorted.map((channel) => (
-								<ChannelRow
-									key={channel.id}
-									channel={channel}
-									simpleView={simpleView}
-								/>
-							))}
+							<div className="space-y-1.5">
+								{sorted.map((channel) => (
+									<ChannelRow
+										key={channel.id}
+										channel={channel}
+										simpleView={simpleView}
+										checked={selectedIds.has(channel.id)}
+										onCheck={handleRowCheck}
+										onToggleEnabled={handleChannelToggle}
+									/>
+								))}
+							</div>
 						</React.Fragment>
 					);
 				})}
 
 				{processedChannels.length === 0 && channels.length > 0 && (
-					<div className="text-muted-foreground p-8 text-center text-sm">
+					<div className="text-muted-foreground py-8 text-center text-sm">
 						No channels match the current filters.
 					</div>
 				)}
 				{channels.length === 0 && (
-					<div className="text-muted-foreground p-8 text-center text-sm">
+					<div className="text-muted-foreground py-8 text-center text-sm">
 						No channels found
 					</div>
 				)}
 			</div>
-		</Card>
+		</div>
 	);
 }

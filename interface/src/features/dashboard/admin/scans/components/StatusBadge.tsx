@@ -2,11 +2,27 @@ import { Badge } from "@/components/ui/badge";
 
 interface StatusBadgeProps {
 	status: string | null;
+	grayscale?: boolean;
 }
 
-export function StatusBadge({ status }: StatusBadgeProps) {
+export function StatusBadge({ status, grayscale = false }: StatusBadgeProps) {
 	if (!status) {
-		return <Badge variant="outline">Unscanned</Badge>;
+		return (
+			<Badge variant="outline" className="text-muted-foreground/50">
+				Unscanned
+			</Badge>
+		);
+	}
+
+	if (grayscale) {
+		return (
+			<Badge
+				variant="outline"
+				className="text-muted-foreground border-border/50"
+			>
+				{status}
+			</Badge>
+		);
 	}
 
 	const variantMap: Record<
@@ -28,7 +44,7 @@ export function StatusBadge({ status }: StatusBadgeProps) {
 			"bg-green-500/20 text-green-600 dark:text-green-400 border-green-500/50",
 	};
 
-	const variant = variantMap[status] || "outline";
+	const variant = variantMap[status] ?? "outline";
 	const customColor = colorMap[status];
 
 	return (
