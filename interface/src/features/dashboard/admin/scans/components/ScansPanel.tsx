@@ -2,12 +2,7 @@
 
 import { Channel } from "@/lib/api/channel";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import {
-	InfoPanel,
-	BulkScanActions,
-	HistoricalScanPanel,
-	ScanStatusTable,
-} from "../index";
+import { InfoPanel, BulkScanActions, ScanStatusTable } from "../index";
 import { toast } from "sonner";
 import { useScanStatusNotifications } from "../lib/useScanStatusNotifications";
 import { useScanStats } from "../lib/useScanStats";
@@ -24,10 +19,14 @@ export function ScansPanel({
 }: ScansPanelProps) {
 	const {
 		channels,
+		totalChannels,
+		enabledChannelsCount,
+		failedScans,
 		unscannedOrFailedCount,
 		activeScans,
 		successfulScans,
-		enabledChannelsCount,
+		totalMessagesScanned,
+		totalClips,
 		isLoading,
 		error,
 		refetch,
@@ -138,25 +137,27 @@ export function ScansPanel({
 
 	return (
 		<div className="space-y-6">
-			<InfoPanel
-				unscannedOrFailedCount={unscannedOrFailedCount}
-				activeScans={activeScans}
-				successfulScans={successfulScans}
-			/>
-
-			<BulkScanActions
-				unscannedOrFailedCount={unscannedOrFailedCount}
-				enabledChannelsCount={enabledChannelsCount}
-				isPending={isPending}
-				onScanUnscannedOrFailed={scanUnscannedOrFailed}
-				onUpdateAllChannels={updateAllChannels}
-			/>
-
-			<HistoricalScanPanel
-				enabledChannelsCount={enabledChannelsCount}
-				isPending={isPending}
-				onHistoricalScan={historicalScan}
-			/>
+			<div className="flex flex-col gap-4 sm:flex-row">
+				<div className="w-full shrink-0 sm:w-60">
+					<InfoPanel
+						totalChannels={totalChannels}
+						enabledChannelsCount={enabledChannelsCount}
+						failedScans={failedScans}
+						activeScans={activeScans}
+						successfulScans={successfulScans}
+						totalMessagesScanned={totalMessagesScanned}
+						totalClips={totalClips}
+					/>
+				</div>
+				<BulkScanActions
+					unscannedOrFailedCount={unscannedOrFailedCount}
+					enabledChannelsCount={enabledChannelsCount}
+					isPending={isPending}
+					onScanUnscannedOrFailed={scanUnscannedOrFailed}
+					onUpdateAllChannels={updateAllChannels}
+					onHistoricalScan={historicalScan}
+				/>
+			</div>
 
 			<ScanStatusTable channels={channels} onRefresh={refetch} />
 		</div>

@@ -1,47 +1,93 @@
-import { Card, CardContent } from "@/components/ui/card";
-import { Info } from "lucide-react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 interface InfoPanelProps {
-	unscannedOrFailedCount: number;
+	totalChannels: number;
+	enabledChannelsCount: number;
+	failedScans: number;
 	activeScans: number;
 	successfulScans: number;
+	totalMessagesScanned: number;
+	totalClips: number;
+}
+
+function formatCount(n: number): string {
+	if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
+	if (n >= 1_000) return `${(n / 1_000).toFixed(1)}k`;
+	return String(n);
+}
+
+interface StatRowProps {
+	label: string;
+	value: string | number;
+	valueClassName?: string;
+}
+
+function StatRow({ label, value, valueClassName }: StatRowProps) {
+	return (
+		<div className="flex items-center justify-between gap-2 py-1.5">
+			<span className="text-muted-foreground text-sm whitespace-nowrap">
+				{label}
+			</span>
+			<span
+				className={`text-sm font-semibold tabular-nums ${valueClassName ?? ""}`}
+			>
+				{value}
+			</span>
+		</div>
+	);
 }
 
 export function InfoPanel({
-	unscannedOrFailedCount,
+	totalChannels,
+	enabledChannelsCount,
+	failedScans,
 	activeScans,
 	successfulScans,
+	totalMessagesScanned,
+	totalClips,
 }: InfoPanelProps) {
 	return (
-		<Card className="border-blue-500/50 bg-blue-500/10">
-			<CardContent className="">
-				<div className="flex items-start gap-3">
-					<Info className="mt-0.5 h-5 w-5 flex-shrink-0 text-blue-600 dark:text-blue-400" />
-					<div className="flex-1">
-						<h3 className="mb-1 text-sm font-semibold text-blue-600 dark:text-blue-400">
-							About Scans
-						</h3>
-						<p className="text-sm">
-							Scans process Discord messages to find and save
-							video clips. Each scan examines messages in a
-							channel and extracts clips based on your settings.
-							You can scan individual channels or all channels at
-							once.
-						</p>
-						<div className="text-muted-foreground mt-2 flex gap-4 text-xs">
-							<span>
-								• <strong>{unscannedOrFailedCount}</strong>{" "}
-								unscanned/failed channels
-							</span>
-							<span>
-								• <strong>{activeScans}</strong> active scans
-							</span>
-							<span>
-								• <strong>{successfulScans}</strong> scanned
-								channels
-							</span>
-						</div>
-					</div>
+		<Card className="h-full flex-1">
+			<CardHeader className="pb-2">
+				<CardTitle className="text-muted-foreground flex-1 text-xs font-semibold tracking-widest uppercase">
+					Overview
+				</CardTitle>
+			</CardHeader>
+			<CardContent className="pt-0">
+				<div className="divide-border/50 divide-y">
+					<StatRow label="Total Channels" value={totalChannels} />
+					<StatRow
+						label="Enabled"
+						value={enabledChannelsCount}
+						valueClassName="text-green-400"
+					/>
+					<StatRow
+						label="Failed"
+						value={failedScans}
+						valueClassName={failedScans > 0 ? "text-red-400" : ""}
+					/>
+					<StatRow
+						label="Active"
+						value={activeScans}
+						valueClassName={
+							activeScans > 0 ? "text-yellow-400" : ""
+						}
+					/>
+					<StatRow
+						label="Scanned"
+						value={successfulScans}
+						valueClassName="text-blue-400"
+					/>
+					<StatRow
+						label="Total Clips"
+						value={formatCount(totalClips)}
+						valueClassName="text-muted-foreground"
+					/>
+					<StatRow
+						label="Msgs Scanned"
+						value={formatCount(totalMessagesScanned)}
+						valueClassName="text-muted-foreground"
+					/>
 				</div>
 			</CardContent>
 		</Card>
