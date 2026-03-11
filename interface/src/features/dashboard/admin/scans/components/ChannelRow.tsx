@@ -135,9 +135,11 @@ function ChannelStats({
 			/>
 			<StatItem
 				label="last scan"
-				value={formatRelativeTime(
-					channel.scanStatus?.updated_at ?? "never"
-				)}
+				value={
+					channel.scanStatus
+						? formatRelativeTime(channel.scanStatus.updated_at)
+						: "—"
+				}
 			/>
 
 			<div className="flex-1" />
