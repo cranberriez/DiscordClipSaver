@@ -46,5 +46,19 @@
         "install_intent_expire_time": 3600, // How long (seconds) an install intent is valid before expiration.
         "install_intent_purge_cron": "*/30 * * * *", // How often (cron) to purge expired install intents. Currently 5 minutes, minimum is 5 minutes.
         "install_intent_purge_grace_seconds": 300 // How long (seconds) to wait after expiration before purging an install intent. (For UI convenience)
+    },
+
+    "user_facing_settings_defaults": {
+        "default_visibility": "unlisted",
+        "ignore_nsfw_channels": true,
+        "auto_archive_after": {
+            "unit": "never",
+            "count": 0
+        },
+        "max_clips_per_channel_per_day": 0,
+        "live_scan_slow_mode": {
+            "enabled": false,
+            "batch_window_seconds": 300
+        }
     }
 }
