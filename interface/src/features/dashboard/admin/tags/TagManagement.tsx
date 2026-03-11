@@ -55,20 +55,6 @@ export function TagManagement({ guildId }: TagManagementProps) {
 	const createTag = useCreateTag();
 	const updateTag = useUpdateTag();
 
-	useEffect(() => {
-		if (tags) {
-			console.log("[TagManagement] Fetched tags:", tags);
-			console.log(
-				"[TagManagement] Active tags:",
-				tags.filter((t) => t.is_active)
-			);
-			console.log(
-				"[TagManagement] Inactive tags:",
-				tags.filter((t) => !t.is_active)
-			);
-		}
-	}, [tags]);
-
 	// Local state for modal
 	const [isModalOpen, setIsModalOpen] = useState(false);
 	const [editingTag, setEditingTag] = useState<Tag | null>(null);
