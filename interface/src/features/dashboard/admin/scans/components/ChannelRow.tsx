@@ -32,9 +32,7 @@ export function ChannelRow({ channel, simpleView, checked }: ChannelRowProps) {
 	const isEnabled = channel.message_scan_enabled;
 
 	return (
-		<div
-			className={`overflow-hidden rounded-md border ${checked ? "border-primary/40 bg-primary/5" : "border-border/50 bg-card"}`}
-		>
+		<div className="border-border/50 bg-card overflow-hidden rounded-md border">
 			{/* Main row */}
 			<div className="flex flex-col flex-wrap items-start gap-3 px-3 py-2 md:flex-row">
 				<div className="flex flex-1 gap-2 xl:self-center">
