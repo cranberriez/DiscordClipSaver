@@ -150,15 +150,23 @@ function ChannelLinks({ channel }: { channel: ChannelWithStatus }) {
 	const forwardId = channel.scanStatus?.forward_message_id;
 
 	const links: { id: string; label: string }[] = [
-		backwardId && {
-			id: backwardId,
-			label: "Start",
-		},
-		forwardId && {
-			id: forwardId,
-			label: "End",
-		},
-	].filter((link) => link !== null) as { id: string; label: string }[];
+		...(backwardId
+			? [
+					{
+						id: backwardId,
+						label: "Start",
+					},
+				]
+			: []),
+		...(forwardId
+			? [
+					{
+						id: forwardId,
+						label: "End",
+					},
+				]
+			: []),
+	];
 
 	return (
 		<>
