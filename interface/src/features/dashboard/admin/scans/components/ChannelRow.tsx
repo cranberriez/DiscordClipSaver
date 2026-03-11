@@ -16,6 +16,7 @@ import {
 	TooltipProvider,
 	TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { cn } from "@/lib/utils";
 
 export interface ChannelRowProps {
 	channel: ChannelWithStatus;
@@ -103,8 +104,15 @@ function ChannelScanStatus({
 
 function StatItem({ label, value }: { label: string; value: string }) {
 	return (
-		<div className="flex flex-1 items-center gap-1 whitespace-nowrap md:flex-0">
-			<span className="font-bold">{value}</span>
+		<div className="flex flex-1 items-center gap-2 whitespace-nowrap md:flex-0">
+			<span
+				className={cn(
+					"min-w-10 text-right font-mono font-bold",
+					value === "—" && "text-muted-foreground/25"
+				)}
+			>
+				{value}
+			</span>
 			<span className="text-muted-foreground/60">{label}</span>
 		</div>
 	);
