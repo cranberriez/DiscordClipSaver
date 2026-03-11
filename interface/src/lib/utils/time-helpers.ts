@@ -9,8 +9,11 @@
 export function formatRelativeTime(date: Date | string | null): string {
 	if (!date) return "Never";
 
+	// Ensure both timestamps are in UTC for accurate comparison
 	const now = new Date();
 	const past = new Date(date);
+
+	// Both getTime() return UTC milliseconds since epoch, so comparison is correct
 	const diffMs = now.getTime() - past.getTime();
 	const diffSec = Math.floor(diffMs / 1000);
 	const diffMin = Math.floor(diffSec / 60);
@@ -41,7 +44,7 @@ export function formatRelativeTime(date: Date | string | null): string {
 	if (diffSec < 60) {
 		return "Just now";
 	} else if (diffMin < 60) {
-		return `${diffMin} hour${diffMin === 1 ? "" : "s"} ago`;
+		return `${diffMin} minute${diffMin === 1 ? "" : "s"} ago`;
 	} else if (diffHour < 24) {
 		return `${diffHour} hour${diffHour === 1 ? "" : "s"} ago`;
 	} else if (diffDay === 1) {
