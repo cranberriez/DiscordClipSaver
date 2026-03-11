@@ -126,7 +126,7 @@ export function ScanToolbar({ onRefresh }: ScanToolbarProps) {
 					<RefreshCw className="mr-1 h-3.5 w-3.5" />
 					Refresh
 				</Button>
-				<Button
+				{/* <Button
 					onClick={toggleSimpleView}
 					variant={simpleView ? "secondary" : "ghost"}
 					size="sm"
@@ -137,7 +137,7 @@ export function ScanToolbar({ onRefresh }: ScanToolbarProps) {
 				>
 					<Layers className="mr-1 h-3.5 w-3.5" />
 					Simple View
-				</Button>
+				</Button> */}
 			</div>
 		</div>
 	);

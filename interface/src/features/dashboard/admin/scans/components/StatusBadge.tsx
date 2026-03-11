@@ -1,55 +1,60 @@
-import { Badge } from "@/components/ui/badge";
+import { cn } from "@/lib/utils";
 
 interface StatusBadgeProps {
-	status: string | null;
+	status?: string;
 	grayscale?: boolean;
 }
 
 export function StatusBadge({ status, grayscale = false }: StatusBadgeProps) {
 	if (!status) {
-		return (
-			<Badge variant="outline" className="text-muted-foreground/50">
-				Unscanned
-			</Badge>
-		);
+		return <Badge className="text-muted-foreground/50">Unscanned</Badge>;
 	}
 
 	if (grayscale) {
 		return (
-			<Badge
-				variant="outline"
-				className="text-muted-foreground border-border/50"
-			>
+			<Badge className="text-muted-foreground border-border/50">
 				{status}
 			</Badge>
 		);
 	}
 
-	const variantMap: Record<
-		string,
-		"default" | "secondary" | "destructive" | "outline"
-	> = {
-		QUEUED: "secondary",
-		RUNNING: "default",
-		SUCCEEDED: "outline",
-		FAILED: "destructive",
-		CANCELLED: "outline",
-	};
-
 	const colorMap: Record<string, string> = {
-		QUEUED: "bg-yellow-500/20 text-yellow-600 dark:text-yellow-400 border-yellow-500/50",
-		RUNNING:
-			"bg-blue-500/20 text-blue-600 dark:text-blue-400 border-blue-500/50",
-		SUCCEEDED:
-			"bg-green-500/20 text-green-600 dark:text-green-400 border-green-500/50",
+		FAILED: "bg-red-500/10 text-red-400",
+		CANCELLED: "bg-gray-500/10 text-gray-400",
+		QUEUED: "bg-yellow-500/10 text-yellow-400",
+		RUNNING: "bg-blue-500/10 text-blue-400 ",
+		SUCCEEDED: "bg-green-500/10 text-green-400 ",
 	};
 
-	const variant = variantMap[status] ?? "outline";
-	const customColor = colorMap[status];
+	const customLabelMap: Record<string, string> = {
+		FAILED: "FAILED",
+		CANCELLED: "CANCELLED",
+		QUEUED: "QUEUED",
+		RUNNING: "RUNNING",
+		SUCCEEDED: "SUCCEEDED",
+	};
 
+	const customColor = colorMap[status];
+	const customLabel = customLabelMap[status] || status;
+
+	return <Badge className={customColor}>{customLabel}</Badge>;
+}
+
+function Badge({
+	children,
+	className,
+}: {
+	children: React.ReactNode;
+	className?: string;
+}) {
 	return (
-		<Badge variant={variant} className={customColor}>
-			{status}
-		</Badge>
+		<div
+			className={cn(
+				"flex h-9 w-24 items-center justify-center rounded-sm px-4 py-1 text-xs font-medium",
+				className
+			)}
+		>
+			{children}
+		</div>
 	);
 }

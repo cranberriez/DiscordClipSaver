@@ -1,23 +1,22 @@
+import { cn } from "@/lib/utils";
+
 interface EnabledToggleBadgeProps {
 	enabled: boolean;
+	className?: string;
 }
 
-/**
- * Clickable enabled/disabled badge.
- * - Resting: shows current state with solid styling.
- * - Hover: dashed border, no background, text color of the *opposite* state.
- */
-export function EnabledBadge({ enabled }: EnabledToggleBadgeProps) {
+export function EnabledBadge({ enabled, className }: EnabledToggleBadgeProps) {
 	return (
-		<div
-			className={[
-				"shrink-0 cursor-pointer rounded border px-2 py-0.5 text-xs font-medium transition-all select-none",
-				enabled
-					? "border-green-600/40 bg-green-600/20 text-green-500"
-					: "border-border text-muted-foreground",
-			].join(" ")}
-		>
-			{enabled ? "Enabled" : "Disabled"}
+		<div className="flex h-full flex-col">
+			<div className="flex h-7 items-center justify-center">
+				<div
+					className={cn(
+						"h-1.5 w-1.5 rounded-full",
+						enabled ? "bg-green-500" : "bg-red-500",
+						className
+					)}
+				/>
+			</div>
 		</div>
 	);
 }

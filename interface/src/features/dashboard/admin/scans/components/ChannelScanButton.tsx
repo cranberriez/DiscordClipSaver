@@ -1,6 +1,5 @@
 "use client";
 
-import { ButtonGroup } from "@/components/ui/button-group";
 import {
 	DropdownMenu,
 	DropdownMenuContent,
@@ -9,15 +8,15 @@ import {
 	DropdownMenuSeparator,
 	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { EllipsisVertical, InfoIcon } from "lucide-react";
+import { ScanText, InfoIcon } from "lucide-react";
 import type { ChannelWithStatus } from "../types";
-import { Button } from "@/components/ui/button";
 import {
-	HoverCard,
-	HoverCardTrigger,
-	HoverCardContent,
-} from "@/components/ui/hover-card";
+	Popover,
+	PopoverContent,
+	PopoverTrigger,
+} from "@/components/ui/popover";
 import { useStartCustomScan } from "@/lib/hooks/useScans";
+import { useState } from "react";
 import { StartScanOptions } from "@/lib/api/scan";
 import { toast } from "sonner";
 import { useGuildSettings } from "@/lib/hooks/useSettings";
@@ -63,108 +62,93 @@ export function ChannelScanButton({ channel }: { channel: ChannelWithStatus }) {
 		? "Enable scanning in Overview tab first"
 		: "";
 
-	const buttonText = !channel.message_scan_enabled
-		? "Disabled"
-		: channel.scanStatus?.status === "RUNNING"
-			? "Running..."
-			: channel.scanStatus?.status === "QUEUED"
-				? "Queued..."
-				: "Scan";
-
 	return (
-		<ButtonGroup className="ml-auto">
-			<Button
-				onClick={() =>
-					handleStart({
-						isUpdate: true,
-						rescan: "stop",
-					})
-				}
-				disabled={isDisabled}
-				variant="outline"
-				size="sm"
-				title={title}
-			>
-				{buttonText}
-			</Button>
+		<DropdownMenu>
+			<DropdownMenuTrigger asChild>
+				<button
+					type="button"
+					className="hover:bg-muted/50 text-muted-foreground hover:text-foreground flex h-9 w-fit cursor-pointer items-center gap-2 rounded-sm border p-1 px-3"
+					disabled={isDisabled}
+					title={title}
+				>
+					<ScanText className="h-4 w-4" />
+					<span className="text-sm">Scan</span>
+				</button>
+			</DropdownMenuTrigger>
+			<DropdownMenuContent align="end" className="w-64">
+				<DropdownMenuLabel className="text-muted-foreground text-xs font-medium">
+					Quick Actions
+				</DropdownMenuLabel>
+				<MenuItemWithInfo
+					onClick={() =>
+						handleStart({
+							isUpdate: true,
+							rescan: "stop",
+						})
+					}
+					disabled={isDisabled}
+					hoverText="Scans from the last scanned message forward to Now. Use this to catch up on recent activity."
+				>
+					Normal Scan
+				</MenuItemWithInfo>
 
-			<DropdownMenu>
-				<DropdownMenuTrigger asChild>
-					<Button variant="outline" size="sm" disabled={isDisabled}>
-						<EllipsisVertical />
-					</Button>
-				</DropdownMenuTrigger>
-				<DropdownMenuContent align="end" className="w-64">
-					<DropdownMenuLabel>Quick Actions</DropdownMenuLabel>
-					<MenuItemWithInfo
-						onClick={() =>
-							handleStart({
-								isUpdate: true,
-								rescan: "stop",
-							})
-						}
-						disabled={isDisabled}
-						hoverText="Scans from the last scanned message forward to Now. Use this to catch up on recent activity."
-					>
-						Forward Update
-					</MenuItemWithInfo>
+				<DropdownMenuSeparator />
+				<DropdownMenuLabel className="text-muted-foreground text-xs font-medium">
+					History
+				</DropdownMenuLabel>
 
-					<DropdownMenuSeparator />
-					<DropdownMenuLabel>History</DropdownMenuLabel>
+				<MenuItemWithInfo
+					onClick={() =>
+						handleStart({
+							isBackfill: true,
+							rescan: "stop",
+						})
+					}
+					disabled={isDisabled}
+					hoverText="Scans from the oldest scanned message backward to fill in gaps in history."
+				>
+					Backfill Scan
+				</MenuItemWithInfo>
 
-					<MenuItemWithInfo
-						onClick={() =>
-							handleStart({
-								isBackfill: true,
-								rescan: "stop",
-							})
-						}
-						disabled={isDisabled}
-						hoverText="Scans from the oldest scanned message backward to fill in gaps in history."
-					>
-						Backfill History
-					</MenuItemWithInfo>
+				<DropdownMenuSeparator />
+				<DropdownMenuLabel className="text-muted-foreground text-xs font-medium">
+					Maintenance (Expensive)
+				</DropdownMenuLabel>
 
-					<DropdownMenuSeparator />
-					<DropdownMenuLabel className="text-destructive">
-						Maintenance (Expensive)
-					</DropdownMenuLabel>
+				<MenuItemWithInfo
+					onClick={() =>
+						handleStart({
+							isHistorical: true,
+							rescan: "continue",
+						})
+					}
+					disabled={isDisabled}
+					hoverText="Deep scan from Now backward to Beginning, skipping known messages. Verifies integrity of history."
+				>
+					Deep Integrity Scan
+				</MenuItemWithInfo>
 
-					<MenuItemWithInfo
-						onClick={() =>
+				<MenuItemWithInfo
+					onClick={() => {
+						if (
+							confirm(
+								"⚠️ This will reprocess ALL messages in this channel from scratch.\n\nThis is very expensive and should only be used if you need to regenerate metadata or apply new parsing rules.\n\nContinue?"
+							)
+						) {
 							handleStart({
 								isHistorical: true,
-								rescan: "continue",
-							})
+								rescan: "update",
+							});
 						}
-						disabled={isDisabled}
-						hoverText="Deep scan from Now backward to Beginning, skipping known messages. Verifies integrity of history."
-					>
-						Deep Integrity Scan
-					</MenuItemWithInfo>
-
-					<MenuItemWithInfo
-						onClick={() => {
-							if (
-								confirm(
-									"⚠️ This will reprocess ALL messages in this channel from scratch.\n\nThis is very expensive and should only be used if you need to regenerate metadata or apply new parsing rules.\n\nContinue?"
-								)
-							) {
-								handleStart({
-									isHistorical: true,
-									rescan: "update",
-								});
-							}
-						}}
-						disabled={isDisabled}
-						hoverText="Force re-scan of ALL messages from Now backward. Regenerates everything. Very slow."
-						className="text-destructive focus:text-destructive"
-					>
-						Force Reprocess
-					</MenuItemWithInfo>
-				</DropdownMenuContent>
-			</DropdownMenu>
-		</ButtonGroup>
+					}}
+					disabled={isDisabled}
+					hoverText="Force re-scan of ALL messages from Now backward. Regenerates everything. Very slow."
+					className="text-destructive focus:text-destructive"
+				>
+					Force Reprocess All
+				</MenuItemWithInfo>
+			</DropdownMenuContent>
+		</DropdownMenu>
 	);
 }
 
@@ -181,23 +165,35 @@ function MenuItemWithInfo({
 	hoverText: string;
 	className?: string;
 }) {
+	const [isOpen, setIsOpen] = useState(false);
+
 	return (
-		<DropdownMenuItem
-			onClick={onClick}
-			disabled={disabled}
-			className={`flex cursor-pointer items-center justify-between ${className}`}
-		>
-			<span>{children}</span>
-			<HoverCard openDelay={200} closeDelay={100}>
-				<HoverCardTrigger asChild>
-					<div className="inline-flex">
-						<InfoIcon className="text-muted-foreground ml-2 h-4 w-4" />
+		<div className="flex w-full items-center justify-between">
+			<DropdownMenuItem
+				onClick={onClick}
+				disabled={disabled}
+				className={`flex-1 cursor-pointer ${className}`}
+			>
+				<span>{children}</span>
+			</DropdownMenuItem>
+			<Popover open={isOpen} onOpenChange={setIsOpen}>
+				<PopoverTrigger asChild>
+					<div
+						className="hover:bg-muted flex h-8 w-8 cursor-pointer items-center justify-center rounded-sm"
+						onMouseEnter={() => setIsOpen(true)}
+						onMouseLeave={() => setIsOpen(false)}
+					>
+						<InfoIcon className="text-muted-foreground h-4 w-4" />
 					</div>
-				</HoverCardTrigger>
-				<HoverCardContent align="center" side="right" className="z-50">
+				</PopoverTrigger>
+				<PopoverContent
+					align="center"
+					side="right"
+					className="z-50 w-64"
+				>
 					<p className="text-sm">{hoverText}</p>
-				</HoverCardContent>
-			</HoverCard>
-		</DropdownMenuItem>
+				</PopoverContent>
+			</Popover>
+		</div>
 	);
 }
