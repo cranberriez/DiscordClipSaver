@@ -1,11 +1,11 @@
-FROM node:20-alpine@sha256:b88333c42c23fbd91596ebd7fd10de239cedab9617de04142dde7315e3bc0afa AS builder
+FROM node:24-alpine@sha256:7a4ef576a570dad463c2e9744e6df118c9c2a3a03a9219122a9dc834e7c8049a AS builder
 WORKDIR /app
 COPY interface/package*.json ./
-RUN npm ci
+COPY interface/node_modules ./node_modules
 COPY interface/ .
 RUN npm run build
 
-FROM node:20-alpine@sha256:b88333c42c23fbd91596ebd7fd10de239cedab9617de04142dde7315e3bc0afa AS runner
+FROM node:24-alpine@sha256:7a4ef576a570dad463c2e9744e6df118c9c2a3a03a9219122a9dc834e7c8049a AS runner
 WORKDIR /app
 ENV NODE_ENV=production
 
