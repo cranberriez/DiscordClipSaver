@@ -1,6 +1,7 @@
 import discord
 from bot.services.container import guild_service, channel_service
 from bot.services.scan_service import get_scan_service
+from bot.services.message_batcher import get_message_batcher
 from bot.logger import logger
 
 # ----- Discord bot -----
@@ -18,6 +19,11 @@ async def on_ready():
     
     for guild in bot.guilds:
         await channel_service.sync_channels(bot, guild)
+    
+    # Start message batcher for batching live messages
+    message_batcher = get_message_batcher()
+    await message_batcher.start()
+    logger.info("MessageBatcher started")
     
     # Detect gaps and queue catch-up scans
     scan_service = get_scan_service()
@@ -109,8 +115,6 @@ async def on_message(message: discord.Message):
     # Ignore the bot's own messages
     if message.author.id == bot.user.id:
         return
-    # Dev visibility
-    logger.info("[%s] %s: %s", message.id, message.author, message.content)
     
     # Handle message scanning (lightweight - just checks for attachments and queues job)
     scan_service = get_scan_service()

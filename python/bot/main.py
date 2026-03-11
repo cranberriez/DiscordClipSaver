@@ -1,6 +1,7 @@
 import asyncio
 from contextlib import suppress
 import os
+import logging
 
 import uvicorn
 from dotenv import load_dotenv
@@ -10,9 +11,12 @@ from bot.api import api
 from bot.bot import bot as discord_bot
 from bot.schedules.scheduler import start_scheduler_and_jobs
 from bot.services.scan_service import get_scan_service
+from bot.services.message_batcher import get_message_batcher
 
 from shared.db.utils import init_db, close_db
 from shared.redis.redis_client import RedisStreamClient
+
+logger = logging.getLogger(__name__)
 
 load_dotenv()
 
@@ -34,6 +38,9 @@ async def main():
     
     # Configure scan service with Redis client
     scan_service = get_scan_service(redis_client=redis_client)
+    
+    # Configure message batcher with Redis client
+    message_batcher = get_message_batcher(redis_client=redis_client)
     
     # Start FastAPI (uvicorn) in the background
     config = uvicorn.Config(api, host="0.0.0.0", port=8000, loop="asyncio", log_level="info")
@@ -62,6 +69,11 @@ async def main():
             scheduler.shutdown(wait=False)
         if not discord_bot.is_closed():
             await discord_bot.close()
+
+        # Stop message batcher and process remaining batches
+        with suppress(Exception):
+            message_batcher = get_message_batcher()
+            await message_batcher.stop()
 
         # If the bot stops, also stop the API server
         if not server.should_exit:

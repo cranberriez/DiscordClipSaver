@@ -6,6 +6,7 @@ from typing import Optional
 import discord
 from shared.db.models import Guild, Channel
 from shared.db.repositories.channel_scan_status import get_scan_status
+from .message_batcher import get_message_batcher
 
 logger = logging.getLogger(__name__)
 
@@ -186,15 +187,11 @@ class ScanService:
     async def handle_new_message(self, message: discord.Message):
         """
         Handle a new message from Discord.
-        Creates a MessageScanJob if the message has attachments.
+        Uses MessageBatcher to batch messages with attachments instead of sending individual jobs.
         
         Args:
             message: Discord message object
         """
-        if not self.redis_client:
-            logger.warning("Redis client not configured, cannot handle message")
-            return
-        
         # Quick checks (no database queries)
         if message.author.bot:
             return
@@ -202,30 +199,38 @@ class ScanService:
         if not message.attachments:
             return
         
-        # Has attachments - queue for worker to handle
-        # Import here to avoid circular dependency
-        from shared.redis.redis import MessageScanJob
+        # Has attachments - add to batch for processing
+        message_batcher = get_message_batcher()
+        await message_batcher.add_message(message)
         
-        job = MessageScanJob(
-            guild_id=str(message.guild.id),
-            channel_id=str(message.channel.id),
-            message_ids=[str(message.id)]
-        )
-        
-        await self.redis_client.push_job(job.model_dump(mode='json'))
-        
-        logger.debug(f"Queued message scan job for message {message.id} in channel {message.channel.id}")
+        logger.debug(f"Added message {message.id} to batch for channel {message.channel.id}")
     
     async def handle_message_deletion(self, guild_id: str, channel_id: str, message_id: str):
         """
         Handle a message deletion from Discord.
-        Creates a MessageDeletionJob for worker to clean up database and storage.
+        First checks if message is in MessageBatcher and removes it if found.
+        If not in batch, creates a MessageDeletionJob for worker to clean up database and storage.
         
         Args:
             guild_id: Discord guild snowflake
             channel_id: Discord channel snowflake
             message_id: Discord message snowflake
         """
+        # First, try to remove from MessageBatcher if it's pending
+        from .message_batcher import get_message_batcher
+        message_batcher = get_message_batcher()
+        
+        # Convert string IDs to integers for MessageBatcher
+        guild_id_int = int(guild_id)
+        channel_id_int = int(channel_id)
+        message_id_int = int(message_id)
+        
+        # Try to remove from batch - if successful, no need to run deletion job
+        if message_batcher.remove_message_from_batch(guild_id_int, channel_id_int, message_id_int):
+            logger.info(f"Removed message {message_id} from batch instead of running deletion job")
+            return
+        
+        # Message wasn't in batch, proceed with normal deletion job
         if not self.redis_client:
             logger.warning("Redis client not configured, cannot handle message deletion")
             return
