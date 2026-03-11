@@ -31,9 +31,6 @@ export function ChannelRow({ channel, simpleView, checked }: ChannelRowProps) {
 	const hitRate = getHitRate(channel);
 	const isEnabled = channel.message_scan_enabled;
 
-	const forwardId = channel.scanStatus?.forward_message_id;
-	const backwardId = channel.scanStatus?.backward_message_id;
-
 	return (
 		<div
 			className={`overflow-hidden rounded-md border ${checked ? "border-primary/40 bg-primary/5" : "border-border/50 bg-card"}`}
