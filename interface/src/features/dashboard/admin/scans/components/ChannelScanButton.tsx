@@ -8,14 +8,14 @@ import {
 	DropdownMenuSeparator,
 	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { ScanText, InfoIcon } from "lucide-react";
+import { ScanText, InfoIcon, X } from "lucide-react";
 import type { ChannelWithStatus } from "../types";
 import {
 	Popover,
 	PopoverContent,
 	PopoverTrigger,
 } from "@/components/ui/popover";
-import { useStartCustomScan } from "@/lib/hooks/useScans";
+import { useStartCustomScan, useCancelScan } from "@/lib/hooks/useScans";
 import { useState } from "react";
 import { StartScanOptions } from "@/lib/api/scan";
 import { toast } from "sonner";
@@ -24,6 +24,7 @@ import type { DefaultChannelSettings } from "@/lib/schema/guild-settings.schema"
 
 export function ChannelScanButton({ channel }: { channel: ChannelWithStatus }) {
 	const { isPending, start } = useStartCustomScan(channel.guild_id);
+	const cancelScanMutation = useCancelScan(channel.guild_id);
 	const { data: guildSettings } = useGuildSettings(channel.guild_id);
 
 	// Get limit from settings or default to 1000, capped at 10000
@@ -52,15 +53,45 @@ export function ChannelScanButton({ channel }: { channel: ChannelWithStatus }) {
 		});
 	};
 
-	const isDisabled =
-		!channel.message_scan_enabled ||
-		isPending ||
+	const handleCancel = () => {
+		cancelScanMutation.mutate(
+			{ channelId: channel.id },
+			{
+				onSuccess: () => {
+					toast("Scan cancelled successfully");
+				},
+				onError: (err) => {
+					toast("Failed to cancel scan: " + err);
+				},
+			}
+		);
+	};
+
+	const isDisabled = !channel.message_scan_enabled || isPending;
+
+	const isScanning =
 		channel.scanStatus?.status === "RUNNING" ||
 		channel.scanStatus?.status === "QUEUED";
 
 	const title = !channel.message_scan_enabled
 		? "Enable scanning in Overview tab first"
 		: "";
+
+	// Show cancel button if scan is running/queued, otherwise show scan dropdown
+	if (isScanning) {
+		return (
+			<button
+				type="button"
+				className="hover:bg-destructive/10 text-destructive hover:text-destructive/80 border-destructive/20 flex h-9 w-fit cursor-pointer items-center gap-2 rounded-sm border p-1 px-3"
+				onClick={handleCancel}
+				disabled={cancelScanMutation.isPending}
+				title="Stop running scan"
+			>
+				<X className="h-4 w-4" />
+				<span className="text-sm">Stop</span>
+			</button>
+		);
+	}
 
 	return (
 		<DropdownMenu>

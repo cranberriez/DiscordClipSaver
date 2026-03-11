@@ -165,6 +165,11 @@ class JobProcessor:
             # Get or create scan status
             scan_status = await get_or_create_scan_status(guild_id, channel_id)
             
+            # Check if scan has been cancelled before starting work
+            if scan_status.status == ScanStatus.CANCELLED:
+                logger.info(f"Scan for channel {channel_id} was cancelled, stopping processing")
+                return
+            
             # Validate guild and channel scan enabled flags
             is_enabled, error_message = await self.validate_scan_enabled(guild_id, channel_id)
             
@@ -290,6 +295,12 @@ class JobProcessor:
                             stopped_on_duplicate = True
                             logger.warning(f"Unknown rescan mode '{rescan}', defaulting to STOP behavior")
             
+            # Check for cancellation before processing messages
+            scan_status = await get_or_create_scan_status(guild_id, channel_id)
+            if scan_status.status == ScanStatus.CANCELLED:
+                logger.info(f"Scan for channel {channel_id} was cancelled during processing, stopping")
+                return
+
             # Process messages in batch for better performance
             total_clips, thumbnails_generated = await self.batch_processor.process_messages_batch(
                 messages=messages_to_process,
@@ -364,6 +375,12 @@ class JobProcessor:
             
             # Queue continuation job if needed and allowed
             if continuation_needed and auto_continue and self.redis_client:
+                # Check for cancellation before queueing continuation job
+                scan_status = await get_or_create_scan_status(guild_id, channel_id)
+                if scan_status.status == ScanStatus.CANCELLED:
+                    logger.info(f"Scan for channel {channel_id} was cancelled, not queueing continuation job")
+                    return
+                
                 logger.info(f"Queueing continuation job for channel {channel_id} (direction: {direction})")
                 
                 continuation_job = BatchScanJob(

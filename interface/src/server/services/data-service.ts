@@ -132,6 +132,29 @@ export class DataService {
 		return ScanMapper.toScanStatus(scanStatus);
 	}
 
+	static async cancelChannelScan(guildId: string, channelId: string) {
+		const cancelledScan = await db.updateChannelScanStatus(
+			guildId,
+			channelId,
+			{
+				status: "CANCELLED",
+				error_message: "Scan cancelled by user",
+			}
+		);
+
+		if (!cancelledScan) {
+			console.error(
+				"Failed to cancel scan, guildId: " +
+					guildId +
+					", channelId: " +
+					channelId
+			);
+			return undefined;
+		}
+
+		return ScanMapper.toScanStatus(cancelledScan);
+	}
+
 	// Clips - Using clips-v2 architecture
 	static async getClipsByGuildId(
 		guildId: string,

@@ -46,7 +46,7 @@ export function ScanStatusTable({ channels, onRefresh }: ScanStatusTableProps) {
 
 					return (
 						<React.Fragment key={type}>
-							<div className="flex items-center gap-2 py-2 pl-1">
+							<div className="flex min-h-12 items-center gap-2 py-2 pl-1">
 								<ChannelTypeHeader type={type} />
 								<span className="text-muted-foreground/50 text-xs">
 									{typeTotal}

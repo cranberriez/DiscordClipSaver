@@ -110,3 +110,35 @@ export async function startBulkScan(
 
 	return response;
 }
+
+/**
+ * Cancel a scan for a specific channel
+ */
+export async function cancelScan(
+	guildId: string,
+	channelId: string
+): Promise<{ success: boolean; scan?: ScanStatus; error?: string }> {
+	try {
+		const response = await fetch(`/api/guilds/${guildId}/scans/cancel`, {
+			method: "POST",
+			headers: {
+				"Content-Type": "application/json",
+			},
+			body: JSON.stringify({ channelId }),
+		});
+
+		if (!response.ok) {
+			const errorData = await response.json();
+			return {
+				success: false,
+				error: errorData.error || "Failed to cancel scan",
+			};
+		}
+
+		const data = await response.json();
+		return { success: true, scan: data.scan };
+	} catch (error) {
+		console.error("Cancel scan error:", error);
+		return { success: false, error: "Network error" };
+	}
+}

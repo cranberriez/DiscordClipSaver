@@ -44,6 +44,7 @@ export type { ClipQueryOptions, ClipQueryFilters } from "./queries/clips";
 export {
 	getChannelScanStatus,
 	getGuildScanStatuses,
+	updateChannelScanStatus,
 } from "./queries/scan_status";
 export {
 	getAuthorStatsByGuildId,

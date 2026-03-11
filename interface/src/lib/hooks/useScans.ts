@@ -11,6 +11,7 @@ import {
 import {
 	startSingleScan,
 	startBulkScan,
+	cancelScan,
 	type StartScanOptions,
 	MultiScanResult,
 	ScanResult,
@@ -253,4 +254,59 @@ export function useStartCustomScan(guildId: string) {
 	}
 
 	return { start, isPending: startScanMutation.isPending };
+}
+
+/**
+ * Hook to cancel a scan for a specific channel
+ */
+export function useCancelScan(guildId: string) {
+	const qc = useQueryClient();
+
+	return useMutation({
+		mutationFn: async ({ channelId }: { channelId: string }) => {
+			const result = await cancelScan(guildId, channelId);
+			if (!result.success) {
+				throw new Error(result.error || "Failed to cancel scan");
+			}
+			return result.scan;
+		},
+
+		onMutate: async ({ channelId }) => {
+			// Cancel any outgoing refetches
+			await qc.cancelQueries({ queryKey: scanKeys.statuses(guildId) });
+
+			// Optimistically update the scan status to CANCELLED
+			const prev = qc.getQueryData(scanKeys.statuses(guildId));
+			qc.setQueryData(scanKeys.statuses(guildId), (old: any) => {
+				if (!old) return old;
+				return old.map((status: any) =>
+					status.channel_id === channelId
+						? {
+								...status,
+								status: "CANCELLED",
+								error_message: "Scan cancelled by user",
+							}
+						: status
+				);
+			});
+
+			return { prev };
+		},
+
+		onError: (_err, _payload, ctx) => {
+			console.error("Failed to cancel scan:", _err);
+
+			// Roll back optimistic update
+			if (ctx?.prev) {
+				qc.setQueryData(scanKeys.statuses(guildId), ctx.prev);
+			}
+		},
+
+		onSettled: () => {
+			// Revalidate canonical data
+			qc.invalidateQueries({
+				queryKey: scanKeys.statuses(guildId),
+			});
+		},
+	});
 }
