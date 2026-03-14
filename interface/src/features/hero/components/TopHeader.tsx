@@ -14,7 +14,7 @@ export function TopHeader() {
 						<p className="text-muted-foreground mx-auto max-w-2xl text-[17px] leading-relaxed">
 							Guild Moments uses a bot to automatically collect
 							clips posted in your server and makes them
-							searchable by game, channel, author, and date.
+							searchable by channel, author, date, and more.
 						</p>
 					</div>
 				</div>
