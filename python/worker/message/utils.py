@@ -5,7 +5,7 @@ import hashlib
 import json
 import urllib.parse
 from datetime import datetime, timedelta, timezone
-from shared.settings_resolver import ResolvedSettings
+# Settings are now passed as dictionary from centralized loader
 
 
 def generate_clip_id(message_id: str, channel_id: str, filename: str, timestamp: datetime) -> str:
@@ -80,21 +80,22 @@ def guess_mime_type(filename: str) -> str:
     return mime_types.get(ext, 'video/mp4')
 
 
-def compute_settings_hash(settings: ResolvedSettings) -> str:
+def compute_settings_hash(settings: dict) -> str:
     """
     Compute MD5 hash of settings for comparison.
     
     Used to detect when settings have changed and thumbnails need regeneration.
     
     Args:
-        settings: Resolved settings object
+        settings: Settings dictionary from centralized loader
         
     Returns:
-        32-character hex string (MD5 hash)
+        MD5 hash string
     """
-    return hashlib.md5(
-        json.dumps(settings.to_dict(), sort_keys=True).encode()
-    ).hexdigest()
+    # Sort keys for consistent hash
+    settings_json = json.dumps(settings, sort_keys=True)
+    
+    return hashlib.md5(settings_json.encode()).hexdigest()
 
 
 def get_mime_type(attachment, filename: str) -> str:

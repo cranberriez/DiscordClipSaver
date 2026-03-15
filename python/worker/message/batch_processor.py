@@ -4,7 +4,7 @@ Batch message processor for efficient processing of multiple messages
 import logging
 from typing import List, Optional
 import discord
-from shared.settings_resolver import get_channel_settings
+from shared.settings import settings
 from worker.message.batch_context import BatchContext
 from worker.message.batch_operations import BatchDatabaseOperations
 from worker.discord.bot import WorkerBot
@@ -57,14 +57,14 @@ class BatchMessageProcessor:
         
         logger.info(f"Starting batch processing of {len(messages)} messages")
         
-        # Fetch settings and initialize context
-        settings = await get_channel_settings(guild_id, channel_id)
+        # Get static settings from centralized loader (no database query needed)
+        channel_settings = settings.get_all_channel_settings()
         context = self._initialize_context(
-            guild_id, channel_id, settings, existing_author_ids, is_update_scan
+            guild_id, channel_id, channel_settings, existing_author_ids, is_update_scan
         )
         
         # Pre-filter and extract clip metadata
-        clip_map = build_clip_id_map(messages, channel_id, settings)
+        clip_map = build_clip_id_map(messages, channel_id, channel_settings)
         clip_ids = get_all_clip_ids(clip_map)
         
         # Load existing clips in bulk

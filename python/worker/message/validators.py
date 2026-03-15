@@ -4,7 +4,7 @@ Validators for message and attachment filtering
 import re
 from typing import List, Optional
 import discord
-from shared.settings_resolver import ResolvedSettings
+# Settings are now passed as dictionary from centralized loader
 
 
 def has_attachments(message: discord.Message) -> bool:
@@ -78,18 +78,19 @@ def filter_video_attachments(
     ]
 
 
-def should_process_message(message: discord.Message, settings: ResolvedSettings) -> bool:
+def should_process_message(message: discord.Message, settings: dict) -> bool:
     """
     Determine if a message should be processed based on settings.
     
     Checks:
     - Has attachments
-    - Matches regex filter (if configured)
+    - Matches include regex filter (if configured)
+    - Does not match exclude regex filter (if configured)
     - Has at least one video attachment
     
     Args:
         message: Discord message
-        settings: Resolved settings
+        settings: Settings dictionary from centralized loader
         
     Returns:
         True if message should be processed
@@ -98,14 +99,23 @@ def should_process_message(message: discord.Message, settings: ResolvedSettings)
     if not has_attachments(message):
         return False
     
-    # Must match regex filter (if configured)
-    if not matches_regex_filter(message, settings.match_regex):
-        return False
+    # Check include regex filter
+    include_regex = settings.get('text_include_regex')
+    if include_regex:
+        if not matches_regex_filter(message, include_regex):
+            return False
+    
+    # Check exclude regex filter
+    exclude_regex = settings.get('text_exclude_regex')
+    if exclude_regex:
+        if matches_regex_filter(message, exclude_regex):
+            return False
     
     # Must have at least one video attachment
+    allowed_mime_types = settings.get('mime_allowlist', ['video/mp4', 'video/quicktime', 'video/webm'])
     video_attachments = filter_video_attachments(
         message.attachments,
-        settings.allowed_mime_types
+        allowed_mime_types
     )
     
     return len(video_attachments) > 0

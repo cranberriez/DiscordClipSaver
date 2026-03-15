@@ -15,6 +15,7 @@ from bot.services.message_batcher import get_message_batcher
 
 from shared.db.utils import init_db, close_db
 from shared.redis.redis_client import RedisStreamClient
+from shared.settings_loader import initialize_settings
 
 logger = logging.getLogger(__name__)
 
@@ -22,6 +23,9 @@ load_dotenv()
 
 # ----- Run both: API server + Discord bot -----
 async def main():
+    # Initialize settings first (must be done before anything else)
+    initialize_settings()
+    
     # Initialize database (async)
     await init_db(generate_schemas=True)
     

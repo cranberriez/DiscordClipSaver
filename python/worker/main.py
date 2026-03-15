@@ -11,6 +11,7 @@ from worker.discord.bot import WorkerBot
 from shared.redis.redis_client import RedisStreamClient, RedisUnavailableError
 from worker.processor import JobProcessor
 from worker.logger import logger  # Centralized logger setup
+from shared.settings_loader import initialize_settings
 
 # Load environment variables
 load_dotenv()
@@ -46,6 +47,9 @@ class Worker:
     
     async def initialize(self):
         """Initialize database and Redis."""
+        # Initialize settings first (must be done before anything else)
+        initialize_settings()
+        
         await init_db()
         try:
             await self.redis.connect()

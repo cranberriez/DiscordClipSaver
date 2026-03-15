@@ -156,7 +156,7 @@ class JobProcessor:
         limit = job_data.get("limit", 100)
         before_message_id = job_data.get("before_message_id")
         after_message_id = job_data.get("after_message_id")
-        auto_continue = job_data.get("auto_continue", True)
+        auto_continue = job_data.get("auto_continue", False)
         rescan = job_data.get("rescan", "stop")  # "stop", "continue", or "update"
         
         logger.info(f"Processing batch scan: channel={channel_id}, direction={direction}, limit={limit}, rescan={rescan}, continue={auto_continue}")

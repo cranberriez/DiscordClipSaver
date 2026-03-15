@@ -5,7 +5,7 @@ import logging
 from typing import Optional
 import discord
 from shared.db.models import Message, Clip, Author
-from shared.settings_resolver import get_channel_settings
+from shared.settings import settings
 from worker.thumbnail.thumbnail_handler import ThumbnailHandler
 from worker.message.utils import compute_settings_hash
 from worker.message.validators import should_process_message, filter_video_attachments
@@ -38,18 +38,18 @@ class MessageHandler:
         Returns:
             Number of clips found and processed
         """
-        # Fetch settings
-        settings = await get_channel_settings(guild_id, channel_id)
+        # Get static settings from centralized loader (no database query needed)
+        channel_settings = settings.get_all_channel_settings()
         
         # Validate message should be processed
-        if not should_process_message(discord_message, settings):
+        if not should_process_message(discord_message, channel_settings):
             return 0
         
         # Process video attachments
-        settings_hash = compute_settings_hash(settings)
+        settings_hash = compute_settings_hash(channel_settings)
         video_attachments = filter_video_attachments(
             discord_message.attachments,
-            settings.allowed_mime_types
+            channel_settings.get('mime_allowlist', ['video/mp4', 'video/quicktime', 'video/webm'])
         )
         
         # Only process author and message if there are video attachments
@@ -58,7 +58,7 @@ class MessageHandler:
         
         # Upsert author and message (only for messages with clips)
         await self._upsert_author(discord_message.author, guild_id)
-        await self._upsert_message(discord_message, channel_id, guild_id, settings)
+        await self._upsert_message(discord_message, channel_id, guild_id, channel_settings)
         
         clips_processed = 0
         for attachment in video_attachments:
@@ -102,7 +102,7 @@ class MessageHandler:
         discord_message: discord.Message,
         channel_id: str,
         guild_id: str,
-        settings
+        channel_settings: dict
     ) -> None:
         """Create or update message record"""
         message_data = {
@@ -112,7 +112,7 @@ class MessageHandler:
             "timestamp": discord_message.created_at,
             "content": (
                 discord_message.content or ""
-                if settings.enable_message_content_storage
+                if channel_settings.get('enable_message_content_storage', True)
                 else ""
             )
         }
