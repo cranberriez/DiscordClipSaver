@@ -2,6 +2,7 @@
 
 import { Navbar } from "../composite/navbar";
 import { useEffect, useState } from "react";
+import { AnnouncementBar } from "./AnnouncementBar";
 
 export function HeroNavScrollContainer() {
 	const [hasScrolled, setHasScrolled] = useState(false);
@@ -16,7 +17,8 @@ export function HeroNavScrollContainer() {
 	}, []);
 
 	return (
-		<div className="sticky top-0 z-99">
+		<div className="sticky top-0 z-99 flex flex-col">
+			<AnnouncementBar />
 			<Navbar
 				containerClassName="mt-2 py-0!"
 				className={`rounded-full bg-transparent transition-all duration-400 ${
