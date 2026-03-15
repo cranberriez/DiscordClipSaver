@@ -489,12 +489,14 @@ class JobProcessor:
                 # Get current forward_message_id to compare
                 scan_status = await get_or_create_scan_status(guild_id, channel_id)
                 current_forward_id = scan_status.forward_message_id
+                new_message_count = scan_status.message_count + total_clips
                 
                 # Only update if this message is newer than what we have
                 if not current_forward_id or int(newest_message_id) > int(current_forward_id):
                     await update_scan_status(
                         guild_id=guild_id,
                         channel_id=channel_id,
+                        message_count=new_message_count,
                         forward_message_id=newest_message_id
                     )
                     logger.debug(f"Updated forward_message_id to {newest_message_id} for channel {channel_id}")
