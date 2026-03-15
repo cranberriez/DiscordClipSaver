@@ -22,6 +22,7 @@ from shared.db.repositories.channel_scan_status import (
 from shared.db.repositories.authors import get_author_ids_by_guild_id
 from shared.redis.redis_client import RedisStreamClient
 from shared.redis.redis import BatchScanJob
+from shared.settings import settings
 
 logger = logging.getLogger(__name__)
 
@@ -152,8 +153,8 @@ class JobProcessor:
         """
         channel_id = job_data["channel_id"]
         guild_id = job_data["guild_id"]
-        direction = job_data.get("direction", "backward")
-        limit = job_data.get("limit", 100)
+        direction = job_data.get("direction", settings.get_default_scan_direction())
+        limit = job_data.get("limit", settings.get_default_batch_limit())
         before_message_id = job_data.get("before_message_id")
         after_message_id = job_data.get("after_message_id")
         auto_continue = job_data.get("auto_continue", False)

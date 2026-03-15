@@ -16,7 +16,7 @@ Usage:
 import os
 from pathlib import Path
 from typing import Dict, Any, Optional
-from bot.lib.jsonc_loader import load_jsonc
+from shared.jsonc_loader import load_jsonc
 
 
 class SettingsLoader:

@@ -78,9 +78,10 @@ def extract_clips_from_message(
         List of ClipInfo objects
     """
     # Filter to video attachments only
+    allowed_mime_types = settings.get('mime_allowlist', ['video/mp4', 'video/quicktime', 'video/webm'])
     video_attachments = filter_video_attachments(
         message.attachments,
-        settings.allowed_mime_types
+        allowed_mime_types
     )
     
     # Extract clip info for each video attachment

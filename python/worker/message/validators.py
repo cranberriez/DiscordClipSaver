@@ -54,7 +54,8 @@ def is_video_attachment(attachment: discord.Attachment, allowed_mime_types: List
     # 1. content_type is None (very old messages)
     # 2. content_type is "application/octet-stream" (generic binary)
     filename = attachment.filename.lower()
-    video_extensions = {'.mp4', '.mov', '.webm', '.avi', '.mkv', '.flv', '.wmv'}
+    from shared.settings import settings
+    video_extensions = settings.get_video_extensions()
     return any(filename.endswith(ext) for ext in video_extensions)
 
 

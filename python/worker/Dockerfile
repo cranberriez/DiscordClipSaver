@@ -16,6 +16,9 @@ RUN pip install --no-cache-dir -r /app/requirements.txt
 COPY python/worker/ /app/worker/
 COPY python/shared/ /app/shared/
 
+# Copy settings file from project root
+COPY settings.default.jsonc /app/settings.default.jsonc
+
 # Optional: ensure import path
 ENV PYTHONPATH=/app
 

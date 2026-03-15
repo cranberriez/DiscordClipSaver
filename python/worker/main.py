@@ -12,6 +12,7 @@ from shared.redis.redis_client import RedisStreamClient, RedisUnavailableError
 from worker.processor import JobProcessor
 from worker.logger import logger  # Centralized logger setup
 from shared.settings_loader import initialize_settings
+from shared.settings import settings
 
 # Load environment variables
 load_dotenv()
@@ -59,14 +60,14 @@ class Worker:
         logger.info("Worker components initialized successfully")
 
         # Start database health check loop
-        health_check_interval = int(os.getenv("DB_HEALTH_CHECK_INTERVAL", "60"))
+        health_check_interval = settings.get_db_health_check_interval_seconds()
         self.health_check_task = asyncio.create_task(
             start_health_check_loop(interval_seconds=health_check_interval)
         )
         
         # Start stale scan cleanup loop
-        stale_scan_interval = int(os.getenv("STALE_SCAN_CLEANUP_INTERVAL", "300"))  # 5 minutes default
-        stale_scan_timeout = int(os.getenv("STALE_SCAN_TIMEOUT_MINUTES", "30"))  # 30 minutes default
+        stale_scan_interval = settings.get_stale_scan_cleanup_interval_seconds()
+        stale_scan_timeout = settings.get_stale_scan_timeout_minutes()
         self.stale_scan_cleanup_task = asyncio.create_task(
             self.stale_scan_cleanup_loop(
                 interval_seconds=stale_scan_interval,
@@ -75,8 +76,8 @@ class Worker:
         )
         
         # Start stale thumbnail cleanup loop
-        stale_thumb_interval = int(os.getenv("STALE_THUMBNAIL_CLEANUP_INTERVAL", "3600"))  # 1 hour default
-        stale_thumb_timeout = int(os.getenv("STALE_THUMBNAIL_TIMEOUT_MINUTES", "60"))  # 60 minutes default
+        stale_thumb_interval = settings.get_stale_thumbnail_cleanup_interval_seconds()
+        stale_thumb_timeout = settings.get_stale_thumbnail_timeout_minutes()
         self.stale_thumbnail_cleanup_task = asyncio.create_task(
             self.stale_thumbnail_cleanup_loop(
                 interval_seconds=stale_thumb_interval,
@@ -186,13 +187,14 @@ class Worker:
         logger.info("Starting job processing loop...")
         self.running = True
         
-        # Job batch size (configurable via env var)
-        job_batch_size = int(os.getenv("WORKER_JOB_BATCH_SIZE", "10"))
+        # Job batch size from centralized settings
+        job_batch_size = settings.get_job_batch_size()
         
         while self.running:
             try:
-                # Read jobs from Redis stream (blocks for 5 seconds)
-                jobs = await self.redis.read_jobs(count=job_batch_size, block=5000)
+                # Read jobs from Redis stream (blocks for configured timeout)
+                block_timeout = settings.get_redis_block_timeout_ms()
+                jobs = await self.redis.read_jobs(count=job_batch_size, block=block_timeout)
                 
                 if not jobs:
                     # No jobs available, continue loop
@@ -271,10 +273,11 @@ class Worker:
             logger.info("Waiting for bot to come online...")
             # Wait for bot with timeout to detect connection issues
             try:
-                await asyncio.wait_for(self.bot.ready_event.wait(), timeout=30.0)
+                bot_timeout = settings.get_bot_ready_timeout_seconds()
+                await asyncio.wait_for(self.bot.ready_event.wait(), timeout=bot_timeout)
                 logger.info("Bot is online, starting job processing.")
             except asyncio.TimeoutError:
-                logger.error("Bot failed to come online within 30 seconds!")
+                logger.error(f"Bot failed to come online within {bot_timeout} seconds!")
                 raise
 
             # Start job processing loop

@@ -4,7 +4,7 @@ from pathlib import Path
 from typing import Any
 import os
 
-from bot.lib.jsonc_loader import load_jsonc
+from shared.jsonc_loader import load_jsonc
 
 
 class SettingsService:
