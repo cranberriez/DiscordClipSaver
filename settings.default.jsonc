@@ -101,7 +101,7 @@
 
     "user_facing_settings_defaults": {
         "default_visibility": "unlisted",
-        "ignore_nsfw_channels": true,
+        "ignore_nsfw_channels": false,
         "auto_archive_after": {
             "unit": "never",
             "count": 0

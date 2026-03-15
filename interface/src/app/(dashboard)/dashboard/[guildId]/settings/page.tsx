@@ -1,4 +1,4 @@
-import DynamicSettingsForm from "@/features/dashboard/admin/settings/components/DynamicSettingsForm";
+import GuildUserSettingsForm from "@/features/dashboard/admin/settings/components/GuildUserSettingsForm";
 import { DangerZone } from "@/features/dashboard/admin/settings/components/DangerZone";
 import { DataService } from "@/server/services/data-service";
 import { redirect } from "next/navigation";
@@ -19,7 +19,7 @@ export default async function SettingsPage({ params }: PageProps) {
 
 	return (
 		<div className="space-y-8">
-			<DynamicSettingsForm guildId={guildId} />
+			<GuildUserSettingsForm guildId={guildId} />
 
 			{/* Only show danger zone if guild is not already deleted */}
 			{!guild.deleted_at && (
