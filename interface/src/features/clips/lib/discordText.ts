@@ -1,3 +1,5 @@
+import { formatClipName } from "./formatClipName";
+
 export function stripDiscordMentions(input: string): string {
 	// Remove user mentions: <@123>, <@!123>
 	let out = input.replace(/<@!?\d+>/g, "");
@@ -15,8 +17,11 @@ export function stripDiscordMentions(input: string): string {
 export function messageTitleOrFilename(
 	messageContent: string | undefined | null,
 	fallbackFilename: string,
-	titleOverride?: string | null
+	titleOverride?: string | null,
+	isSpoiler?: boolean
 ): string {
+	// if clips is a spoiler strip "SPOILER " from beginning of final output
+
 	if (titleOverride && titleOverride.trim().length > 0) {
 		return titleOverride.trim();
 	}
@@ -24,5 +29,9 @@ export function messageTitleOrFilename(
 		const cleaned = stripDiscordMentions(messageContent);
 		if (cleaned.length > 0) return cleaned;
 	}
-	return fallbackFilename;
+
+	const filename = isSpoiler
+		? fallbackFilename.replace("SPOILER_", "")
+		: fallbackFilename;
+	return formatClipName(filename);
 }

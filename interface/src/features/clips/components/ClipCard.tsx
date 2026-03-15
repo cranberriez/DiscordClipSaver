@@ -2,27 +2,20 @@
 
 import type { FullClip } from "@/lib/api/clip";
 import type { AuthorWithStats } from "@/lib/api/author";
-import { formatClipName } from "../lib/formatClipName";
 import { formatDuration, formatRelativeTime } from "@/lib/utils/time-helpers";
 import { UserAvatar } from "@/components/core/UserAvatar";
-import {
-	Heart,
-	Play,
-	Loader2,
-	AlertCircle,
-	Lock,
-	Link as LinkIcon,
-	Archive,
-} from "lucide-react";
+import { Heart, Play, Loader2, AlertCircle } from "lucide-react";
 import Image from "next/image";
 import { messageTitleOrFilename } from "@/features/clips/lib/discordText";
 import { parseIsoTimestamp } from "@/lib/utils/time-helpers";
 import { Thumbnail } from "@/lib/api/clip";
 import { ClipOptionsDropdown } from "./ClipOptionsDropdown";
 import { useToggleFavorite } from "@/lib/hooks/useFavorites";
+import { useChannel } from "@/lib/hooks/useChannels";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { TagManager } from "@/features/clips/components/tags/TagManager";
+import { ClipCardBadges } from "./clip-card-badges/ClipCardBadges";
 
 interface ClipCardProps {
 	clip: FullClip;
@@ -63,11 +56,18 @@ export function ClipCard({
 	const thumbnailUrl = getThumbnailUrl();
 	const { clip: clipData, message } = clip;
 	const author = authorMap?.get(message.author_id);
+	const { data: channel } = useChannel(
+		clipData.guild_id,
+		clipData.channel_id
+	);
 
+	const isNSFW = channel?.nsfw || false;
+	const isSpoiler = clipData.filename.startsWith("SPOILER_");
 	const vidTitle = messageTitleOrFilename(
 		message?.content,
-		formatClipName(clipData.filename),
-		clipData.title
+		clipData.filename,
+		clipData.title,
+		isSpoiler
 	);
 
 	const showThumbnail = thumbnailUrl;
@@ -122,6 +122,16 @@ export function ClipCard({
 							height={360}
 							unoptimized
 						/>
+
+						{/* Spoiler cover */}
+						{isSpoiler && (
+							<div className="absolute inset-0 flex items-center justify-center bg-black/60 opacity-100 backdrop-blur-2xl transition-opacity group-hover:backdrop-blur-xs">
+								<div className="bg-muted rounded-lg p-1 px-3 font-mono text-xs font-semibold opacity-100 transition-opacity group-hover:opacity-0">
+									SPOILER
+								</div>
+							</div>
+						)}
+
 						{/* Play button overlay on hover */}
 						<div className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 transition-opacity group-hover:opacity-100">
 							<div className="rounded-full bg-white/90 p-4">
@@ -151,23 +161,11 @@ export function ClipCard({
 					</div>
 				)}
 
-				{/* Visibility & Archive Badges */}
-				{isArchived ? (
-					<div className="pointer-events-none absolute top-2 left-2 flex items-center gap-1 rounded bg-black/75 px-2 py-1 text-xs text-white">
-						<Archive className="h-3 w-3" />
-						<span className="font-medium">Archived</span>
-					</div>
-				) : visibility === "PRIVATE" ? (
-					<div className="pointer-events-none absolute top-2 left-2 flex items-center gap-1 rounded bg-black/75 px-2 py-1 text-xs text-white">
-						<Lock className="h-3 w-3" />
-						<span className="font-medium">Private</span>
-					</div>
-				) : visibility === "UNLISTED" ? (
-					<div className="pointer-events-none absolute top-2 left-2 flex items-center gap-1 rounded bg-black/75 px-2 py-1 text-xs text-white">
-						<LinkIcon className="h-3 w-3" />
-						<span className="font-medium">Unlisted</span>
-					</div>
-				) : null}
+				<ClipCardBadges
+					isArchived={isArchived}
+					visibility={visibility}
+					isNSFW={isNSFW}
+				/>
 
 				{/* Duration overlay */}
 				{clipData.duration > 0 && (
@@ -183,7 +181,7 @@ export function ClipCard({
 				<div className="flex items-center justify-between gap-1">
 					<p
 						className="line-clamp-1 flex-1 overflow-hidden text-sm font-semibold"
-						title={clipData.filename}
+						title={vidTitle}
 					>
 						{vidTitle}
 					</p>

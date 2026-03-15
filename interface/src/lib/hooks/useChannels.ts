@@ -42,6 +42,19 @@ export function useChannels(guildId: string) {
 }
 
 /**
+ * Fetch a specific channel from the cached guild channels.
+ *
+ * @param guildId - The guild ID
+ * @param channelId - The channel ID
+ */
+export function useChannel(guildId: string, channelId: string) {
+	return useQuery({
+		...guildChannelsQuery(guildId),
+		select: (channels) => channels.find((c) => c.id === channelId),
+	});
+}
+
+/**
  * Fetch channel statistics (with clip counts) for a guild.
  *
  * Useful for analytics, dashboards, purge operations, etc.
