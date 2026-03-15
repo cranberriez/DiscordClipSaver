@@ -135,7 +135,6 @@ export function InitialScan({
 					channelIds,
 					options: {
 						isUpdate: false, // Start from newest message
-						limit: 500, // Higher limit for initial scan
 						autoContinue: false, // Don't auto-continue
 						rescan: "stop", // Stop on duplicates
 					},
@@ -286,7 +285,6 @@ export function InitialScan({
 				channelIds: failedChannels,
 				options: {
 					isUpdate: false,
-					limit: 500,
 					autoContinue: false,
 					rescan: "stop",
 				},
