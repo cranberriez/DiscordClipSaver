@@ -1,7 +1,7 @@
 FROM node:24-alpine@sha256:7a4ef576a570dad463c2e9744e6df118c9c2a3a03a9219122a9dc834e7c8049a AS builder
 WORKDIR /app
 COPY interface/package*.json ./
-COPY interface/node_modules ./node_modules
+RUN npm ci
 COPY interface/ .
 RUN npm run build
 
