@@ -222,7 +222,7 @@ export function ClipCard({
 				</div>
 
 				{/* Tags (Read Only) */}
-				<div className="mb-1">
+				<div>
 					<TagManager
 						clipId={clipData.id}
 						guildId={clipData.guild_id}
