@@ -4,7 +4,6 @@ import {
 	ChannelMapper,
 	ClipMapper,
 	ScanMapper,
-	SettingsMapper,
 	AuthorMapper,
 } from "../mappers";
 
@@ -349,10 +348,10 @@ export class DataService {
 		const settings = await db.getGuildSettings(guildId);
 
 		if (!settings) {
-			console.error("Settings not found, guildId: " + guildId);
 			return undefined;
 		}
 
-		return SettingsMapper.toGuildSettings(settings);
+		// Return raw DB type - user-settings route extracts what it needs
+		return settings;
 	}
 }

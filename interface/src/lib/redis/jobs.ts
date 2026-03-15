@@ -90,7 +90,6 @@ export async function startBatchScan(params: {
 	guildId: string;
 	channelId: string;
 	direction?: "forward" | "backward";
-	limit?: number;
 	beforeMessageId?: string;
 	afterMessageId?: string;
 	autoContinue?: boolean;
@@ -100,7 +99,6 @@ export async function startBatchScan(params: {
 		guildId,
 		channelId,
 		direction = "backward",
-		limit = 100,
 		beforeMessageId = null,
 		afterMessageId = null,
 		autoContinue = true,
@@ -113,7 +111,6 @@ export async function startBatchScan(params: {
 		channel_id: channelId,
 		type: "batch",
 		direction,
-		limit,
 		before_message_id: beforeMessageId ?? null,
 		after_message_id: afterMessageId ?? null,
 		auto_continue: autoContinue,

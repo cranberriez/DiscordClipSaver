@@ -56,7 +56,6 @@ export async function POST(
 		isUpdate = false,
 		isHistorical = false,
 		isBackfill = false,
-		limit = 100,
 		autoContinue = true,
 		rescan = "stop",
 	} = body;
@@ -68,9 +67,6 @@ export async function POST(
 			{ status: 400 }
 		);
 	}
-
-	// Enforce limit cap
-	const actualLimit = Math.min(Math.max(1, limit), 10000);
 
 	// Validate rescan mode
 	if (!["stop", "continue", "update"].includes(rescan)) {
@@ -212,7 +208,6 @@ export async function POST(
 					guildId,
 					channelId,
 					direction,
-					limit: actualLimit,
 					afterMessageId,
 					beforeMessageId,
 					autoContinue,

@@ -15,7 +15,6 @@ export type RescanMode = "stop" | "continue" | "update";
 export interface BatchScanJob extends BaseJob {
 	type: "batch";
 	direction: "forward" | "backward";
-	limit: number;
 	before_message_id?: string | null;
 	after_message_id?: string | null;
 	auto_continue: boolean;

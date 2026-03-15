@@ -13,8 +13,7 @@ import {
 	startBulkScan,
 	cancelScan,
 	type StartScanOptions,
-	MultiScanResult,
-	ScanResult,
+	type ScanResult,
 } from "../api/scan";
 
 // ============================================================================
@@ -228,7 +227,6 @@ export function useStartCustomScan(guildId: string) {
 	const DEFAULTS: StartScanOptions = {
 		isUpdate: true,
 		isHistorical: false,
-		limit: 1000,
 		autoContinue: true,
 		rescan: "stop",
 	};

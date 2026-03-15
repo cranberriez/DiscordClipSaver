@@ -35,23 +35,29 @@ export async function GET(
 	try {
 		// Get guild settings from database
 		const guildSettings = await DataService.getGuildSettings(guildId);
+		const settings = (guildSettings?.settings ?? {}) as Record<
+			string,
+			unknown
+		>;
 
 		// Extract only user-facing settings, merge with defaults
 		const userSettings = {
 			default_visibility:
-				guildSettings?.settings?.default_visibility ??
+				(settings.default_visibility as string | undefined) ??
 				defaultUserSettings.default_visibility,
 			ignore_nsfw_channels:
-				guildSettings?.settings?.ignore_nsfw_channels ??
+				(settings.ignore_nsfw_channels as boolean | undefined) ??
 				defaultUserSettings.ignore_nsfw_channels,
 			auto_archive_after:
-				guildSettings?.settings?.auto_archive_after ??
+				(settings.auto_archive_after as number | undefined) ??
 				defaultUserSettings.auto_archive_after,
 			max_clips_per_channel_per_day:
-				guildSettings?.settings?.max_clips_per_channel_per_day ??
+				(settings.max_clips_per_channel_per_day as
+					| number
+					| undefined) ??
 				defaultUserSettings.max_clips_per_channel_per_day,
 			live_scan_slow_mode:
-				guildSettings?.settings?.live_scan_slow_mode ??
+				(settings.live_scan_slow_mode as number | undefined) ??
 				defaultUserSettings.live_scan_slow_mode,
 		};
 
@@ -111,10 +117,16 @@ export async function PUT(
 		// Get current guild settings to preserve non-user settings
 		const currentGuildSettings =
 			await DataService.getGuildSettings(guildId);
+		const currentSettings = (currentGuildSettings?.settings ??
+			{}) as Record<string, unknown>;
+		const currentChannelSettings =
+			(currentGuildSettings?.default_channel_settings ?? undefined) as
+				| Record<string, unknown>
+				| undefined;
 
 		// Merge user settings with existing settings (preserving bot/system settings)
-		const updatedSettings = {
-			...currentGuildSettings?.settings,
+		const updatedSettings: Record<string, unknown> = {
+			...currentSettings,
 			...userSettings, // User settings override
 		};
 
@@ -122,7 +134,7 @@ export async function PUT(
 		await upsertGuildSettings(
 			guildId,
 			updatedSettings,
-			currentGuildSettings?.default_channel_settings || undefined
+			currentChannelSettings
 		);
 
 		// Return only the user-facing settings

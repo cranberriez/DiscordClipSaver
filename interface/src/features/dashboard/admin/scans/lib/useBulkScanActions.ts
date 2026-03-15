@@ -1,20 +1,13 @@
 "use client";
 
 import { useStartBulkScan } from "@/lib/hooks";
-import { useGuildSettings } from "@/lib/hooks/useSettings";
-import type { DefaultChannelSettings } from "@/lib/schema/guild-settings.schema";
 import type { ChannelWithStatus } from "../types";
 
-export function useBulkScanActions(guildId: string, channels: ChannelWithStatus[]) {
-	const { data: guildSettings } = useGuildSettings(guildId);
+export function useBulkScanActions(
+	guildId: string,
+	channels: ChannelWithStatus[]
+) {
 	const { mutate, isPending } = useStartBulkScan(guildId);
-
-	const defaultSettings =
-		guildSettings?.default_channel_settings as unknown as DefaultChannelSettings | null;
-	const limit = Math.max(
-		Math.min(defaultSettings?.max_messages_per_pass ?? 1000, 10000),
-		100
-	);
 
 	const scanUnscannedOrFailed = () => {
 		const channelIds = channels
@@ -30,7 +23,10 @@ export function useBulkScanActions(guildId: string, channels: ChannelWithStatus[
 			return;
 		}
 
-		mutate({ channelIds, options: { isUpdate: false, limit, autoContinue: true, rescan: "stop" } });
+		mutate({
+			channelIds,
+			options: { isUpdate: false, autoContinue: true, rescan: "stop" },
+		});
 	};
 
 	const updateAllChannels = () => {
@@ -43,7 +39,10 @@ export function useBulkScanActions(guildId: string, channels: ChannelWithStatus[
 			return;
 		}
 
-		mutate({ channelIds, options: { isUpdate: true, limit, autoContinue: true, rescan: "stop" } });
+		mutate({
+			channelIds,
+			options: { isUpdate: true, autoContinue: true, rescan: "stop" },
+		});
 	};
 
 	const historicalScan = (scanType: "backfill" | "integrity" | "force") => {
@@ -69,7 +68,6 @@ export function useBulkScanActions(guildId: string, channels: ChannelWithStatus[
 		}
 
 		const options = {
-			limit,
 			autoContinue: true,
 			isUpdate: false,
 			isHistorical: false,

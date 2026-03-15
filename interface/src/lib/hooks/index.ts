@@ -32,13 +32,6 @@ export {
 	useStartCustomScan,
 } from "./useScans";
 
-// Settings hooks
-export {
-	useGuildSettings,
-	useUpdateGuildSettings,
-	useGuildSettingsForm,
-} from "./useSettings";
-
 // Clip hooks
 export {
 	useChannelClips,

@@ -19,31 +19,13 @@ import { useStartCustomScan, useCancelScan } from "@/lib/hooks/useScans";
 import { useState } from "react";
 import { StartScanOptions } from "@/lib/api/scan";
 import { toast } from "sonner";
-import { useGuildSettings } from "@/lib/hooks/useSettings";
-import type { DefaultChannelSettings } from "@/lib/schema/guild-settings.schema";
 
 export function ChannelScanButton({ channel }: { channel: ChannelWithStatus }) {
 	const { isPending, start } = useStartCustomScan(channel.guild_id);
 	const cancelScanMutation = useCancelScan(channel.guild_id);
-	const { data: guildSettings } = useGuildSettings(channel.guild_id);
-
-	// Get limit from settings or default to 1000, capped at 10000
-	// Cast default_channel_settings to the correct type
-	const defaultSettings =
-		guildSettings?.default_channel_settings as unknown as DefaultChannelSettings | null;
-	const limit = Math.min(
-		defaultSettings?.max_messages_per_pass ?? 1000,
-		10000
-	);
 
 	const handleStart = (options?: StartScanOptions) => {
-		// Use default limit if not provided in options
-		const finalOptions = {
-			limit,
-			...options,
-		};
-
-		start(channel.id, finalOptions, {
+		start(channel.id, options, {
 			onSuccess: () => {
 				toast("Scan started successfully");
 			},

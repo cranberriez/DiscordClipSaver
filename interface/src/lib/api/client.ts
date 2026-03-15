@@ -6,16 +6,13 @@
  */
 
 import { signOut } from "next-auth/react";
-import type { GuildSettingsResponse } from "./setting";
 import type { EnrichedDiscordGuild, Guild } from "@/lib/api/guild";
 import {
 	GuildResponse,
-	GuildWithClipCount,
 	GuildWithStats,
 	GuildStatsOptions,
 	ToggleScanningResponse,
 } from "./guild";
-import { UpdateGuildSettingsPayload } from "../schema/guild-settings.schema";
 import { Channel, ChannelStatsResponse } from "./channel";
 import {
 	MultiScanResult,
@@ -148,7 +145,7 @@ export const api = {
 		 * GET /api/guilds/?withClipCount=1
 		 */
 		listWithClipCount: () =>
-			apiRequest<GuildWithClipCount[]>("/api/guilds?withClipCount=1"),
+			apiRequest<GuildWithStats[]>("/api/guilds?withClipCount=1"),
 
 		/**
 		 * Toggle message scanning for a guild
@@ -297,33 +294,6 @@ export const api = {
 					...options,
 				}),
 			}),
-	},
-
-	// ========================================================================
-	// Settings
-	// ========================================================================
-	settings: {
-		/**
-		 * Get guild settings
-		 * GET /api/guilds/[guildId]/settings
-		 */
-		get: (guildId: string) =>
-			apiRequest<GuildSettingsResponse>(
-				`/api/guilds/${guildId}/settings`
-			),
-
-		/**
-		 * Update guild settings (partial update)
-		 * PATCH /api/guilds/[guildId]/settings
-		 */
-		update: (guildId: string, payload: UpdateGuildSettingsPayload) =>
-			apiRequest<GuildSettingsResponse>(
-				`/api/guilds/${guildId}/settings`,
-				{
-					method: "PATCH",
-					body: JSON.stringify(payload),
-				}
-			),
 	},
 
 	// ========================================================================
