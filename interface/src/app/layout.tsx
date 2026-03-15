@@ -14,8 +14,37 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-	title: "Guild Moments",
-	description: "Guild Moments",
+	title: {
+		default: "Guild Moments | The Ultimate Clip Saver for Communities",
+		template: "%s | Guild Moments",
+	},
+	description:
+		"Automatically save, organize, and search through your community's best gaming moments and video clips. The perfect clip saver for Discord servers and gaming guilds.",
+	keywords: [
+		"clip saver",
+		"discord clip saver",
+		"gaming clips",
+		"community moments",
+		"discord moments",
+		"video organizer",
+		"save gaming clips",
+		"guild moments",
+		"discord moments",
+	],
+	openGraph: {
+		type: "website",
+		locale: "en_US",
+		siteName: "Guild Moments",
+		title: "Guild Moments | The Ultimate Clip Saver for Communities",
+		description:
+			"Automatically save, organize, and search through your community's best gaming moments and video clips. The perfect clip saver for Discord servers and gaming guilds.",
+	},
+	twitter: {
+		card: "summary_large_image",
+		title: "Guild Moments | The Ultimate Clip Saver for Communities",
+		description:
+			"Automatically save, organize, and search through your community's best gaming moments and video clips.",
+	},
 };
 
 export default function RootLayout({

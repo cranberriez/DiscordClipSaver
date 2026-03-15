@@ -16,10 +16,24 @@ import { PageContainer, RootLayout } from "@/components/layout";
 import { HeroNavScrollContainer } from "@/components/core/HeroNavScrollContainer";
 
 export const metadata: Metadata = {
-	title: "Guild Moments | Discord Clip Saver & Organizer",
+	title: "Discord Clip Saver & Video Organizer | Guild Moments",
 	description:
-		"Automatically save, organize, and search through your Discord community's best video clips and attachments.",
-	keywords: ["discord", "clips", "video", "bot", "gaming", "community"],
+		"The best Discord clip saver to automatically archive, organize, and search your community's gaming moments, video clips, and attachments. Never lose a great moment again.",
+	keywords: [
+		"discord clip saver",
+		"save discord clips",
+		"discord moments",
+		"gaming clips",
+		"video organizer",
+		"community moments",
+		"discord bot clips",
+		"guild moments",
+	],
+	openGraph: {
+		title: "Discord Clip Saver & Video Organizer | Guild Moments",
+		description:
+			"The best Discord clip saver to automatically archive, organize, and search your community's gaming moments, video clips, and attachments.",
+	},
 };
 
 export default async function HomePage() {
