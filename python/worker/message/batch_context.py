@@ -154,7 +154,7 @@ class BatchContext:
                 guild_id=self.guild_id,
                 author_id=author_id,
                 timestamp=timestamp,
-                content=content if self.settings.enable_message_content_storage else ""
+                content=content if self.settings.get('enable_message_content_storage', True) else ""
             )
     
     def add_clip(

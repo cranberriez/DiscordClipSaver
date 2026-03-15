@@ -87,6 +87,8 @@ class GuildSettings(Model):
     default_channel_settings = fields.JSONField(null=True)
     # Guild-level settings (expandable for future features)
     settings = fields.JSONField(null=True)
+    # Hash of combined settings for cache invalidation (computed from default_channel_settings + settings)
+    settings_hash = fields.CharField(max_length=32, null=True)
     created_at = fields.DatetimeField(auto_now_add=True)
     updated_at = fields.DatetimeField(auto_now=True)
     deleted_at = fields.DatetimeField(null=True)
@@ -131,6 +133,8 @@ class ChannelSettings(Model):
         null=True,
         default=None
     )
+    # Hash of channel settings for cache invalidation (computed from settings JSON)
+    settings_hash = fields.CharField(max_length=32, null=True)
     created_at = fields.DatetimeField(auto_now_add=True)
     updated_at = fields.DatetimeField(auto_now=True)
     deleted_at = fields.DatetimeField(null=True)

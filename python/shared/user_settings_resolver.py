@@ -101,6 +101,10 @@ async def resolve_user_settings(guild_id: str, channel_id: str, use_cache: bool 
     # 2. User-facing defaults (static, but user-modifiable categories)
     effective_settings.update(get_user_facing_defaults())
     
+    # Track components for hash computation
+    guild_hash = None
+    channel_hash = None
+    
     # 3. Guild-level user settings from database
     try:
         guild_settings = await GuildSettings.get_or_none(guild_id=guild_id)
@@ -112,6 +116,22 @@ async def resolve_user_settings(guild_id: str, channel_id: str, use_cache: bool 
             # Apply guild-level settings if they exist
             if guild_settings.settings:
                 effective_settings.update(guild_settings.settings)
+            
+            # Use stored hash if available, otherwise compute it
+            if hasattr(guild_settings, 'settings_hash') and guild_settings.settings_hash:
+                guild_hash = guild_settings.settings_hash
+            elif guild_settings.settings or guild_settings.default_channel_settings:
+                # Compute and store hash for future use
+                guild_data = {}
+                if guild_settings.default_channel_settings:
+                    guild_data.update(guild_settings.default_channel_settings)
+                if guild_settings.settings:
+                    guild_data.update(guild_settings.settings)
+                guild_hash = compute_settings_hash(guild_data)
+                # Update the database with computed hash (if column exists)
+                if hasattr(guild_settings, 'settings_hash'):
+                    guild_settings.settings_hash = guild_hash
+                    await guild_settings.save(update_fields=['settings_hash'])
     except Exception as e:
         logger.warning(f"Failed to load guild settings for {guild_id}: {e}")
     
@@ -120,11 +140,39 @@ async def resolve_user_settings(guild_id: str, channel_id: str, use_cache: bool 
         channel_settings = await ChannelSettings.get_or_none(channel_id=channel_id)
         if channel_settings and channel_settings.settings:
             effective_settings.update(channel_settings.settings)
+            
+            # Use stored hash if available, otherwise compute it
+            if channel_settings.settings_hash:
+                channel_hash = channel_settings.settings_hash
+            else:
+                # Compute and store hash for future use
+                channel_hash = compute_settings_hash(channel_settings.settings)
+                channel_settings.settings_hash = channel_hash
+                await channel_settings.save(update_fields=['settings_hash'])
     except Exception as e:
         logger.warning(f"Failed to load channel settings for {channel_id}: {e}")
     
-    # Compute hash for cache invalidation
-    settings_hash = compute_settings_hash(effective_settings)
+    # Compute final hash from all components
+    # This ensures the hash changes when any component changes
+    hash_components = []
+    
+    # Always include static defaults hash (computed once)
+    static_defaults = {}
+    static_defaults.update(get_channel_defaults())
+    static_defaults.update(get_user_facing_defaults())
+    hash_components.append(compute_settings_hash(static_defaults))
+    
+    # Add guild hash if present
+    if guild_hash:
+        hash_components.append(guild_hash)
+    
+    # Add channel hash if present
+    if channel_hash:
+        hash_components.append(channel_hash)
+    
+    # Compute final hash from components
+    combined_hash_input = ":".join(hash_components)
+    settings_hash = hashlib.md5(combined_hash_input.encode()).hexdigest()
     
     # Cache the resolved settings
     if use_cache:
