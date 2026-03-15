@@ -7,10 +7,10 @@ static and never change during runtime, eliminating the need for database
 queries or complex caching.
 
 Usage:
-    from shared.settings_loader import get_guild_defaults, get_channel_defaults
+    from shared.settings_loader import get_server_admin_guild_defaults, get_server_admin_channel_defaults
     
-    guild_settings = get_guild_defaults()
-    channel_settings = get_channel_defaults()
+    guild_settings = get_server_admin_guild_defaults()
+    channel_settings = get_server_admin_channel_defaults()
 """
 
 import os

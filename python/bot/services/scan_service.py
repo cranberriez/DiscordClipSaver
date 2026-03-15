@@ -197,30 +197,12 @@ class ScanService:
         if not message.attachments:
             return
         
-        # Check NSFW channel before batching to avoid processing clips that will be ignored
-        guild_id = str(message.guild.id)
-        channel_id = str(message.channel.id)
-        
-        # First check Discord message object for NSFW flag (faster)
-        is_nsfw = getattr(message.channel, 'nsfw', False)
-        
-        # If Discord doesn't have NSFW info, check database
-        if not is_nsfw:
-            from shared.db.models import Channel
-            channel = await Channel.get_or_none(id=channel_id)
-            is_nsfw = channel and channel.nsfw
-        
-        if is_nsfw:
-            from worker.settings_helpers.user_settings import check_ignore_nsfw_channels
-            if await check_ignore_nsfw_channels(guild_id, channel_id):
-                logger.debug(f"Skipping message {message.id} in NSFW channel {channel_id} due to ignore_nsfw_channels setting")
-                return
-        
-        # Has attachments and passed NSFW check - add to batch for processing
+        # Has attachments - add to batch for processing
+        # All validation (NSFW, enabled status, etc.) is handled by ValidationService in the worker
         message_batcher = get_message_batcher()
         await message_batcher.add_message(message)
         
-        logger.debug(f"Added message {message.id} to batch for channel {channel_id}")
+        logger.debug(f"Added message {message.id} to batch for channel {message.channel.id}")
     
     async def handle_message_deletion(self, guild_id: str, channel_id: str, message_id: str):
         """

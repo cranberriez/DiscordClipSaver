@@ -41,25 +41,6 @@ async def get_default_visibility(guild_id: str, channel_id: str) -> str:
     return default_visibility
 
 
-async def check_ignore_nsfw_channels(guild_id: str, channel_id: str) -> bool:
-    """
-    Check if NSFW channels should be ignored for scanning.
-    
-    Args:
-        guild_id: Discord guild snowflake
-        channel_id: Discord channel snowflake
-        
-    Returns:
-        True if NSFW channels should be ignored, False otherwise
-    """
-    try:
-        user_settings, _ = await resolve_user_settings(guild_id, channel_id)
-        return user_settings and user_settings.get('ignore_nsfw_channels', False)
-    except Exception as e:
-        logger.warning(f"Failed to check ignore_nsfw_channels setting for {guild_id}:{channel_id}: {e}")
-        return False  # Default to not ignoring NSFW channels if settings check fails
-
-
 async def get_user_settings_with_fallback(guild_id: str, channel_id: str) -> Tuple[Optional[Dict[str, Any]], str]:
     """
     Get user settings with fallback handling.

@@ -188,7 +188,7 @@ class BotSettings:
     @staticmethod
     def get_video_extensions() -> List[str]:
         """List of supported video file extensions."""
-        return get_channel_defaults().get("video_extensions", [".mp4", ".mov", ".webm", ".avi", ".mkv", ".flv", ".wmv", ".m4v"])
+        return get_server_admin_channel_defaults().get("video_extensions", [".mp4", ".mov", ".webm", ".avi", ".mkv", ".flv", ".wmv", ".m4v"])
     
     @staticmethod
     def get_all_worker_settings() -> dict:

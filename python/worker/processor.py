@@ -13,6 +13,7 @@ from worker.message.message_handler import MessageHandler
 from worker.message.batch_processor import BatchMessageProcessor
 from worker.thumbnail.thumbnail_handler import ThumbnailHandler
 from worker.purge.purge_handler import PurgeHandler
+from worker.validation import ValidationService
 from shared.db.models import Guild, Channel, ScanStatus, ChannelType
 from shared.db.repositories.channel_scan_status import (
     get_or_create_scan_status,
@@ -32,6 +33,7 @@ class JobProcessor:
     
     def __init__(self, bot: WorkerBot, redis_client: Optional[RedisStreamClient] = None):
         self.bot = bot
+        self.redis_client = redis_client
         
         # Create single shared thumbnail handler to avoid duplicate aiohttp sessions
         # Previously had 3 separate instances (one per handler) - wasteful!
@@ -41,7 +43,9 @@ class JobProcessor:
         self.message_handler = MessageHandler(thumbnail_handler=self.thumbnail_handler)
         self.batch_processor = BatchMessageProcessor(bot=bot, thumbnail_handler=self.thumbnail_handler)
         self.purge_handler = PurgeHandler(bot=bot)
-        self.redis_client = redis_client
+        
+        # Centralized validation service with Redis caching
+        self.validation_service = ValidationService(redis_client=redis_client)
     
     async def close(self):
         """Close all handlers and cleanup resources"""
@@ -80,7 +84,8 @@ class JobProcessor:
     
     async def validate_scan_enabled(self, guild_id: str, channel_id: str) -> tuple[bool, Optional[str]]:
         """
-        Validate that both guild and channel have message scanning enabled.
+        Validate that processing should proceed for the given guild/channel.
+        Uses centralized ValidationService with Redis caching.
         
         Args:
             guild_id: Discord guild snowflake
@@ -89,35 +94,19 @@ class JobProcessor:
         Returns:
             Tuple of (is_enabled, error_message)
         """
-        # Check guild scan enabled
-        guild = await Guild.get_or_none(id=str(guild_id))
-        if not guild:
-            return False, "Guild not found in database"
+        result = await self.validation_service.validate_processing_context(guild_id, channel_id)
         
-        if not guild.message_scan_enabled:
-            return False, "Guild scanning disabled"
-        
-        # Check channel scan enabled
-        channel = await Channel.get_or_none(id=str(channel_id))
-        if not channel:
-            return False, "Channel not found in database"
-        
-        if not channel.message_scan_enabled:
-            return False, "Channel scanning disabled for this channel"
-        
-        # Check if channel type is scannable (not category, voice, etc.)
-        if channel.type == ChannelType.CATEGORY:
-            return False, "Cannot scan category channels"
-        
-        # This is fine, voice channels are supported
-        # if channel.type == ChannelType.VOICE:
-        #     return False, "Cannot scan voice channels"
-        
-        # Check ignore_nsfw_channels setting
-        if channel.nsfw:
-            from worker.settings_helpers.user_settings import check_ignore_nsfw_channels
-            if await check_ignore_nsfw_channels(guild_id, channel_id):
-                return False, "Channel is NSFW and ignore_nsfw_channels setting is enabled"
+        if not result.should_process:
+            # Map reason codes to user-friendly messages
+            reason_messages = {
+                "guild_or_channel_not_found": "Guild or channel not found in database",
+                "guild_disabled": "Guild scanning disabled",
+                "channel_disabled": "Channel scanning disabled for this channel",
+                "category_channel": "Cannot scan category channels",
+                "nsfw_ignored": "Channel is NSFW and ignore_nsfw_channels setting is enabled"
+            }
+            error_message = reason_messages.get(result.reason, f"Validation failed: {result.reason}")
+            return False, error_message
         
         return True, None
     
