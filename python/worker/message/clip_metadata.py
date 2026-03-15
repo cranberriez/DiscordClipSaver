@@ -3,7 +3,7 @@ Clip metadata extraction and processing
 """
 from dataclasses import dataclass
 from datetime import datetime
-from typing import List, Dict
+from typing import List, Dict, Optional
 import discord
 from shared.settings_resolver import ResolvedSettings
 from worker.message.utils import generate_clip_id, extract_cdn_expiry, get_mime_type
@@ -19,6 +19,7 @@ class ClipInfo:
     file_size: int
     mime_type: str
     cdn_url: str
+    proxy_url: Optional[str]
     expires_at: datetime
 
 
@@ -55,6 +56,7 @@ def extract_clip_info(
         file_size=attachment.size,
         mime_type=mime_type,
         cdn_url=attachment.url,
+        proxy_url=attachment.proxy_url,
         expires_at=expires_at
     )
 

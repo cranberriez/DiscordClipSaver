@@ -138,6 +138,9 @@ class MessageHandler:
         """
         # Extract clip metadata
         clip_info = extract_clip_info(attachment, discord_message, channel_id)
+
+        # Use proxy_url if available, otherwise fall back to cdn_url
+        final_url = clip_info.proxy_url or clip_info.cdn_url
         
         # Create or update clip record
         clip, created = await Clip.update_or_create(
@@ -150,7 +153,7 @@ class MessageHandler:
                 "filename": clip_info.filename,
                 "file_size": clip_info.file_size,
                 "mime_type": clip_info.mime_type,
-                "cdn_url": clip_info.cdn_url,
+                "cdn_url": final_url,  # Store proxy_url if available, cdn_url as fallback
                 "expires_at": clip_info.expires_at,
                 "thumbnail_status": "pending",
                 "settings_hash": settings_hash
