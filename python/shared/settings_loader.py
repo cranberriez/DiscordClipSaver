@@ -63,28 +63,28 @@ class SettingsLoader:
                 raise ValueError("Settings file must contain a JSON object")
             
             # Extract each settings section
-            self._guild_defaults = config.get("guild_settings_defaults", {})
-            self._channel_defaults = config.get("channel_settings_defaults", {})
+            self._server_admin_guild_defaults = config.get("server_admin_guild_defaults", {})
+            self._server_admin_channel_defaults = config.get("server_admin_channel_defaults", {})
             self._database_defaults = config.get("database_settings_defaults", {})
             self._worker_defaults = config.get("worker_settings_defaults", {})
-            self._user_facing_defaults = config.get("user_facing_settings_defaults", {})
+            self._guild_admin_defaults = config.get("guild_admin_settings_defaults", {})
             
             self._loaded = True
             
         except Exception as e:
             raise RuntimeError(f"Failed to load settings from {settings_path}: {e}")
     
-    def get_guild_defaults(self) -> Dict[str, Any]:
-        """Get guild-level default settings."""
+    def get_server_admin_guild_defaults(self) -> Dict[str, Any]:
+        """Get server admin guild-level default settings."""
         if not self._loaded:
             raise RuntimeError("Settings not loaded. Call load_settings() first.")
-        return self._guild_defaults.copy()
+        return self._server_admin_guild_defaults.copy()
     
-    def get_channel_defaults(self) -> Dict[str, Any]:
-        """Get channel-level default settings."""
+    def get_server_admin_channel_defaults(self) -> Dict[str, Any]:
+        """Get server admin channel-level default settings."""
         if not self._loaded:
             raise RuntimeError("Settings not loaded. Call load_settings() first.")
-        return self._channel_defaults.copy()
+        return self._server_admin_channel_defaults.copy()
     
     def get_database_defaults(self) -> Dict[str, Any]:
         """Get database-level default settings."""
@@ -98,19 +98,19 @@ class SettingsLoader:
             raise RuntimeError("Settings not loaded. Call load_settings() first.")
         return self._worker_defaults.copy()
     
-    def get_user_facing_defaults(self) -> Dict[str, Any]:
-        """Get user-facing default settings."""
+    def get_guild_admin_defaults(self) -> Dict[str, Any]:
+        """Get guild admin default settings."""
         if not self._loaded:
             raise RuntimeError("Settings not loaded. Call load_settings() first.")
-        return self._user_facing_defaults.copy()
+        return self._guild_admin_defaults.copy()
     
-    def get_guild_setting(self, key: str, default: Any = None) -> Any:
-        """Get a specific guild setting."""
-        return self.get_guild_defaults().get(key, default)
+    def get_server_admin_guild_setting(self, key: str, default: Any = None) -> Any:
+        """Get a specific server admin guild setting."""
+        return self.get_server_admin_guild_defaults().get(key, default)
     
-    def get_channel_setting(self, key: str, default: Any = None) -> Any:
-        """Get a specific channel setting."""
-        return self.get_channel_defaults().get(key, default)
+    def get_server_admin_channel_setting(self, key: str, default: Any = None) -> Any:
+        """Get a specific server admin channel setting."""
+        return self.get_server_admin_channel_defaults().get(key, default)
     
     def get_database_setting(self, key: str, default: Any = None) -> Any:
         """Get a specific database setting."""
@@ -120,9 +120,9 @@ class SettingsLoader:
         """Get a specific worker setting."""
         return self.get_worker_defaults().get(key, default)
     
-    def get_user_facing_setting(self, key: str, default: Any = None) -> Any:
-        """Get a specific user-facing setting."""
-        return self.get_user_facing_defaults().get(key, default)
+    def get_guild_admin_setting(self, key: str, default: Any = None) -> Any:
+        """Get a specific guild admin setting."""
+        return self.get_guild_admin_defaults().get(key, default)
     
     def is_loaded(self) -> bool:
         """Check if settings have been loaded."""
@@ -162,14 +162,14 @@ def get_settings_loader() -> SettingsLoader:
 
 
 # Convenience functions for common access patterns
-def get_guild_defaults() -> Dict[str, Any]:
-    """Get guild-level default settings."""
-    return get_settings_loader().get_guild_defaults()
+def get_server_admin_guild_defaults() -> Dict[str, Any]:
+    """Get server admin guild-level default settings."""
+    return get_settings_loader().get_server_admin_guild_defaults()
 
 
-def get_channel_defaults() -> Dict[str, Any]:
-    """Get channel-level default settings."""
-    return get_settings_loader().get_channel_defaults()
+def get_server_admin_channel_defaults() -> Dict[str, Any]:
+    """Get server admin channel-level default settings."""
+    return get_settings_loader().get_server_admin_channel_defaults()
 
 
 def get_database_defaults() -> Dict[str, Any]:
@@ -182,9 +182,9 @@ def get_worker_defaults() -> Dict[str, Any]:
     return get_settings_loader().get_worker_defaults()
 
 
-def get_user_facing_defaults() -> Dict[str, Any]:
-    """Get user-facing default settings."""
-    return get_settings_loader().get_user_facing_defaults()
+def get_guild_admin_defaults() -> Dict[str, Any]:
+    """Get guild admin default settings."""
+    return get_settings_loader().get_guild_admin_defaults()
 
 
 def get_guild_setting(key: str, default: Any = None) -> Any:

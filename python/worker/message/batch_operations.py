@@ -6,6 +6,8 @@ from collections import Counter
 from typing import List, Dict
 from shared.db.models import Clip, Thumbnail
 from shared.db.repositories import bulk_operations
+from shared.db.models import Clip
+from worker.settings_helpers.user_settings import get_default_visibility
 from worker.message.batch_context import BatchContext, ClipMetadata
 
 logger = logging.getLogger(__name__)
@@ -165,6 +167,9 @@ class BatchDatabaseOperations:
         if not context.clips_to_upsert:
             return 0
         
+        # Get default visibility from user settings
+        default_visibility = await get_default_visibility(context.guild_id, context.channel_id)
+        
         # Convert to list of dicts for repository
         clips_data = [
             {
@@ -184,7 +189,7 @@ class BatchDatabaseOperations:
             for clip in context.clips_to_upsert.values()
         ]
         
-        success_count, failure_count = await bulk_operations.bulk_upsert_clips(clips_data)
+        success_count, failure_count = await bulk_operations.bulk_upsert_clips(clips_data, default_visibility)
         
         if failure_count > 0:
             logger.warning(f"Bulk upsert clips: {success_count} succeeded, {failure_count} failed")

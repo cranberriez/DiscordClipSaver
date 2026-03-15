@@ -113,6 +113,12 @@ class JobProcessor:
         # if channel.type == ChannelType.VOICE:
         #     return False, "Cannot scan voice channels"
         
+        # Check ignore_nsfw_channels setting
+        if channel.nsfw:
+            from worker.settings_helpers.user_settings import check_ignore_nsfw_channels
+            if await check_ignore_nsfw_channels(guild_id, channel_id):
+                return False, "Channel is NSFW and ignore_nsfw_channels setting is enabled"
+        
         return True, None
     
     async def process_job(self, job_data: dict):

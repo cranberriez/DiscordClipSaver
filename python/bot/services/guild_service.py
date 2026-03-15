@@ -30,7 +30,7 @@ class GuildService:
             guild_names = ", ".join(s.name for s in snapshots)
            
             for guild in snapshots:
-                await db_upsert_guild_settings(str(guild.id), self._settings.get_config("guild_settings_defaults"), self._settings.get_config("channel_settings_defaults"))
+                await db_upsert_guild_settings(str(guild.id), self._settings.get_config("guild_admin_settings_defaults"), None)
                 logger.info("Synced guild settings for guild: %s (%s)", guild.name, guild.id)
 
             logger.info("Accessible guilds: %s", guild_names)
@@ -41,7 +41,7 @@ class GuildService:
         # Reuse gather helper for consistency
         snapshot = build_guild_snapshot(guild)
         await db_upsert_guilds([snapshot])
-        await db_upsert_guild_settings(str(guild.id), self._settings.get_config("guild_settings_defaults"), self._settings.get_config("channel_settings_defaults"))
+        await db_upsert_guild_settings(str(guild.id), self._settings.get_config("guild_admin_settings_defaults"), None)
 
         logger.info("Joined guild: %s (%s)", guild.name, guild.id)
 

@@ -179,7 +179,7 @@ async def bulk_upsert_messages(messages_data: List[dict]) -> Tuple[int, int]:
         return 0, len(messages_data)
 
 
-async def bulk_upsert_clips(clips_data: List[dict]) -> Tuple[int, int]:
+async def bulk_upsert_clips(clips_data: List[dict], default_visibility: str = 'PUBLIC') -> Tuple[int, int]:
     """
     Bulk upsert clips using PostgreSQL INSERT ... ON CONFLICT.
     
@@ -187,6 +187,7 @@ async def bulk_upsert_clips(clips_data: List[dict]) -> Tuple[int, int]:
         clips_data: List of dicts with keys: id, message_id, guild_id, channel_id,
                     author_id, filename, file_size, mime_type, cdn_url, expires_at,
                     thumbnail_status, settings_hash
+        default_visibility: Default visibility for clips if not specified in clip data
         
     Returns:
         Tuple of (success_count, failure_count)
@@ -224,7 +225,7 @@ async def bulk_upsert_clips(clips_data: List[dict]) -> Tuple[int, int]:
             (
                 clip['id'],
                 clip['message_id'],
-                (clip.get('visibility') or 'PUBLIC'),
+                (clip.get('visibility') or default_visibility),
                 clip['guild_id'],
                 clip['channel_id'],
                 clip['author_id'],

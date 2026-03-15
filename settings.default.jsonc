@@ -8,7 +8,7 @@
     // - Arrays: empty list [] means "no items configured".
     // ------------------------------------------------------------------------------
 
-    "guild_settings_defaults": {
+    "server_admin_guild_defaults": {
         // =========================
         // BASIC
         // =========================
@@ -19,7 +19,7 @@
         "schedule_cron": "@continuous" // When the bot should run jobs by default (e.g., "@hourly" or "*/5 * * * *").
     },
 
-    "channel_settings_defaults": {
+    "server_admin_channel_defaults": {
         // =========================
         // BASIC
         // =========================
@@ -99,8 +99,8 @@
         "db_health_check_interval_seconds": 60 // Database health check interval
     },
 
-    "user_facing_settings_defaults": {
-        "default_visibility": "unlisted",
+    "guild_admin_settings_defaults": {
+        "default_visibility": "public",
         "ignore_nsfw_channels": false,
         "auto_archive_after": {
             "unit": "never",

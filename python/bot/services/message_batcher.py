@@ -33,10 +33,10 @@ class MessageBatcher:
     after a cooldown period (default 5 minutes) to batch frequent clips.
     """
     
-    def __init__(self, redis_client=None, cooldown_minutes: int = 1):
+    def __init__(self, redis_client=None, cooldown_seconds: int = 5):
         self.redis_client = redis_client
-        self.cooldown_minutes = cooldown_minutes
-        self.cooldown_delta = timedelta(minutes=cooldown_minutes)
+        self.cooldown_seconds = cooldown_seconds
+        self.cooldown_delta = timedelta(seconds=cooldown_seconds)
         
         # Cache structure: guild_id -> channel_id -> MessageBatch
         self._batches: Dict[int, Dict[int, MessageBatch]] = {}
@@ -52,7 +52,7 @@ class MessageBatcher:
             
         self._running = True
         self._cleanup_task = asyncio.create_task(self._cleanup_loop())
-        logger.info("MessageBatcher started with %d minute cooldown", self.cooldown_minutes)
+        logger.info("MessageBatcher started with %d second cooldown", self.cooldown_seconds)
     
     async def stop(self):
         """Stop the background cleanup task and process remaining batches."""

@@ -7,6 +7,7 @@ import discord
 from shared.db.models import Guild, Channel
 from shared.db.repositories.channel_scan_status import get_scan_status
 from .message_batcher import get_message_batcher
+from shared.redis.redis import BatchScanJob
 
 logger = logging.getLogger(__name__)
 
@@ -155,9 +156,6 @@ class ScanService:
                     f"last_known={last_known_message_id}, latest={latest_message_id}"
                 )
                 
-                # Import here to avoid circular dependency
-                from shared.redis.redis import BatchScanJob
-                
                 # Queue a forward scan from last known message to current
                 catch_up_job = BatchScanJob(
                     guild_id=str(discord_guild.id),
@@ -199,11 +197,30 @@ class ScanService:
         if not message.attachments:
             return
         
-        # Has attachments - add to batch for processing
+        # Check NSFW channel before batching to avoid processing clips that will be ignored
+        guild_id = str(message.guild.id)
+        channel_id = str(message.channel.id)
+        
+        # First check Discord message object for NSFW flag (faster)
+        is_nsfw = getattr(message.channel, 'nsfw', False)
+        
+        # If Discord doesn't have NSFW info, check database
+        if not is_nsfw:
+            from shared.db.models import Channel
+            channel = await Channel.get_or_none(id=channel_id)
+            is_nsfw = channel and channel.nsfw
+        
+        if is_nsfw:
+            from worker.settings_helpers.user_settings import check_ignore_nsfw_channels
+            if await check_ignore_nsfw_channels(guild_id, channel_id):
+                logger.debug(f"Skipping message {message.id} in NSFW channel {channel_id} due to ignore_nsfw_channels setting")
+                return
+        
+        # Has attachments and passed NSFW check - add to batch for processing
         message_batcher = get_message_batcher()
         await message_batcher.add_message(message)
         
-        logger.debug(f"Added message {message.id} to batch for channel {message.channel.id}")
+        logger.debug(f"Added message {message.id} to batch for channel {channel_id}")
     
     async def handle_message_deletion(self, guild_id: str, channel_id: str, message_id: str):
         """

@@ -194,6 +194,7 @@ class BatchMessageProcessor:
         """Bulk upsert authors, messages, and clips"""
         await self.db_ops.bulk_upsert_authors(context)
         await self.db_ops.bulk_upsert_messages(context)
+        
         await self.db_ops.bulk_upsert_clips(context)
     
     async def _generate_thumbnails(self, context: BatchContext) -> int:

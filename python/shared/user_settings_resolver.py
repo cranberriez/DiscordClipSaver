@@ -10,7 +10,7 @@ import json
 import logging
 from typing import Dict, Any, Optional, Tuple
 from shared.db.models import GuildSettings, ChannelSettings
-from shared.settings_loader import get_user_facing_defaults, get_channel_defaults, get_guild_defaults
+from shared.settings_loader import get_guild_admin_defaults, get_server_admin_channel_defaults
 
 logger = logging.getLogger(__name__)
 
@@ -96,10 +96,10 @@ async def resolve_user_settings(guild_id: str, channel_id: str, use_cache: bool 
     effective_settings = {}
     
     # 1. Bot/system channel defaults (static, never change)
-    effective_settings.update(get_channel_defaults())
+    effective_settings.update(get_server_admin_channel_defaults())
     
-    # 2. User-facing defaults (static, but user-modifiable categories)
-    effective_settings.update(get_user_facing_defaults())
+    # 2. Guild admin defaults (static, but user-modifiable categories)
+    effective_settings.update(get_guild_admin_defaults())
     
     # Track components for hash computation
     guild_hash = None
@@ -158,8 +158,8 @@ async def resolve_user_settings(guild_id: str, channel_id: str, use_cache: bool 
     
     # Always include static defaults hash (computed once)
     static_defaults = {}
-    static_defaults.update(get_channel_defaults())
-    static_defaults.update(get_user_facing_defaults())
+    static_defaults.update(get_server_admin_channel_defaults())
+    static_defaults.update(get_guild_admin_defaults())
     hash_components.append(compute_settings_hash(static_defaults))
     
     # Add guild hash if present

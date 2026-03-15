@@ -10,6 +10,8 @@ from worker.thumbnail.thumbnail_handler import ThumbnailHandler
 from worker.message.utils import compute_settings_hash
 from worker.message.validators import should_process_message, filter_video_attachments
 from worker.message.clip_metadata import extract_clip_info
+from worker.settings_helpers.user_settings import check_ignore_nsfw_channels, get_default_visibility
+from shared.db.models import Channel
 
 logger = logging.getLogger(__name__)
 
@@ -44,6 +46,20 @@ class MessageHandler:
         # Validate message should be processed
         if not should_process_message(discord_message, channel_settings):
             return 0
+        
+        # Check ignore_nsfw_channels setting
+        # First check Discord message object for NSFW flag (faster)
+        is_nsfw = getattr(discord_message.channel, 'nsfw', False)
+        
+        # If Discord doesn't have NSFW info, check database
+        if not is_nsfw:
+            channel = await Channel.get_or_none(id=str(channel_id))
+            is_nsfw = channel and channel.nsfw
+        
+        if is_nsfw:
+            if await check_ignore_nsfw_channels(guild_id, channel_id):
+                logger.debug(f"Skipping NSFW channel {channel_id} due to ignore_nsfw_channels setting (source: {'discord' if getattr(discord_message.channel, 'nsfw', False) else 'database'})")
+                return 0
         
         # Process video attachments
         settings_hash = compute_settings_hash(channel_settings)
@@ -142,6 +158,9 @@ class MessageHandler:
         # Use proxy_url if available, otherwise fall back to cdn_url
         final_url = clip_info.proxy_url or clip_info.cdn_url
         
+        # Fetch user settings for default visibility
+        default_visibility = await get_default_visibility(guild_id, channel_id)
+        
         # Create or update clip record
         clip, created = await Clip.update_or_create(
             id=clip_info.clip_id,
@@ -150,6 +169,7 @@ class MessageHandler:
                 "channel_id": channel_id,
                 "guild_id": guild_id,
                 "author_id": str(discord_message.author.id),
+                "visibility": default_visibility,
                 "filename": clip_info.filename,
                 "file_size": clip_info.file_size,
                 "mime_type": clip_info.mime_type,
