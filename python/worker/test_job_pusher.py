@@ -52,9 +52,9 @@ async def validate_guild_channel(guild_id: str, channel_id: str):
     logger.info(f"✅ Guild: {guild.name} ({guild_id})")
     logger.info(f"✅ Channel: {channel.name} ({channel_id})")
     logger.info(f"✅ Settings resolved:")
-    logger.info(f"   - Allowed MIME types: {settings.allowed_mime_types}")
-    logger.info(f"   - Match regex: {settings.match_regex or 'None'}")
-    logger.info(f"   - Store message content: {settings.enable_message_content_storage}")
+    logger.info(f"   - Allowed MIME types: {settings.get('mime_allowlist', [])}")
+    logger.info(f"   - Match regex: {settings.get('text_include_regex') or 'None'}")
+    logger.info(f"   - Store message content: {settings.get('enable_message_content_storage', True)}")
     
     return settings
 
