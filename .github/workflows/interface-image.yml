@@ -2,7 +2,7 @@ name: Build & Publish Interface Image
 on:
     push:
         branches:
-            - main
+            - master
         paths:
             - "interface/**"
             - "settings.default.jsonc"
