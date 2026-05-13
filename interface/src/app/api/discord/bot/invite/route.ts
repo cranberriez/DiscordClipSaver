@@ -14,18 +14,16 @@ import { rateLimit } from "@/server/rate-limit";
  * If no guildId is provided, Discord will prompt the user to select a guild.
  */
 export async function GET(req: NextRequest) {
-	if (process.env.DISCORD_INVITES_DISABLED === "1") {
-		const url = new URL(req.url);
-		const guildId = url.searchParams.get("guildId") || undefined;
+	const url = new URL(req.url);
+	const guildId = url.searchParams.get("guildId") || undefined;
+	const publicBaseUrl = process.env.NEXTAUTH_URL ?? url.origin;
 
-		const redirectUrl = new URL("/invite", url.origin);
+	if (process.env.DISCORD_INVITES_DISABLED === "1") {
+		const redirectUrl = new URL("/invite", publicBaseUrl);
 		redirectUrl.searchParams.set("error", "invites_disabled");
 		if (guildId) redirectUrl.searchParams.set("guildId", guildId);
 		return NextResponse.redirect(redirectUrl);
 	}
-
-	const url = new URL(req.url);
-	const guildId = url.searchParams.get("guildId") || undefined;
 
 	// Verify authentication
 	const auth = await requireAuth(req);
@@ -46,7 +44,7 @@ export async function GET(req: NextRequest) {
 
 	const ownerDiscordId = process.env.OWNER_DISCORD_ID;
 	if (ownerDiscordId && auth.discordUserId !== ownerDiscordId) {
-		const redirectUrl = new URL("/invite", url.origin);
+		const redirectUrl = new URL("/invite", publicBaseUrl);
 		redirectUrl.searchParams.set("error", "invites_restricted");
 		if (guildId) redirectUrl.searchParams.set("guildId", guildId);
 		return NextResponse.redirect(redirectUrl);
