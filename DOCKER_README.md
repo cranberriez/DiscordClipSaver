@@ -11,6 +11,7 @@ docker-compose up --build
 
 This starts:
 
+-   **DB Schema** (one-shot initializer) to create missing PostgreSQL tables
 -   **Bot** (Discord bot + API server) on port 8000
 -   **Worker** (Job processor) - 1 instance by default
 -   **Interface** (Web UI) on port 3000
@@ -62,6 +63,9 @@ docker-compose up worker dcs-postgres dcs-redis
 ```bash
 docker-compose up interface dcs-postgres
 ```
+
+The `db-schema` one-shot service is pulled in automatically by these app
+services and must complete before they start.
 
 The interface can browse existing data with PostgreSQL available. Redis, the bot,
 and workers are still needed for background jobs such as scans, purge requests,
@@ -145,6 +149,9 @@ docker-compose down -v
 ### Database Access
 
 ```bash
+# Initialize or repair missing tables manually
+docker-compose run --rm db-schema
+
 # Connect to PostgreSQL
 docker exec -it dcs-postgres psql -U discord -d discord_clip_saver
 

@@ -13,7 +13,7 @@ from bot.schedules.scheduler import start_scheduler_and_jobs
 from bot.services.scan_service import get_scan_service
 from bot.services.message_batcher import get_message_batcher
 
-from shared.db.utils import init_db, close_db
+from shared.db.utils import get_env_bool, init_db, close_db
 from shared.redis.redis_client import RedisStreamClient
 from shared.settings_loader import initialize_settings
 
@@ -26,8 +26,12 @@ async def main():
     # Initialize settings first (must be done before anything else)
     initialize_settings()
     
-    # Initialize database (async)
-    await init_db(generate_schemas=True)
+    # Initialize database (async). Schema creation is handled by the db-schema
+    # one-shot service; DB_GENERATE_SCHEMAS remains as a standalone/dev escape hatch.
+    generate_schemas = get_env_bool("DB_GENERATE_SCHEMAS", default=False)
+    if generate_schemas:
+        logger.warning("DB_GENERATE_SCHEMAS=true; bot startup will generate schemas")
+    await init_db(generate_schemas=generate_schemas)
     
     # Initialize Redis client for job queue (bot is a producer, not a consumer)
     redis_client = RedisStreamClient(

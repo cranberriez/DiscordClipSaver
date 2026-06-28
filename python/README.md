@@ -106,12 +106,24 @@ DATABASE_URL=postgres://user:pass@host:port/db
 ### Making Database Changes
 
 1. **Edit models** in `shared/db/models.py`
-2. **Create migration**:
+2. **Create missing tables in local/dev databases**:
+    ```bash
+    python -m shared.db.schema
+    ```
+
+The Docker stack runs the same initializer as the `db-schema` one-shot service.
+It uses Tortoise `generate_schemas(safe=True)` and only creates missing tables;
+destructive schema changes still need a planned migration path.
+
+Aerich migration commands are not currently wired into the default Docker
+startup path. If you configure Aerich separately, the intended flow is:
+
+1. **Create migration**:
     ```bash
     cd python/shared
     aerich migrate --name "your_change"
     ```
-3. **Apply migration**:
+2. **Apply migration**:
     ```bash
     aerich upgrade
     ```

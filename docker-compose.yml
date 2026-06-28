@@ -32,6 +32,24 @@ services:
         networks:
             - default
         restart: unless-stopped
+
+    db-schema:
+        build:
+            context: .
+            dockerfile: ./python/worker/Dockerfile
+        container_name: dcs-db-schema
+        env_file:
+            - ./.env.global
+        environment:
+            - DB_USER=${POSTGRES_USER}
+            - DB_PASSWORD=${POSTGRES_PASSWORD}
+            - DB_NAME=${POSTGRES_DB}
+        depends_on:
+            dcs-postgres:
+                condition: service_started
+        restart: "no"
+        command: ["python", "-m", "shared.db.schema"]
+
     bot:
         build:
             context: .
@@ -45,8 +63,12 @@ services:
             - DB_PASSWORD=${POSTGRES_PASSWORD}
             - DB_NAME=${POSTGRES_DB}
         depends_on:
-            - dcs-postgres
-            - dcs-redis
+            dcs-postgres:
+                condition: service_started
+            dcs-redis:
+                condition: service_started
+            db-schema:
+                condition: service_completed_successfully
         restart: unless-stopped
         volumes:
             # Optional: mount local settings file for rapid iteration without rebuilding image
@@ -68,8 +90,12 @@ services:
             - DB_NAME=${POSTGRES_DB}
             - WORKER_MODE=${WORKER_MODE:-all}
         depends_on:
-            - dcs-postgres
-            - dcs-redis
+            dcs-postgres:
+                condition: service_started
+            dcs-redis:
+                condition: service_started
+            db-schema:
+                condition: service_completed_successfully
         restart: unless-stopped
         volumes:
             # Persist thumbnails in shared volume
@@ -91,7 +117,10 @@ services:
             - DB_PASSWORD=${POSTGRES_PASSWORD}
             - DB_NAME=${POSTGRES_DB}
         depends_on:
-            - dcs-postgres
+            dcs-postgres:
+                condition: service_started
+            db-schema:
+                condition: service_completed_successfully
         restart: unless-stopped
         volumes:
             # Optional: mount local settings file to the same in-container path used by the image

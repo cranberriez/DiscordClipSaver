@@ -129,7 +129,11 @@ The worker consists of several components:
    ```
 
 3. **Ensure database is initialized**:
-   The worker uses the shared database configuration. Make sure the database schema is created.
+   The worker uses the shared database configuration. Create missing tables before starting local Python services:
+   ```bash
+   cd ../
+   python -m shared.db.schema
+   ```
 
 ## Running the Worker
 

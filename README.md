@@ -30,6 +30,7 @@ Docker or a Postgres and Redis cloud server are required for the bot to function
 2. Fill in the values in the `.env.global.example` file.
 3. Copy the `.env.global.example` file to `.env` in the /python/bot or /interface directories depending on which you want to work on
 4. Start the Postgres Server and Redis server with `docker compose up -d dcs-postgres dcs-redis`
+5. Initialize missing database tables from the `/python` directory with `python -m shared.db.schema`
 
 ### Bot
 
@@ -43,9 +44,11 @@ At the time of writing this, some functionality is tied to the interface calling
 4. Navigate back to python folder with `cd ..`
 5. Run the bot in module mode with `python -m bot.main`
 
+The Docker stack runs the `db-schema` initializer automatically. For standalone bot-only development, set `DB_GENERATE_SCHEMAS=1` only if you intentionally want the bot process to create missing tables on startup.
+
 ### Interface
 
-The interface requires the bot to be running to function.
+The interface requires PostgreSQL to browse existing data. The bot, Redis, and workers are only required for background jobs and Discord-driven actions.
 
 1. Navigate to the interface folder with `cd /interface`
 2. Install the dependencies with `npm install`
