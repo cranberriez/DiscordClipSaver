@@ -1,4 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
+import { access } from "fs/promises";
+import { join } from "path";
+import { sql } from "kysely";
+import { withRedis } from "@/lib/redis/client";
+import { getDb } from "@/server/db";
+
+type DependencyHealth = {
+	ok: boolean;
+	required: boolean;
+	latencyMs?: number;
+	error?: string;
+};
 
 function getClientIp(req: NextRequest): string | null {
 	const forwardedFor = req.headers.get("x-forwarded-for");
@@ -64,7 +76,95 @@ async function handleHealthRequest(
 		}
 	}
 
-	return NextResponse.json({ ok: true }, { status: 200 });
+	const dependencies = {
+		database: await checkDatabaseHealth(),
+		redis: await checkRedisHealth(),
+		botApi: await checkBotApiHealth(),
+		storage: await checkStorageHealth(),
+	};
+	const ok = dependencies.database.ok;
+
+	return NextResponse.json(
+		{
+			ok,
+			dependencies,
+		},
+		{ status: ok ? 200 : 503 }
+	);
+}
+
+async function timedCheck(
+	required: boolean,
+	fn: () => Promise<void>
+): Promise<DependencyHealth> {
+	const start = performance.now();
+
+	try {
+		await fn();
+		return {
+			ok: true,
+			required,
+			latencyMs: Math.round(performance.now() - start),
+		};
+	} catch (error) {
+		return {
+			ok: false,
+			required,
+			latencyMs: Math.round(performance.now() - start),
+			error: error instanceof Error ? error.message : "Unknown error",
+		};
+	}
+}
+
+function checkDatabaseHealth() {
+	return timedCheck(true, async () => {
+		await sql`select 1`.execute(getDb());
+	});
+}
+
+function checkRedisHealth() {
+	return timedCheck(false, async () => {
+		await withRedis(async (redis) => {
+			await redis.ping();
+		});
+	});
+}
+
+function checkBotApiHealth() {
+	const botApiUrl = process.env.BOT_API_URL;
+	if (!botApiUrl) {
+		return Promise.resolve({
+			ok: false,
+			required: false,
+			error: "BOT_API_URL is not configured",
+		});
+	}
+
+	return timedCheck(false, async () => {
+		const controller = new AbortController();
+		const timeout = setTimeout(() => controller.abort(), 2000);
+
+		try {
+			const response = await fetch(`${botApiUrl}/health`, {
+				signal: controller.signal,
+			});
+
+			if (!response.ok) {
+				throw new Error(`Bot API returned ${response.status}`);
+			}
+		} finally {
+			clearTimeout(timeout);
+		}
+	});
+}
+
+function checkStorageHealth() {
+	const storagePath =
+		process.env.STORAGE_PATH || join(process.cwd(), "storage");
+
+	return timedCheck(false, async () => {
+		await access(storagePath);
+	});
 }
 
 export async function GET(req: NextRequest) {

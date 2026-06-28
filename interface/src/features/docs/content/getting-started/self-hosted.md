@@ -23,6 +23,10 @@ Our provided `docker-compose-prod.yml` will spin up the following containers:
 - **Dozzle**: Used for Docker log aggregation and viewing.
 - **Uptime Kuma**: Used for service uptime monitoring.
 
+The web interface depends on PostgreSQL for normal browsing. Redis, the bot, and
+workers can be temporarily offline; scan, purge, thumbnail, and live Discord
+update features will be degraded until those services recover.
+
 ## Quick Start
 
 ### 1. Create a Discord Bot

@@ -3,6 +3,10 @@ import { requireGuildAccess } from "@/server/middleware/auth";
 import { queueChannelPurge } from "@/lib/redis/jobs";
 import { DataService } from "@/server/services/data-service";
 import { rateLimit } from "@/server/rate-limit";
+import {
+	isRedisUnavailableError,
+	queueUnavailableResponse,
+} from "@/server/http";
 
 /**
  * POST /api/guilds/[guildId]/channels/[channelId]/purge
@@ -80,6 +84,10 @@ export async function POST(
 		});
 	} catch (error) {
 		console.error("Failed to queue channel purge:", error);
+		if (isRedisUnavailableError(error)) {
+			return queueUnavailableResponse(error);
+		}
+
 		return NextResponse.json(
 			{ error: "Failed to queue purge job" },
 			{ status: 500 }

@@ -81,9 +81,7 @@ services:
             - DB_NAME=${POSTGRES_DB}
             - NEXTAUTH_URL=https://${PUBLIC_DOMAIN}
         depends_on:
-            - bot
             - dcs-postgres
-            - dcs-redis
         restart: unless-stopped
         volumes:
             # Optional: mount local settings file to the same in-container path used by the image

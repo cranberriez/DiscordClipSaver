@@ -20,11 +20,26 @@ function isDbUnavailableError(err: any): boolean {
 	return false;
 }
 
-function isRedisUnavailableError(err: any): boolean {
+export function isRedisUnavailableError(err: any): boolean {
 	if (!err) return false;
 	if (err?.name === "RedisUnavailableError") return true;
 	if (err?.message === "Redis unavailable") return true;
 	return false;
+}
+
+export function queueUnavailableResponse(err: any) {
+	const body: any = {
+		error: "Queue temporarily unavailable",
+		code: "QUEUE_UNAVAILABLE",
+		userMessage:
+			"Background jobs are temporarily unavailable. Please try again after Redis is back online.",
+	};
+
+	if (typeof err?.retryAfterSeconds === "number") {
+		body.retryAfterSeconds = err.retryAfterSeconds;
+	}
+
+	return NextResponse.json(body, { status: 503 });
 }
 
 export function jsonError(err: any, fallbackStatus = 500) {

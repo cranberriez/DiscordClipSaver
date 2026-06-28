@@ -19,6 +19,8 @@ const eslintConfig = [
 			"build/**",
 			"next-env.d.ts",
 		],
+	},
+	{
 		rules: {
 			// User preference: allow "any" in TS without lint errors
 			"@typescript-eslint/no-explicit-any": "off",

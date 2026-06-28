@@ -45,6 +45,16 @@ docker-compose up bot dcs-postgres dcs-redis
 docker-compose up worker dcs-postgres dcs-redis
 ```
 
+**Start only the web interface and database:**
+
+```bash
+docker-compose up interface dcs-postgres
+```
+
+The interface can browse existing data with PostgreSQL available. Redis, the bot,
+and workers are still needed for background jobs such as scans, purge requests,
+thumbnail generation, and live Discord updates.
+
 ## Environment Configuration
 
 ### Required Files
@@ -182,6 +192,25 @@ worker:
 ```
 
 ### 3. Health Checks
+
+The interface exposes `/health` for uptime monitoring. The response separates
+required and optional dependencies:
+
+```json
+{
+    "ok": true,
+    "dependencies": {
+        "database": { "ok": true, "required": true, "latencyMs": 12 },
+        "redis": { "ok": false, "required": false, "error": "Redis unavailable" },
+        "botApi": { "ok": false, "required": false },
+        "storage": { "ok": true, "required": false, "latencyMs": 1 }
+    }
+}
+```
+
+An unavailable database returns HTTP 503. Optional dependency failures keep the
+endpoint HTTP 200 so monitoring can distinguish a degraded interface from a down
+interface.
 
 Add to worker service:
 
