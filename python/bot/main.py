@@ -21,8 +21,23 @@ logger = logging.getLogger(__name__)
 
 load_dotenv()
 
-# ----- Run both: API server + Discord bot -----
+BOT_RUNTIME_MODES = {"all", "api", "discord"}
+
+
+def get_bot_runtime_mode() -> str:
+    mode = os.getenv("BOT_RUNTIME_MODE", "all").strip().lower()
+    if mode not in BOT_RUNTIME_MODES:
+        allowed = ", ".join(sorted(BOT_RUNTIME_MODES))
+        raise RuntimeError(f"BOT_RUNTIME_MODE must be one of: {allowed}")
+    return mode
+
+
+# ----- Run API server, Discord bot, or both -----
 async def main():
+    runtime_mode = get_bot_runtime_mode()
+    start_api = runtime_mode in {"all", "api"}
+    start_discord = runtime_mode in {"all", "discord"}
+
     # Initialize settings first (must be done before anything else)
     initialize_settings()
     
@@ -49,33 +64,48 @@ async def main():
     
     # Configure message batcher with Redis client
     message_batcher = get_message_batcher(redis_client=redis_client)
-    
-    # Start FastAPI (uvicorn) in the background
-    config = uvicorn.Config(api, host="0.0.0.0", port=8000, loop="asyncio", log_level="info")
-    server = uvicorn.Server(config)
 
-    api_task = asyncio.create_task(server.serve())
+    token = None
+    if start_discord:
+        token = os.getenv("BOT_TOKEN")
+        if not token:
+            raise RuntimeError("BOT_TOKEN not set in environment")
+
+    server = None
+    api_task = None
+    if start_api:
+        # Start FastAPI (uvicorn) in the background
+        config = uvicorn.Config(api, host="0.0.0.0", port=8000, loop="asyncio", log_level="info")
+        server = uvicorn.Server(config)
+        api_task = asyncio.create_task(server.serve())
 
     # Start a single scheduler and register all jobs in one place
     scheduler = start_scheduler_and_jobs()
 
-    # Start the Discord bot (replace with your token)
-    TOKEN = os.getenv("BOT_TOKEN")
-    if not TOKEN:
-        raise RuntimeError("BOT_TOKEN not set in environment")
-    bot_task = asyncio.create_task(discord_bot.start(TOKEN))
+    bot_task = None
+    if start_discord:
+        # Start the Discord bot
+        bot_task = asyncio.create_task(discord_bot.start(token))
 
     try:
-        await bot_task
-    except (asyncio.CancelledError, KeyboardInterrupt):
-        bot_task.cancel()
-        with suppress(asyncio.CancelledError):
+        if bot_task:
             await bot_task
+        elif api_task:
+            await api_task
+    except (asyncio.CancelledError, KeyboardInterrupt):
+        if bot_task:
+            bot_task.cancel()
+            with suppress(asyncio.CancelledError):
+                await bot_task
+        if api_task:
+            api_task.cancel()
+            with suppress(asyncio.CancelledError):
+                await api_task
     finally:
         # Stop scheduler
         with suppress(Exception):
             scheduler.shutdown(wait=False)
-        if not discord_bot.is_closed():
+        if start_discord and not discord_bot.is_closed():
             await discord_bot.close()
 
         # Stop message batcher and process remaining batches
@@ -84,11 +114,12 @@ async def main():
             await message_batcher.stop()
 
         # If the bot stops, also stop the API server
-        if not server.should_exit:
+        if server and not server.should_exit:
             server.should_exit = True
 
-        with suppress(asyncio.CancelledError):
-            await api_task
+        if api_task:
+            with suppress(asyncio.CancelledError):
+                await api_task
         
         # Disconnect Redis
         with suppress(Exception):

@@ -35,6 +35,7 @@ services:
             - DB_USER=${POSTGRES_USER}
             - DB_PASSWORD=${POSTGRES_PASSWORD}
             - DB_NAME=${POSTGRES_DB}
+            - BOT_RUNTIME_MODE=${BOT_RUNTIME_MODE:-all}
         depends_on:
             dcs-postgres:
                 condition: service_started

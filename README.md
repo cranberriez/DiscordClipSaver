@@ -46,6 +46,8 @@ At the time of writing this, some functionality is tied to the interface calling
 
 The Docker stack runs the `db-schema` initializer automatically. For standalone bot-only development, set `DB_GENERATE_SCHEMAS=1` only if you intentionally want the bot process to create missing tables on startup.
 
+Set `BOT_RUNTIME_MODE=api` to run only the FastAPI server, or `BOT_RUNTIME_MODE=discord` to run only the Discord gateway side. The default `all` preserves the combined process.
+
 ### Interface
 
 The interface requires PostgreSQL to browse existing data. The bot, Redis, and workers are only required for background jobs and Discord-driven actions.

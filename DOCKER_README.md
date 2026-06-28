@@ -44,7 +44,15 @@ For example, run maintenance jobs while the Discord bot is down:
 WORKER_MODE=maintenance docker-compose up worker dcs-postgres dcs-redis
 ```
 
-### 3. Run Specific Services
+### 3. Run Bot Modes
+
+The bot container can be scoped with `BOT_RUNTIME_MODE`:
+
+-   `all` - default; serves the FastAPI API and connects the Discord gateway client.
+-   `api` - serves FastAPI only and does not require `BOT_TOKEN`. Discord-backed routes return 503 while the gateway is unavailable.
+-   `discord` - runs the Discord gateway client, live message batching, and scheduled jobs without binding the API port.
+
+### 4. Run Specific Services
 
 **Start only bot and dependencies:**
 

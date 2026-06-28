@@ -21,7 +21,10 @@ class RefreshCdnResponse(BaseModel):
 
 @api.get("/health")
 async def health():
-    return {"status": "ok"}
+    return {
+        "status": "ok",
+        "discordGatewayReady": discord_bot.is_ready(),
+    }
 
 
 @api.post("/refresh-cdn", response_model=RefreshCdnResponse)
@@ -33,6 +36,15 @@ async def refresh_cdn_url(request: RefreshCdnRequest):
     Lazy deletion detection: If message is not found (deleted), queue cleanup job.
     """
     try:
+        if not discord_bot.is_ready():
+            raise HTTPException(
+                status_code=503,
+                detail={
+                    "error_type": "DISCORD_GATEWAY_UNAVAILABLE",
+                    "message": "Discord gateway client is not connected",
+                },
+            )
+
         # Get the channel
         channel = discord_bot.get_channel(int(request.channel_id))
         if not channel:
