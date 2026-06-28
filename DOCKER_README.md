@@ -31,6 +31,18 @@ docker-compose up --scale worker=5 -d
 
 Each worker will process jobs from the Redis queue independently.
 
+Workers can be scoped with `WORKER_MODE`:
+
+-   `all` - default; processes every job type and requires Discord bot connectivity.
+-   `discord` - processes Discord-bound jobs: scans, message jobs, rescans, guild purge leave step.
+-   `maintenance` - processes DB/storage jobs without Discord: thumbnail retry/cleanup, message deletion cleanup, channel purge.
+
+For example, run maintenance jobs while the Discord bot is down:
+
+```bash
+WORKER_MODE=maintenance docker-compose up worker dcs-postgres dcs-redis
+```
+
 ### 3. Run Specific Services
 
 **Start only bot and dependencies:**

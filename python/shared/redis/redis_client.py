@@ -7,7 +7,7 @@ import logging
 import asyncio
 import time
 import redis.asyncio as redis_async
-from typing import Optional, Dict, Any, List
+from typing import Optional, Dict, Any, List, Iterable
 
 logger = logging.getLogger(__name__)
 
@@ -28,7 +28,8 @@ class RedisStreamClient:
         self, 
         stream_pattern: str = "*",
         consumer_group: Optional[str] = None,
-        consumer_name: Optional[str] = None
+        consumer_name: Optional[str] = None,
+        allowed_job_types: Optional[Iterable[str]] = None
     ):
         """
         Initialize Redis stream client
@@ -40,12 +41,15 @@ class RedisStreamClient:
                 - "channel:{channel_id}" = specific channel (jobs:channel:456)
             consumer_group: Consumer group name (required for workers, None for producers like bot)
             consumer_name: Consumer name (required for workers, None for producers like bot)
+            allowed_job_types: Optional job type allow-list for consumers. When set,
+                only streams whose suffix matches one of these job types are read.
         """
         self.client: Optional[redis_async.Redis] = None
         self.connected = False
         self.stream_pattern = stream_pattern
         self.consumer_group = consumer_group
         self.consumer_name = consumer_name
+        self.allowed_job_types = set(allowed_job_types) if allowed_job_types else None
         self.is_consumer = consumer_group is not None and consumer_name is not None
 
         self._connect_backoff_initial_seconds = float(os.getenv("REDIS_CONNECT_BACKOFF_INITIAL_SECONDS", "0.5"))
@@ -264,9 +268,20 @@ class RedisStreamClient:
     
     async def _get_matching_streams(self) -> List[str]:
         """Get list of streams matching the pattern using non-blocking SCAN"""
-        pattern = f"{self.STREAM_PREFIX}:{self.stream_pattern}"
-        keys = await self._scan_keys(pattern)
-        return [k for k in keys if k.startswith(self.STREAM_PREFIX)]
+        if not self.allowed_job_types:
+            pattern = f"{self.STREAM_PREFIX}:{self.stream_pattern}"
+            keys = await self._scan_keys(pattern)
+            return [k for k in keys if k.startswith(self.STREAM_PREFIX)]
+
+        keys = []
+        for job_type in sorted(self.allowed_job_types):
+            if self.stream_pattern == "*":
+                pattern = f"{self.STREAM_PREFIX}:guild:*:{job_type}"
+            else:
+                pattern = f"{self.STREAM_PREFIX}:{self.stream_pattern}:{job_type}"
+            keys.extend(await self._scan_keys(pattern))
+
+        return sorted(set(k for k in keys if k.startswith(self.STREAM_PREFIX)))
     
     async def _claim_pending_jobs(self, streams: List[str], min_idle_time: int = 60000) -> List[Dict[str, Any]]:
         """

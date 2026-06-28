@@ -123,6 +123,9 @@ The worker consists of several components:
    
    # Redis
    REDIS_URL=redis://localhost:6379
+
+   # Worker mode: all, discord, or maintenance
+   WORKER_MODE=all
    ```
 
 3. **Ensure database is initialized**:
@@ -137,9 +140,14 @@ python main.py
 
 The worker will:
 1. Connect to the database
-2. Start the Discord bot
+2. Start the Discord bot when `WORKER_MODE` is `all` or `discord`
 3. Connect to Redis
 4. Begin processing jobs from the Redis stream
+
+Use `WORKER_MODE=maintenance` to process DB/storage jobs without Discord bot
+connectivity. Maintenance mode handles thumbnail retry/cleanup, message deletion
+cleanup, and channel purge jobs. Discord mode handles scans, message jobs,
+rescans, and guild purge jobs.
 
 ## Testing
 
