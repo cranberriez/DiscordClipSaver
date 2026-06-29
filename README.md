@@ -15,7 +15,9 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 -   Docker (optional, recommended for production)
 -   FFmpeg (required for thumbnail generation - see worker README for installation)
 
-Docker or a Postgres and Redis cloud server are required for the bot to function.
+Docker is recommended for the full stack. PostgreSQL is the hard requirement for
+the interface and API to browse existing data; Redis is required for queued
+background work such as live scans, thumbnail jobs, and purge jobs.
 
 ## Setup
 

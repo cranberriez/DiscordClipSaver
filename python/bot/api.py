@@ -6,17 +6,14 @@ import aiohttp
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 
-from shared.redis.redis import MessageDeletionJob
-from shared.redis.redis_client import RedisStreamClient
-
 # ----- FastAPI app -----
 api = FastAPI(title="Discord Bot API", version="0.1.0")
 logger = logging.getLogger(__name__)
 DISCORD_API_BASE = "https://discord.com/api/v10"
-_redis_client: Optional[RedisStreamClient] = None
+_redis_client: Optional[Any] = None
 
 
-def set_redis_client(redis_client: Optional[RedisStreamClient]) -> None:
+def set_redis_client(redis_client: Optional[Any]) -> None:
     global _redis_client
     _redis_client = redis_client
 
@@ -102,6 +99,8 @@ async def queue_message_deletion_cleanup(request: RefreshCdnRequest) -> None:
         return
 
     try:
+        from shared.redis.redis import MessageDeletionJob
+
         job = MessageDeletionJob(
             guild_id=request.guild_id,
             channel_id=request.channel_id,

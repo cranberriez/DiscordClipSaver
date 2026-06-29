@@ -11,7 +11,6 @@ from bot.api import api, set_redis_client
 from bot.schedules.scheduler import start_scheduler_and_jobs
 
 from shared.db.utils import get_env_bool, init_db, close_db
-from shared.redis.redis_client import RedisStreamClient
 from shared.settings_loader import initialize_settings
 
 logger = logging.getLogger(__name__)
@@ -45,19 +44,25 @@ async def main():
         logger.warning("DB_GENERATE_SCHEMAS=true; bot startup will generate schemas")
     await init_db(generate_schemas=generate_schemas)
     
-    # Initialize Redis client for job queue (bot is a producer, not a consumer)
-    redis_client = RedisStreamClient(
-        stream_pattern="*",
-        consumer_group=None,  # Bot doesn't consume jobs
-        consumer_name=None    # Bot only produces jobs
-    )
-    try:
-        # Redis is required for the gateway listener to queue live work. API-only
-        # mode uses Redis only for best-effort cleanup jobs, so keep startup fast.
-        await redis_client.connect(max_attempts=None if start_discord else 1)
-    except Exception as e:
-        log = logger.error if start_discord else logger.warning
-        log(f"Initial Redis connection failed; bot will keep running and retry on demand. Error: {e}")
+    redis_client = None
+    if start_discord:
+        from shared.redis.redis_client import RedisStreamClient
+
+        # Initialize Redis client for job queue (bot is a producer, not a consumer).
+        # API-only mode must not require Redis; it can serve REST-backed routes
+        # without queueing best-effort cleanup jobs.
+        redis_client = RedisStreamClient(
+            stream_pattern="*",
+            consumer_group=None,  # Bot doesn't consume jobs
+            consumer_name=None    # Bot only produces jobs
+        )
+        try:
+            await redis_client.connect(max_attempts=None)
+        except Exception as e:
+            logger.error(
+                "Initial Redis connection failed; bot will keep running and retry on demand. "
+                f"Error: {e}"
+            )
 
     set_redis_client(redis_client)
 
@@ -135,8 +140,9 @@ async def main():
                 await api_task
         
         # Disconnect Redis
-        with suppress(Exception):
-            await redis_client.disconnect()
+        if redis_client:
+            with suppress(Exception):
+                await redis_client.disconnect()
 
         # Close database connections
         with suppress(Exception):
