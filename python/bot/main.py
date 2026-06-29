@@ -7,10 +7,8 @@ import uvicorn
 from dotenv import load_dotenv
 
 
-from bot.api import api
+from bot.api import api, set_redis_client
 from bot.schedules.scheduler import start_scheduler_and_jobs
-from bot.services.scan_service import get_scan_service
-from bot.services.message_batcher import get_message_batcher
 
 from shared.db.utils import get_env_bool, init_db, close_db
 from shared.redis.redis_client import RedisStreamClient
@@ -57,12 +55,19 @@ async def main():
         await redis_client.connect()
     except Exception as e:
         logger.error(f"Initial Redis connection failed; bot will keep running and retry on demand. Error: {e}")
-    
-    # Configure scan service with Redis client
-    scan_service = get_scan_service(redis_client=redis_client)
-    
-    # Configure message batcher with Redis client
-    message_batcher = get_message_batcher(redis_client=redis_client)
+
+    set_redis_client(redis_client)
+
+    message_batcher = None
+    if start_discord:
+        from bot.services.scan_service import get_scan_service
+        from bot.services.message_batcher import get_message_batcher
+
+        # Configure scan service with Redis client
+        get_scan_service(redis_client=redis_client)
+
+        # Configure message batcher with Redis client
+        message_batcher = get_message_batcher(redis_client=redis_client)
 
     token = None
     if start_discord:
@@ -114,9 +119,9 @@ async def main():
             await discord_bot.close()
 
         # Stop message batcher and process remaining batches
-        with suppress(Exception):
-            message_batcher = get_message_batcher()
-            await message_batcher.stop()
+        if message_batcher:
+            with suppress(Exception):
+                await message_batcher.stop()
 
         # If the bot stops, also stop the API server
         if server and not server.should_exit:

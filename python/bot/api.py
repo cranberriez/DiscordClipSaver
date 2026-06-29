@@ -6,12 +6,19 @@ import aiohttp
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 
-from bot.services.scan_service import get_scan_service
+from shared.redis.redis import MessageDeletionJob
+from shared.redis.redis_client import RedisStreamClient
 
 # ----- FastAPI app -----
 api = FastAPI(title="Discord Bot API", version="0.1.0")
 logger = logging.getLogger(__name__)
 DISCORD_API_BASE = "https://discord.com/api/v10"
+_redis_client: Optional[RedisStreamClient] = None
+
+
+def set_redis_client(redis_client: Optional[RedisStreamClient]) -> None:
+    global _redis_client
+    _redis_client = redis_client
 
 
 class RefreshCdnRequest(BaseModel):
@@ -90,17 +97,17 @@ async def queue_message_deletion_cleanup(request: RefreshCdnRequest) -> None:
         )
         return
 
-    scan_service = get_scan_service()
-    if not scan_service or not scan_service.redis_client:
+    if not _redis_client:
         logger.warning("Redis client not configured, cannot queue deletion cleanup")
         return
 
     try:
-        await scan_service.handle_message_deletion(
+        job = MessageDeletionJob(
             guild_id=request.guild_id,
             channel_id=request.channel_id,
             message_id=request.message_id,
         )
+        await _redis_client.push_job(job.model_dump(mode="json"))
     except Exception:
         logger.warning(
             "Failed to queue deletion cleanup for message %s",
