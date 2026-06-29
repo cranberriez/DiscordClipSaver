@@ -239,7 +239,15 @@ required and optional dependencies:
     "dependencies": {
         "database": { "ok": true, "required": true, "latencyMs": 12 },
         "redis": { "ok": false, "required": false, "error": "Redis unavailable" },
-        "botApi": { "ok": false, "required": false },
+        "botApi": {
+            "ok": true,
+            "required": false,
+            "latencyMs": 8,
+            "details": {
+                "status": "ok",
+                "discordRestAvailable": true
+            }
+        },
         "storage": { "ok": true, "required": false, "latencyMs": 1 }
     }
 }

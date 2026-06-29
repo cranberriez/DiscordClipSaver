@@ -11,6 +11,7 @@ type DependencyHealth = {
 	required: boolean;
 	latencyMs?: number;
 	error?: string;
+	details?: Record<string, unknown>;
 };
 
 function getClientIp(req: NextRequest): string | null {
@@ -131,22 +132,43 @@ function checkRedisHealth() {
 	});
 }
 
-function checkBotApiHealth() {
+async function checkBotApiHealth(): Promise<DependencyHealth> {
 	if (!getBotApiUrl()) {
-		return Promise.resolve({
+		return {
 			ok: false,
 			required: false,
 			error: "BOT_API_URL is not configured",
-		});
+		};
 	}
 
-	return timedCheck(false, async () => {
+	const start = performance.now();
+
+	try {
 		const response = await fetchBotApi("/health");
 
 		if (!response.ok) {
 			throw new Error(`Bot API returned ${response.status}`);
 		}
-	});
+
+		const contentType = response.headers.get("content-type") ?? "";
+		const details = contentType.includes("application/json")
+			? ((await response.json()) as Record<string, unknown>)
+			: undefined;
+
+		return {
+			ok: true,
+			required: false,
+			latencyMs: Math.round(performance.now() - start),
+			details,
+		};
+	} catch (error) {
+		return {
+			ok: false,
+			required: false,
+			latencyMs: Math.round(performance.now() - start),
+			error: error instanceof Error ? error.message : "Unknown error",
+		};
+	}
 }
 
 function checkStorageHealth() {
