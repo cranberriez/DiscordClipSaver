@@ -54,6 +54,8 @@ services:
         build:
             context: .
             dockerfile: ./python/bot/Dockerfile
+            args:
+                BOT_REQUIREMENTS_FILE: requirements.api.txt
         container_name: dcs-bot-api
         env_file:
             - ./python/bot/.env
@@ -79,6 +81,8 @@ services:
         build:
             context: .
             dockerfile: ./python/bot/Dockerfile
+            args:
+                BOT_REQUIREMENTS_FILE: requirements.discord.txt
         container_name: dcs-bot-discord
         env_file:
             - ./python/bot/.env

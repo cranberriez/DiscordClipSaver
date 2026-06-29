@@ -1,0 +1,9 @@
+fastapi
+uvicorn[standard]
+pydantic
+python-dotenv
+APScheduler
+aiohttp
+psycopg-binary
+tortoise-orm[asyncpg]
+colorlog

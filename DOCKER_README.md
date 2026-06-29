@@ -55,6 +55,11 @@ The bot image is split into two Docker services:
 `BOT_RUNTIME_MODE=all|api|discord` is still available for standalone Python
 runs, but Docker Compose sets the mode per service.
 
+The Docker builds also install mode-specific dependency sets:
+`bot-api` uses `python/bot/requirements.api.txt`, `bot-discord` uses
+`python/bot/requirements.discord.txt`, and `python/bot/requirements.txt`
+remains the full standalone/local-development set.
+
 ### 4. Run Specific Services
 
 **Start only the bot API and database:**

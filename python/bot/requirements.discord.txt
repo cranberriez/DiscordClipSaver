@@ -1,0 +1,8 @@
+discord.py
+pydantic
+python-dotenv
+audioop-lts
+psycopg-binary
+tortoise-orm[asyncpg]
+redis
+colorlog
