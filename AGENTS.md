@@ -4,24 +4,27 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Discord Clip Saver is a self-hosted system that automatically archives video clips from Discord servers. It consists of three services: a Python Discord bot, a Python async worker, and a Next.js web interface — all backed by PostgreSQL and Redis.
+Discord Clip Saver is a self-hosted system that automatically archives video clips from Discord servers. It consists of a Python bot API, a Python Discord gateway listener, Python async workers, and a Next.js web interface. PostgreSQL is the hard runtime dependency for browsing existing data; Redis is required for queued background work.
 
 ## Architecture
 
-The system has four main processes that communicate through shared infrastructure:
+The system has separate runtime processes that communicate through shared infrastructure:
 
 ```
-Discord API ─── Bot (discord.py + FastAPI) ── PostgreSQL (Tortoise ORM)
-                        │                             │
-                        └──── Redis Streams ──── Worker (asyncio)
-                                                      │
-Interface (Next.js) ──────── PostgreSQL (Kysely) ─────┘
-                    └─────── Bot API (HTTP :8000)
+Discord API ── Bot Discord (discord.py) ── PostgreSQL (Tortoise ORM)
+                         │
+                         └── Redis Streams ── Worker (asyncio)
+                                                │
+Interface (Next.js) ── PostgreSQL (Kysely) ─────┘
+        │
+        └── Bot API (FastAPI HTTP :8000) ── Discord REST
 ```
 
-**Bot** (`python/bot/`): A discord.py client with an embedded FastAPI server on port 8000. Listens to real-time Discord events, syncs guild/channel state to the database, batches live messages via `MessageBatcher`, and queues scan jobs onto Redis Streams. The `ScanService` detects gaps in message history and queues backfill jobs.
+**Bot API** (`python/bot/`, `BOT_RUNTIME_MODE=api`, Docker service `bot-api`): FastAPI server on port 8000 for interface-triggered Discord REST actions and API-owned maintenance. It requires PostgreSQL but does not start the Discord gateway or connect to Redis on startup.
 
-**Worker** (`python/worker/`): An asyncio service that pulls jobs from Redis Streams using a consumer group (`worker_group`), allowing horizontal scaling (`docker compose up --scale worker=N`). Processes two job types: `batch` (historical channel scans fetching message history via Discord HTTP API) and `message` (individual real-time messages). Also handles thumbnail generation via FFmpeg/Pillow and the `purge` operation. Stale scan and thumbnail cleanup loops run on background tasks.
+**Bot Discord** (`python/bot/`, `BOT_RUNTIME_MODE=discord`, Docker service `bot-discord`): discord.py gateway client. Listens to real-time Discord events, syncs guild/channel state to the database, batches live messages via `MessageBatcher`, and queues scan jobs onto Redis Streams. The `ScanService` detects gaps in message history and queues backfill jobs.
+
+**Worker** (`python/worker/`): An asyncio service that pulls jobs from Redis Streams using a consumer group (`worker_group`), allowing horizontal scaling (`docker compose up --scale worker=N`). `WORKER_MODE=all|discord|maintenance` controls whether a worker handles Discord-bound jobs, DB/storage maintenance jobs, or both. Maintenance mode avoids constructing or importing the Discord worker bot.
 
 **Interface** (`interface/`): Next.js 15 App Router application. Uses Kysely (not Tortoise) to query the same PostgreSQL database directly. Authentication is Discord OAuth via NextAuth.js. API routes are strictly layered — route handlers validate/auth, then delegate all DB access to query functions in `lib/db/queries/`. TanStack Query manages client-side caching and refetching.
 
@@ -46,7 +49,7 @@ Clips use a deterministic MD5 hash: `md5(message_id + channel_id + filename + ti
 ```bash
 docker compose up -d                          # Start everything
 docker compose up -d dcs-postgres dcs-redis  # Start only infrastructure
-docker compose logs -f bot                    # Follow bot logs
+docker compose logs -f bot-api bot-discord    # Follow bot logs
 docker compose up --scale worker=3           # Run 3 workers
 ```
 
@@ -83,7 +86,7 @@ The project uses a layered env file pattern:
 - `.env.global` / `.env.global.example` — shared secrets (DB credentials, Discord tokens, Redis URL)
 - `python/bot/.env`, `python/worker/.env`, `interface/.env` — service-specific variables
 
-Key variables: `DISCORD_BOT_TOKEN`, `DISCORD_CLIENT_ID`, `DISCORD_CLIENT_SECRET`, `POSTGRES_USER/PASSWORD/DB`, `REDIS_URL`, `NEXTAUTH_SECRET`, `NEXTAUTH_URL`, `BOT_API_URL`.
+Key variables: `BOT_TOKEN`, `DISCORD_CLIENT_ID`, `DISCORD_CLIENT_SECRET`, `POSTGRES_USER/PASSWORD/DB`, `REDIS_URL`, `NEXTAUTH_SECRET`, `NEXTAUTH_URL`, `BOT_API_URL`.
 
 ## Code Style
 
