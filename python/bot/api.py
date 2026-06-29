@@ -1,18 +1,23 @@
+import logging
+import os
+from typing import Any, Optional
+
+import aiohttp
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
-from typing import Optional
-import discord
 
-from bot.bot import bot as discord_bot
 from bot.services.scan_service import get_scan_service
 
 # ----- FastAPI app -----
 api = FastAPI(title="Discord Bot API", version="0.1.0")
+logger = logging.getLogger(__name__)
+DISCORD_API_BASE = "https://discord.com/api/v10"
 
 
 class RefreshCdnRequest(BaseModel):
     message_id: str
     channel_id: str
+    guild_id: Optional[str] = None
 
 
 class RefreshCdnResponse(BaseModel):
@@ -23,8 +28,85 @@ class RefreshCdnResponse(BaseModel):
 async def health():
     return {
         "status": "ok",
-        "discordGatewayReady": discord_bot.is_ready(),
+        "discordRestAvailable": bool(os.getenv("BOT_TOKEN")),
     }
+
+
+async def fetch_discord_message(channel_id: str, message_id: str) -> dict[str, Any]:
+    token = os.getenv("BOT_TOKEN")
+    if not token:
+        raise HTTPException(
+            status_code=503,
+            detail={
+                "error_type": "DISCORD_REST_UNAVAILABLE",
+                "message": "BOT_TOKEN is not configured",
+            },
+        )
+
+    url = f"{DISCORD_API_BASE}/channels/{channel_id}/messages/{message_id}"
+    timeout = aiohttp.ClientTimeout(total=10)
+
+    async with aiohttp.ClientSession(timeout=timeout) as session:
+        async with session.get(url, headers={"Authorization": f"Bot {token}"}) as response:
+            if response.status == 404:
+                raise HTTPException(
+                    status_code=410,
+                    detail={
+                        "error_type": "MESSAGE_DELETED",
+                        "message": "This clip was deleted from Discord and is no longer available",
+                    },
+                )
+
+            if response.status == 403:
+                raise HTTPException(
+                    status_code=403,
+                    detail="Bot lacks permission to access message",
+                )
+
+            if response.status == 401:
+                raise HTTPException(
+                    status_code=503,
+                    detail={
+                        "error_type": "DISCORD_REST_UNAVAILABLE",
+                        "message": "BOT_TOKEN was rejected by Discord",
+                    },
+                )
+
+            if response.status >= 400:
+                detail = await response.text()
+                raise HTTPException(
+                    status_code=502,
+                    detail=f"Discord API returned {response.status}: {detail[:200]}",
+                )
+
+            return await response.json()
+
+
+async def queue_message_deletion_cleanup(request: RefreshCdnRequest) -> None:
+    if not request.guild_id:
+        logger.warning(
+            "Cannot queue deletion cleanup for message %s without guild_id",
+            request.message_id,
+        )
+        return
+
+    scan_service = get_scan_service()
+    if not scan_service or not scan_service.redis_client:
+        logger.warning("Redis client not configured, cannot queue deletion cleanup")
+        return
+
+    try:
+        await scan_service.handle_message_deletion(
+            guild_id=request.guild_id,
+            channel_id=request.channel_id,
+            message_id=request.message_id,
+        )
+    except Exception:
+        logger.warning(
+            "Failed to queue deletion cleanup for message %s",
+            request.message_id,
+            exc_info=True,
+        )
 
 
 @api.post("/refresh-cdn", response_model=RefreshCdnResponse)
@@ -36,61 +118,24 @@ async def refresh_cdn_url(request: RefreshCdnRequest):
     Lazy deletion detection: If message is not found (deleted), queue cleanup job.
     """
     try:
-        if not discord_bot.is_ready():
-            raise HTTPException(
-                status_code=503,
-                detail={
-                    "error_type": "DISCORD_GATEWAY_UNAVAILABLE",
-                    "message": "Discord gateway client is not connected",
-                },
-            )
-
-        # Get the channel
-        channel = discord_bot.get_channel(int(request.channel_id))
-        if not channel:
-            raise HTTPException(status_code=404, detail="Channel not found")
-
-        # Fetch the message
-        try:
-            message = await channel.fetch_message(int(request.message_id))
-        except discord.NotFound:
-            # Message was deleted from Discord!
-            # Queue deletion job to clean up database and storage
-            
-            scan_service = get_scan_service()
-            if scan_service and scan_service.redis_client:
-                # Queue cleanup job asynchronously
-                await scan_service.handle_message_deletion(
-                    guild_id=str(channel.guild.id) if hasattr(channel, 'guild') else None,
-                    channel_id=request.channel_id,
-                    message_id=request.message_id
-                )
-            
-            # Return specific error type for UI to handle gracefully
-            raise HTTPException(
-                status_code=410,  # 410 Gone - resource permanently deleted
-                detail={
-                    "error_type": "MESSAGE_DELETED",
-                    "message": "This clip was deleted from Discord and is no longer available"
-                }
-            )
-        except discord.Forbidden:
-            raise HTTPException(status_code=403, detail="Bot lacks permission to access message")
+        message = await fetch_discord_message(request.channel_id, request.message_id)
 
         # Extract attachment information
         attachments = []
-        for attachment in message.attachments:
+        for attachment in message.get("attachments", []):
             attachments.append({
-                "id": str(attachment.id),
-                "filename": attachment.filename,
-                "url": attachment.url,
-                "size": attachment.size,
-                "content_type": attachment.content_type,
+                "id": str(attachment["id"]),
+                "filename": attachment["filename"],
+                "url": attachment["url"],
+                "size": attachment["size"],
+                "content_type": attachment.get("content_type"),
             })
 
         return RefreshCdnResponse(attachments=attachments)
 
-    except HTTPException:
+    except HTTPException as e:
+        if e.status_code == 410:
+            await queue_message_deletion_cleanup(request)
         raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to refresh CDN URL: {str(e)}")

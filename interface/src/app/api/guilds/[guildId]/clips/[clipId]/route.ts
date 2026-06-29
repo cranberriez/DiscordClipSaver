@@ -76,6 +76,7 @@ export async function GET(
 					body: JSON.stringify({
 						message_id: clipWithMetadata.message.id,
 						channel_id: clipWithMetadata.message.channel_id,
+						guild_id: guildId,
 					}),
 				});
 

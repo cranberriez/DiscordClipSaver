@@ -49,7 +49,7 @@ WORKER_MODE=maintenance docker-compose up worker dcs-postgres dcs-redis
 
 The bot image is split into two Docker services:
 
--   `bot-api` - serves FastAPI and API-owned scheduled maintenance without requiring `BOT_TOKEN`. Discord-backed routes return 503 while the gateway is unavailable.
+-   `bot-api` - serves FastAPI and API-owned scheduled maintenance without the Discord gateway. Discord REST-backed routes return 503 if `BOT_TOKEN` is unavailable or rejected.
 -   `bot-discord` - runs the Discord gateway client and live message batching without binding the API port.
 
 `BOT_RUNTIME_MODE=all|api|discord` is still available for standalone Python

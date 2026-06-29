@@ -8,7 +8,6 @@ from dotenv import load_dotenv
 
 
 from bot.api import api
-from bot.bot import bot as discord_bot
 from bot.schedules.scheduler import start_scheduler_and_jobs
 from bot.services.scan_service import get_scan_service
 from bot.services.message_batcher import get_message_batcher
@@ -70,6 +69,10 @@ async def main():
         token = os.getenv("BOT_TOKEN")
         if not token:
             raise RuntimeError("BOT_TOKEN not set in environment")
+
+    discord_bot = None
+    if start_discord:
+        from bot.bot import bot as discord_bot
 
     server = None
     api_task = None
