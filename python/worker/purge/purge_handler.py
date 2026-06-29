@@ -15,7 +15,7 @@ logger = logging.getLogger(__name__)
 class PurgeHandler:
     """Handles purge operations for channels and guilds"""
     
-    def __init__(self, bot: WorkerBot):
+    def __init__(self, bot: Optional[WorkerBot]):
         self.bot = bot
         self.storage = get_storage_backend()
     
@@ -202,13 +202,16 @@ class PurgeHandler:
             
             # Leave the guild via bot
             try:
-                discord_guild = self.bot.get_guild(int(guild_id))
-                if discord_guild:
-                    await discord_guild.leave()
-                    stats["guild_left"] = True
-                    logger.info(f"Bot left guild {guild_id}")
+                if self.bot is None:
+                    logger.warning("Discord worker bot is unavailable; skipping guild leave")
                 else:
-                    logger.warning(f"Guild {guild_id} not found in bot cache (already left?)")
+                    discord_guild = self.bot.get_guild(int(guild_id))
+                    if discord_guild:
+                        await discord_guild.leave()
+                        stats["guild_left"] = True
+                        logger.info(f"Bot left guild {guild_id}")
+                    else:
+                        logger.warning(f"Guild {guild_id} not found in bot cache (already left?)")
             except Exception as e:
                 logger.error(f"Failed to leave guild {guild_id}: {e}")
                 # Continue even if leaving fails

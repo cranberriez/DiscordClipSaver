@@ -31,7 +31,7 @@ logger = logging.getLogger(__name__)
 class JobProcessor:
     """Processes jobs from the Redis queue"""
     
-    def __init__(self, bot: WorkerBot, redis_client: Optional[RedisStreamClient] = None):
+    def __init__(self, bot: Optional[WorkerBot], redis_client: Optional[RedisStreamClient] = None):
         self.bot = bot
         self.redis_client = redis_client
         
@@ -46,6 +46,11 @@ class JobProcessor:
         
         # Centralized validation service with Redis caching
         self.validation_service = ValidationService(redis_client=redis_client)
+
+    def _require_discord_bot(self) -> WorkerBot:
+        if self.bot is None:
+            raise RuntimeError("This job type requires a Discord worker bot")
+        return self.bot
     
     async def close(self):
         """Close all handlers and cleanup resources"""
@@ -188,7 +193,8 @@ class JobProcessor:
             
             # Get the Discord channel from cache to avoid API call
             # The user requested that .history is the ONLY API call for batch scans
-            discord_channel = self.bot.get_channel(int(channel_id))
+            bot = self._require_discord_bot()
+            discord_channel = bot.get_channel(int(channel_id))
             
             if not discord_channel:
                 await self._update_scan_status_with_error(
@@ -451,8 +457,9 @@ class JobProcessor:
                 return
             
             # Fetch the Discord channel
+            bot = self._require_discord_bot()
             discord_channel = await execute_with_retry(
-                self.bot.fetch_channel,
+                bot.fetch_channel,
                 int(channel_id),
                 max_retries=3,
                 base_delay=1.0

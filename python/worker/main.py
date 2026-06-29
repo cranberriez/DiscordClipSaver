@@ -38,7 +38,7 @@ class Worker:
                 f"Expected one of: {', '.join(sorted(ALL_WORKER_MODES))}"
             )
 
-        self.bot = WorkerBot()
+        self.bot = WorkerBot() if self.requires_discord_bot() else None
         # Generate unique consumer name using hostname (unique per container)
         import socket
         hostname = socket.gethostname()
@@ -305,6 +305,8 @@ class Worker:
             await self.initialize()
 
             if self.requires_discord_bot():
+                if self.bot is None:
+                    raise RuntimeError("Discord worker mode requires a WorkerBot instance")
                 # Now start the bot
                 logger.info("Starting Discord bot...")
                 bot_task = asyncio.create_task(self.bot.start_bot())

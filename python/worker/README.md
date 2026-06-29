@@ -149,9 +149,9 @@ The worker will:
 4. Begin processing jobs from the Redis stream
 
 Use `WORKER_MODE=maintenance` to process DB/storage jobs without Discord bot
-connectivity. Maintenance mode handles thumbnail retry/cleanup, message deletion
-cleanup, and channel purge jobs. Discord mode handles scans, message jobs,
-rescans, and guild purge jobs.
+connectivity or Discord client startup. Maintenance mode handles thumbnail
+retry/cleanup, message deletion cleanup, and channel purge jobs. Discord mode
+handles scans, message jobs, rescans, and guild purge jobs.
 
 ## Testing
 

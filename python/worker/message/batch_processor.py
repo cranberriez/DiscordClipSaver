@@ -29,7 +29,7 @@ class BatchMessageProcessor:
     - Thumbnail existence checked in bulk
     """
     
-    def __init__(self, bot: WorkerBot, thumbnail_handler: Optional[ThumbnailHandler] = None):
+    def __init__(self, bot: Optional[WorkerBot], thumbnail_handler: Optional[ThumbnailHandler] = None):
         self.bot = bot
         self.db_ops = BatchDatabaseOperations()
         self.thumbnail_handler = thumbnail_handler or ThumbnailHandler()
@@ -121,6 +121,9 @@ class BatchMessageProcessor:
         author_ids = {msg.author.id for msg in messages if str(msg.id) in clip_map}
         if not author_ids:
             return
+
+        if self.bot is None:
+            raise RuntimeError("Batch message processing requires a Discord worker bot")
 
         guild = self.bot.get_guild(int(context.guild_id))
         if not guild:
