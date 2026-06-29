@@ -3,6 +3,7 @@ import { requireGuildAccess } from "@/server/middleware/auth";
 import { DataService } from "@/server/services/data-service";
 import { updateClipCdnUrl } from "@/server/db/queries/clips";
 import { rateLimit } from "@/server/rate-limit";
+import { fetchBotApi, getBotApiUrl } from "@/server/bot-api";
 
 /**
  * GET /api/guilds/[guildId]/clips/[clipId]
@@ -62,15 +63,14 @@ export async function GET(
 			console.log(`CDN URL expired for clip ${clipId}, refreshing...`);
 
 			try {
-				const botApiUrl = process.env.BOT_API_URL;
-				if (!botApiUrl) {
+				if (!getBotApiUrl()) {
 					console.error(
 						"BOT_API_URL not configured, returning expired URL"
 					);
 					return NextResponse.json(clipWithMetadata);
 				}
 
-				const response = await fetch(`${botApiUrl}/refresh-cdn`, {
+				const response = await fetchBotApi("/refresh-cdn", {
 					method: "POST",
 					headers: { "Content-Type": "application/json" },
 					body: JSON.stringify({

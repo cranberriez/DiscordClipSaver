@@ -3,6 +3,7 @@ import { access } from "fs/promises";
 import { join } from "path";
 import { sql } from "kysely";
 import { withRedis } from "@/lib/redis/client";
+import { fetchBotApi, getBotApiUrl } from "@/server/bot-api";
 import { getDb } from "@/server/db";
 
 type DependencyHealth = {
@@ -131,8 +132,7 @@ function checkRedisHealth() {
 }
 
 function checkBotApiHealth() {
-	const botApiUrl = process.env.BOT_API_URL;
-	if (!botApiUrl) {
+	if (!getBotApiUrl()) {
 		return Promise.resolve({
 			ok: false,
 			required: false,
@@ -141,19 +141,10 @@ function checkBotApiHealth() {
 	}
 
 	return timedCheck(false, async () => {
-		const controller = new AbortController();
-		const timeout = setTimeout(() => controller.abort(), 2000);
+		const response = await fetchBotApi("/health");
 
-		try {
-			const response = await fetch(`${botApiUrl}/health`, {
-				signal: controller.signal,
-			});
-
-			if (!response.ok) {
-				throw new Error(`Bot API returned ${response.status}`);
-			}
-		} finally {
-			clearTimeout(timeout);
+		if (!response.ok) {
+			throw new Error(`Bot API returned ${response.status}`);
 		}
 	});
 }

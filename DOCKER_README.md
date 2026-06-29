@@ -237,7 +237,8 @@ required and optional dependencies:
 
 An unavailable database returns HTTP 503. Optional dependency failures keep the
 endpoint HTTP 200 so monitoring can distinguish a degraded interface from a down
-interface.
+interface. `BOT_API_TIMEOUT_MS` controls how long interface requests wait on the
+optional bot API before continuing in degraded mode.
 
 Add to worker service:
 
