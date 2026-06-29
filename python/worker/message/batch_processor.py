@@ -1,19 +1,22 @@
 """
 Batch message processor for efficient processing of multiple messages
 """
+from __future__ import annotations
+
 import logging
-from typing import List, Optional
+from typing import List, Optional, TYPE_CHECKING
 import discord
 from shared.settings import settings
 from shared.user_settings_resolver import resolve_user_settings
 from worker.message.batch_context import BatchContext
 from worker.message.batch_operations import BatchDatabaseOperations
-from worker.discord.bot import WorkerBot
 from worker.thumbnail.thumbnail_handler import ThumbnailHandler
 from worker.message.utils import compute_settings_hash
-from worker.message.validators import should_process_message, filter_video_attachments
-from worker.message.clip_metadata import build_clip_id_map, get_all_clip_ids, extract_clip_info
+from worker.message.clip_metadata import build_clip_id_map, get_all_clip_ids
 from shared.db.models import Clip
+
+if TYPE_CHECKING:
+    from worker.discord.bot import WorkerBot
 
 logger = logging.getLogger(__name__)
 
@@ -29,7 +32,7 @@ class BatchMessageProcessor:
     - Thumbnail existence checked in bulk
     """
     
-    def __init__(self, bot: Optional[WorkerBot], thumbnail_handler: Optional[ThumbnailHandler] = None):
+    def __init__(self, bot: Optional["WorkerBot"], thumbnail_handler: Optional[ThumbnailHandler] = None):
         self.bot = bot
         self.db_ops = BatchDatabaseOperations()
         self.thumbnail_handler = thumbnail_handler or ThumbnailHandler()

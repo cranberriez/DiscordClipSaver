@@ -1,20 +1,13 @@
 """
 Job processor for handling different job types
 """
+from __future__ import annotations
+
 import logging
-import asyncio
-from typing import Optional
-import discord
-from worker.discord.bot import WorkerBot
-from worker.discord.get_message_history import get_message_history
-from worker.discord.get_message import get_message
-from worker.discord.retry import execute_with_retry
-from worker.message.message_handler import MessageHandler
-from worker.message.batch_processor import BatchMessageProcessor
+from typing import Optional, TYPE_CHECKING
 from worker.thumbnail.thumbnail_handler import ThumbnailHandler
-from worker.purge.purge_handler import PurgeHandler
 from worker.validation import ValidationService
-from shared.db.models import Guild, Channel, ScanStatus, ChannelType
+from shared.db.models import ScanStatus
 from shared.db.repositories.channel_scan_status import (
     get_or_create_scan_status,
     update_scan_status,
@@ -25,32 +18,60 @@ from shared.redis.redis_client import RedisStreamClient
 from shared.redis.redis import BatchScanJob
 from shared.settings import settings
 
+if TYPE_CHECKING:
+    from worker.discord.bot import WorkerBot
+    from worker.message.message_handler import MessageHandler
+    from worker.message.batch_processor import BatchMessageProcessor
+    from worker.purge.purge_handler import PurgeHandler
+
 logger = logging.getLogger(__name__)
 
 
 class JobProcessor:
     """Processes jobs from the Redis queue"""
     
-    def __init__(self, bot: Optional[WorkerBot], redis_client: Optional[RedisStreamClient] = None):
+    def __init__(self, bot: Optional["WorkerBot"], redis_client: Optional[RedisStreamClient] = None):
         self.bot = bot
         self.redis_client = redis_client
         
         # Create single shared thumbnail handler to avoid duplicate aiohttp sessions
         # Previously had 3 separate instances (one per handler) - wasteful!
         self.thumbnail_handler = ThumbnailHandler()
-        
-        # Inject shared handler into message processors
-        self.message_handler = MessageHandler(thumbnail_handler=self.thumbnail_handler)
-        self.batch_processor = BatchMessageProcessor(bot=bot, thumbnail_handler=self.thumbnail_handler)
-        self.purge_handler = PurgeHandler(bot=bot)
+        self.message_handler: Optional["MessageHandler"] = None
+        self.batch_processor: Optional["BatchMessageProcessor"] = None
+        self.purge_handler: Optional["PurgeHandler"] = None
         
         # Centralized validation service with Redis caching
         self.validation_service = ValidationService(redis_client=redis_client)
 
-    def _require_discord_bot(self) -> WorkerBot:
+    def _require_discord_bot(self) -> "WorkerBot":
         if self.bot is None:
             raise RuntimeError("This job type requires a Discord worker bot")
         return self.bot
+
+    def _get_message_handler(self) -> "MessageHandler":
+        if self.message_handler is None:
+            from worker.message.message_handler import MessageHandler
+
+            self.message_handler = MessageHandler(thumbnail_handler=self.thumbnail_handler)
+        return self.message_handler
+
+    def _get_batch_processor(self) -> "BatchMessageProcessor":
+        if self.batch_processor is None:
+            from worker.message.batch_processor import BatchMessageProcessor
+
+            self.batch_processor = BatchMessageProcessor(
+                bot=self._require_discord_bot(),
+                thumbnail_handler=self.thumbnail_handler,
+            )
+        return self.batch_processor
+
+    def _get_purge_handler(self) -> "PurgeHandler":
+        if self.purge_handler is None:
+            from worker.purge.purge_handler import PurgeHandler
+
+            self.purge_handler = PurgeHandler(bot=self.bot)
+        return self.purge_handler
     
     async def close(self):
         """Close all handlers and cleanup resources"""
@@ -161,6 +182,8 @@ class JobProcessor:
         rescan = job_data.get("rescan", "stop")  # "stop", "continue", or "update"
         
         logger.info(f"Processing batch scan: channel={channel_id}, direction={direction}, limit={limit}, rescan={rescan}, continue={auto_continue}")
+        import discord
+        from worker.discord.get_message_history import get_message_history
         
         try:
             # Get or create scan status
@@ -304,7 +327,7 @@ class JobProcessor:
                 return
 
             # Process messages in batch for better performance
-            total_clips, thumbnails_generated = await self.batch_processor.process_messages_batch(
+            total_clips, thumbnails_generated = await self._get_batch_processor().process_messages_batch(
                 messages=messages_to_process,
                 channel_id=channel_id,
                 guild_id=guild_id,
@@ -446,6 +469,8 @@ class JobProcessor:
         message_ids = job_data["message_ids"]
         
         logger.info(f"Processing message scan: channel={channel_id}, messages={len(message_ids)}")
+        from worker.discord.get_message import get_message
+        from worker.discord.retry import execute_with_retry
         
         try:
             # Validate guild and channel scan enabled flags
@@ -475,7 +500,7 @@ class JobProcessor:
                     discord_message = await get_message(discord_channel, int(message_id))
                     
                     # Process the message
-                    clips_found = await self.message_handler.process_message(
+                    clips_found = await self._get_message_handler().process_message(
                         discord_message=discord_message,
                         channel_id=channel_id,
                         guild_id=guild_id
@@ -686,7 +711,7 @@ class JobProcessor:
             await self._stop_channel_scan(guild_id, channel_id)
             
             # Execute purge
-            stats = await self.purge_handler.purge_channel(
+            stats = await self._get_purge_handler().purge_channel(
                 guild_id=guild_id,
                 channel_id=channel_id
             )
@@ -713,7 +738,7 @@ class JobProcessor:
             await self._stop_guild_scans(guild_id)
             
             # Execute purge (will also leave the guild)
-            stats = await self.purge_handler.purge_guild(guild_id=guild_id)
+            stats = await self._get_purge_handler().purge_guild(guild_id=guild_id)
             
             logger.info(f"Guild purge complete: {stats}")
             

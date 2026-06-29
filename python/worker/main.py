@@ -4,15 +4,18 @@ Main worker entry point
 import asyncio
 import os
 import signal
+from typing import TYPE_CHECKING, Optional
 from dotenv import load_dotenv
 from shared.db.utils import init_db, close_db, start_health_check_loop
 from shared.db.models import ScanStatus
-from worker.discord.bot import WorkerBot
 from shared.redis.redis_client import RedisStreamClient, RedisUnavailableError
 from worker.processor import JobProcessor
 from worker.logger import logger  # Centralized logger setup
 from shared.settings_loader import initialize_settings
 from shared.settings import settings
+
+if TYPE_CHECKING:
+    from worker.discord.bot import WorkerBot
 
 # Load environment variables
 load_dotenv()
@@ -38,7 +41,7 @@ class Worker:
                 f"Expected one of: {', '.join(sorted(ALL_WORKER_MODES))}"
             )
 
-        self.bot = WorkerBot() if self.requires_discord_bot() else None
+        self.bot: Optional["WorkerBot"] = self._create_discord_bot() if self.requires_discord_bot() else None
         # Generate unique consumer name using hostname (unique per container)
         import socket
         hostname = socket.gethostname()
@@ -75,6 +78,12 @@ class Worker:
     def requires_discord_bot(self) -> bool:
         """Return True when this worker mode needs the Discord gateway."""
         return self.mode in {"all", "discord"}
+
+    def _create_discord_bot(self) -> "WorkerBot":
+        """Create the Discord gateway bot only for worker modes that need it."""
+        from worker.discord.bot import WorkerBot
+
+        return WorkerBot()
 
     def runs_maintenance_tasks(self) -> bool:
         """Return True when this worker mode should run DB/storage maintenance loops."""
