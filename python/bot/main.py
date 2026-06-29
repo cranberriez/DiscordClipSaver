@@ -3,12 +3,7 @@ from contextlib import suppress
 import os
 import logging
 
-import uvicorn
 from dotenv import load_dotenv
-
-
-from bot.api import api, set_redis_client
-from bot.schedules.scheduler import start_scheduler_and_jobs
 
 from shared.db.utils import get_env_bool, init_db, close_db
 from shared.settings_loader import initialize_settings
@@ -64,8 +59,6 @@ async def main():
                 f"Error: {e}"
             )
 
-    set_redis_client(redis_client)
-
     message_batcher = None
     if start_discord:
         from bot.services.scan_service import get_scan_service
@@ -90,6 +83,11 @@ async def main():
     server = None
     api_task = None
     if start_api:
+        import uvicorn
+        from bot.api import api, set_redis_client
+
+        set_redis_client(redis_client)
+
         # Start FastAPI (uvicorn) in the background
         config = uvicorn.Config(api, host="0.0.0.0", port=8000, loop="asyncio", log_level="info")
         server = uvicorn.Server(config)
@@ -97,6 +95,8 @@ async def main():
 
     scheduler = None
     if start_api:
+        from bot.schedules.scheduler import start_scheduler_and_jobs
+
         # Start API-owned scheduled maintenance jobs.
         scheduler = start_scheduler_and_jobs()
 
