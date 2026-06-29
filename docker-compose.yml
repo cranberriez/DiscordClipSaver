@@ -50,11 +50,11 @@ services:
         restart: "no"
         command: ["python", "-m", "shared.db.schema"]
 
-    bot:
+    bot-api:
         build:
             context: .
             dockerfile: ./python/bot/Dockerfile
-        container_name: dcs-bot
+        container_name: dcs-bot-api
         env_file:
             - ./python/bot/.env
             - ./.env.global
@@ -62,11 +62,9 @@ services:
             - DB_USER=${POSTGRES_USER}
             - DB_PASSWORD=${POSTGRES_PASSWORD}
             - DB_NAME=${POSTGRES_DB}
-            - BOT_RUNTIME_MODE=${BOT_RUNTIME_MODE:-all}
+            - BOT_RUNTIME_MODE=api
         depends_on:
             dcs-postgres:
-                condition: service_started
-            dcs-redis:
                 condition: service_started
             db-schema:
                 condition: service_completed_successfully
@@ -76,6 +74,29 @@ services:
             - ./settings.default.json:/app/settings.default.json:ro
         ports:
             - "8000:8000"
+
+    bot-discord:
+        build:
+            context: .
+            dockerfile: ./python/bot/Dockerfile
+        container_name: dcs-bot-discord
+        env_file:
+            - ./python/bot/.env
+            - ./.env.global
+        environment:
+            - DB_USER=${POSTGRES_USER}
+            - DB_PASSWORD=${POSTGRES_PASSWORD}
+            - DB_NAME=${POSTGRES_DB}
+            - BOT_RUNTIME_MODE=discord
+        depends_on:
+            dcs-postgres:
+                condition: service_started
+            db-schema:
+                condition: service_completed_successfully
+        restart: unless-stopped
+        volumes:
+            # Optional: mount local settings file for rapid iteration without rebuilding image
+            - ./settings.default.json:/app/settings.default.json:ro
 
     worker:
         build:
@@ -113,7 +134,7 @@ services:
             - ./interface/.env
             - ./.env.global
         environment:
-            - BOT_API_URL=http://bot:8000
+            - BOT_API_URL=http://bot-api:8000
             - DB_USER=${POSTGRES_USER}
             - DB_PASSWORD=${POSTGRES_PASSWORD}
             - DB_NAME=${POSTGRES_DB}

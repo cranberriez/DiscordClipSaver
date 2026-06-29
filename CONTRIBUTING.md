@@ -203,8 +203,8 @@ DiscordClipSaver/
 
 ### Running Database Migrations
 ```bash
-# Migrations are handled automatically by Tortoise ORM on startup
-# Schema changes in python/shared/db/models.py will be applied
+# Current Docker startup creates missing tables through the db-schema service.
+docker compose run --rm db-schema
 ```
 
 ### Testing Job Processing
@@ -216,8 +216,9 @@ python test_job_pusher.py
 ### Viewing Logs
 ```bash
 # Docker logs
-docker compose logs -f dcs-worker
-docker compose logs -f dcs-bot
+docker compose logs -f worker
+docker compose logs -f bot-api
+docker compose logs -f bot-discord
 
 # Local logs appear in terminal
 ```

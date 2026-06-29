@@ -12,7 +12,8 @@ docker-compose up --build
 This starts:
 
 -   **DB Schema** (one-shot initializer) to create missing PostgreSQL tables
--   **Bot** (Discord bot + API server) on port 8000
+-   **Bot API** (FastAPI server for Discord-backed API actions) on port 8000
+-   **Discord Bot** (Discord gateway listener for live updates)
 -   **Worker** (Job processor) - 1 instance by default
 -   **Interface** (Web UI) on port 3000
 -   **Redis** (Job queue) on port 6379
@@ -44,20 +45,28 @@ For example, run maintenance jobs while the Discord bot is down:
 WORKER_MODE=maintenance docker-compose up worker dcs-postgres dcs-redis
 ```
 
-### 3. Run Bot Modes
+### 3. Run Bot Services
 
-The bot container can be scoped with `BOT_RUNTIME_MODE`:
+The bot image is split into two Docker services:
 
--   `all` - default; serves the FastAPI API and connects the Discord gateway client.
--   `api` - serves FastAPI and API-owned scheduled maintenance without requiring `BOT_TOKEN`. Discord-backed routes return 503 while the gateway is unavailable.
--   `discord` - runs the Discord gateway client and live message batching without binding the API port.
+-   `bot-api` - serves FastAPI and API-owned scheduled maintenance without requiring `BOT_TOKEN`. Discord-backed routes return 503 while the gateway is unavailable.
+-   `bot-discord` - runs the Discord gateway client and live message batching without binding the API port.
+
+`BOT_RUNTIME_MODE=all|api|discord` is still available for standalone Python
+runs, but Docker Compose sets the mode per service.
 
 ### 4. Run Specific Services
 
-**Start only bot and dependencies:**
+**Start only the bot API and database:**
 
 ```bash
-docker-compose up bot dcs-postgres dcs-redis
+docker-compose up bot-api dcs-postgres
+```
+
+**Start only the Discord gateway listener:**
+
+```bash
+docker-compose up bot-discord dcs-postgres dcs-redis
 ```
 
 **Start only worker and dependencies:**
@@ -75,9 +84,9 @@ docker-compose up interface dcs-postgres
 The `db-schema` one-shot service is pulled in automatically by these app
 services and must complete before they start.
 
-The interface can browse existing data with PostgreSQL available. Redis, the bot,
-and workers are still needed for background jobs such as scans, purge requests,
-thumbnail generation, and live Discord updates.
+The interface can browse existing data with PostgreSQL available. Redis, the bot
+services, and workers are still needed for background jobs such as scans, purge
+requests, thumbnail generation, and live Discord updates.
 
 ## Environment Configuration
 
@@ -125,7 +134,8 @@ docker-compose logs -f
 
 # Specific service
 docker-compose logs -f worker
-docker-compose logs -f bot
+docker-compose logs -f bot-api
+docker-compose logs -f bot-discord
 
 # All workers
 docker-compose logs -f worker
@@ -137,8 +147,8 @@ docker-compose logs -f worker
 # Restart all workers
 docker-compose restart worker
 
-# Restart bot
-docker-compose restart bot
+# Restart bot services
+docker-compose restart bot-api bot-discord
 
 # Restart everything
 docker-compose restart
