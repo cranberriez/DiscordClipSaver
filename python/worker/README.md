@@ -109,7 +109,7 @@ The worker consists of several components:
 3. **Configure environment variables** (create `.env` file):
    ```env
    # Discord Bot
-   DISCORD_BOT_TOKEN=your_bot_token_here
+   BOT_TOKEN=your_bot_token_here
    
    # Database
    DATABASE_URL=postgres://user:password@localhost:5432/discord_clips

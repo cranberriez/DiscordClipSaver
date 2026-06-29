@@ -59,7 +59,7 @@ cp .env.global.example .env.global
 
 Edit `.env` using your preferred text editor (like `nano` or `vim`) and fill in the required variables:
 
-- `DISCORD_TOKEN`: Your Bot Token.
+- `BOT_TOKEN`: Your Bot Token.
 - `NEXTAUTH_SECRET`: Generate a random string (e.g., `openssl rand -hex 32`).
 - `DISCORD_CLIENT_ID` & `DISCORD_CLIENT_SECRET`: From your Discord app.
 - `PUBLIC_DOMAIN`: Your website domain for Traefik routing.
