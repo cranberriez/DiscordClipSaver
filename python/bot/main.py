@@ -79,8 +79,10 @@ async def main():
         server = uvicorn.Server(config)
         api_task = asyncio.create_task(server.serve())
 
-    # Start a single scheduler and register all jobs in one place
-    scheduler = start_scheduler_and_jobs()
+    scheduler = None
+    if start_api:
+        # Start API-owned scheduled maintenance jobs.
+        scheduler = start_scheduler_and_jobs()
 
     bot_task = None
     if start_discord:
@@ -103,7 +105,7 @@ async def main():
                 await api_task
     finally:
         # Stop scheduler
-        with suppress(Exception):
+        if scheduler:
             scheduler.shutdown(wait=False)
         if start_discord and not discord_bot.is_closed():
             await discord_bot.close()
