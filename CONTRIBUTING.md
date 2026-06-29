@@ -105,7 +105,7 @@ cp .env.global.example .env.global
 ```
 
 Fill in the required values:
-- `DISCORD_BOT_TOKEN` - Your Discord bot token
+- `BOT_TOKEN` - Your Discord bot token
 - `DISCORD_CLIENT_ID` - Your Discord application client ID
 - `DISCORD_CLIENT_SECRET` - Your Discord application client secret
 - `NEXTAUTH_SECRET` - Generate with `openssl rand -base64 32`
