@@ -52,9 +52,12 @@ async def main():
         consumer_name=None    # Bot only produces jobs
     )
     try:
-        await redis_client.connect()
+        # Redis is required for the gateway listener to queue live work. API-only
+        # mode uses Redis only for best-effort cleanup jobs, so keep startup fast.
+        await redis_client.connect(max_attempts=None if start_discord else 1)
     except Exception as e:
-        logger.error(f"Initial Redis connection failed; bot will keep running and retry on demand. Error: {e}")
+        log = logger.error if start_discord else logger.warning
+        log(f"Initial Redis connection failed; bot will keep running and retry on demand. Error: {e}")
 
     set_redis_client(redis_client)
 
