@@ -8,10 +8,25 @@ from shared.db.models import Channel, Guild, ChannelType
 from shared.time import utcnow
 
 
+# discord.py channel type names that don't match our enum values directly.
+# Announcement ("news") channels are text-based and scannable; stages are voice.
+_CHANNEL_TYPE_ALIASES = {
+    "news": ChannelType.TEXT,
+    "stage_voice": ChannelType.VOICE,
+}
+
+
 def _to_channel_type(value: str) -> ChannelType:
     try:
         return ChannelType(value)
     except Exception:
+        alias = _CHANNEL_TYPE_ALIASES.get(str(value))
+        if alias is not None:
+            return alias
+        import logging
+        logging.getLogger(__name__).warning(
+            "Unknown Discord channel type %r; defaulting to TEXT", value
+        )
         return ChannelType.TEXT
 
 
@@ -28,6 +43,7 @@ async def upsert_channels_for_guild(guild_id: str, snapshots: Iterable[Any]) -> 
         name = getattr(s, "name")
         typ = _to_channel_type(getattr(s, "type"))
         nsfw = bool(getattr(s, "is_nsfw", False))
+        everyone_can_view = bool(getattr(s, "everyone_can_view", True))
 
         obj, created = await Channel.get_or_create(
             id=cid,
@@ -36,6 +52,7 @@ async def upsert_channels_for_guild(guild_id: str, snapshots: Iterable[Any]) -> 
                 "name": name,
                 "type": typ,
                 "nsfw": nsfw,
+                "everyone_can_view": everyone_can_view,
             },
         )
         if not created:
@@ -57,6 +74,10 @@ async def upsert_channels_for_guild(guild_id: str, snapshots: Iterable[Any]) -> 
                 update_needed = True
             if obj.nsfw != nsfw:
                 obj.nsfw = nsfw
+                update_needed = True
+            # NOTE: access_override is owner-managed and never touched by sync
+            if obj.everyone_can_view != everyone_can_view:
+                obj.everyone_can_view = everyone_can_view
                 update_needed = True
             
             if update_needed:

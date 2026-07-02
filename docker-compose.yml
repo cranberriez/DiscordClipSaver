@@ -28,7 +28,9 @@ services:
             - traefik.http.middlewares.strip-dashboard.stripprefix.prefixes=/dashboard
 
             # Middleware: Authentication
-            - traefik.http.middlewares.auth.basicauth.users=admin:$$apr1$$ulssIwoF$$ctpjqfP9n0yDJhdwVXH050 # generated with htpasswd
+            # Set TRAEFIK_DASHBOARD_AUTH in .env (generate with: htpasswd -nB admin)
+            # SECURITY: never commit a real htpasswd hash to the repo.
+            - traefik.http.middlewares.auth.basicauth.users=${TRAEFIK_DASHBOARD_AUTH:?Set TRAEFIK_DASHBOARD_AUTH in .env}
         networks:
             - default
         restart: unless-stopped
@@ -46,7 +48,7 @@ services:
             - DB_NAME=${POSTGRES_DB}
         depends_on:
             dcs-postgres:
-                condition: service_started
+                condition: service_healthy
         restart: "no"
         command: ["python", "-m", "shared.db.schema"]
 
@@ -65,17 +67,19 @@ services:
             - DB_PASSWORD=${POSTGRES_PASSWORD}
             - DB_NAME=${POSTGRES_DB}
             - BOT_RUNTIME_MODE=api
+            - INTERNAL_API_TOKEN=${INTERNAL_API_TOKEN:?Set INTERNAL_API_TOKEN in .env}
         depends_on:
             dcs-postgres:
-                condition: service_started
+                condition: service_healthy
             db-schema:
                 condition: service_completed_successfully
         restart: unless-stopped
         volumes:
             # Optional: mount local settings file for rapid iteration without rebuilding image
-            - ./settings.default.json:/app/settings.default.json:ro
+            - ./settings.default.jsonc:/app/settings.default.jsonc:ro
         ports:
-            - "8000:8000"
+            # Localhost only: the bot API proxies Discord REST with the bot token
+            - "127.0.0.1:8000:8000"
 
     bot-discord:
         build:
@@ -94,15 +98,15 @@ services:
             - BOT_RUNTIME_MODE=discord
         depends_on:
             dcs-postgres:
-                condition: service_started
+                condition: service_healthy
             dcs-redis:
-                condition: service_started
+                condition: service_healthy
             db-schema:
                 condition: service_completed_successfully
         restart: unless-stopped
         volumes:
             # Optional: mount local settings file for rapid iteration without rebuilding image
-            - ./settings.default.json:/app/settings.default.json:ro
+            - ./settings.default.jsonc:/app/settings.default.jsonc:ro
 
     worker:
         build:
@@ -119,9 +123,9 @@ services:
             - WORKER_MODE=${WORKER_MODE:-all}
         depends_on:
             dcs-postgres:
-                condition: service_started
+                condition: service_healthy
             dcs-redis:
-                condition: service_started
+                condition: service_healthy
             db-schema:
                 condition: service_completed_successfully
         restart: unless-stopped
@@ -144,15 +148,16 @@ services:
             - DB_USER=${POSTGRES_USER}
             - DB_PASSWORD=${POSTGRES_PASSWORD}
             - DB_NAME=${POSTGRES_DB}
+            - INTERNAL_API_TOKEN=${INTERNAL_API_TOKEN:?Set INTERNAL_API_TOKEN in .env}
         depends_on:
             dcs-postgres:
-                condition: service_started
+                condition: service_healthy
             db-schema:
                 condition: service_completed_successfully
         restart: unless-stopped
         volumes:
             # Optional: mount local settings file to the same in-container path used by the image
-            - ./settings.default.json:/app/settings.default.json:ro
+            - ./settings.default.jsonc:/app/settings.default.jsonc:ro
             # Share worker storage volume to serve thumbnails
             - worker_storage:/app/storage:ro
         labels:
@@ -177,11 +182,17 @@ services:
         volumes:
             - postgres_data:/var/lib/postgresql/data
         ports:
-            - "5432:5432"
+            # Localhost only: never expose the database to the network
+            - "127.0.0.1:5432:5432"
         networks:
             default:
                 ipv4_address: 172.20.0.10
         restart: unless-stopped
+        healthcheck:
+            test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-postgres}"]
+            interval: 5s
+            timeout: 3s
+            retries: 10
 
     dcs-redis:
         image: redis:7-alpine
@@ -190,18 +201,23 @@ services:
         volumes:
             - redis_data:/data
         ports:
-            - "6379:6379"
+            # Localhost only: Redis has no authentication configured
+            - "127.0.0.1:6379:6379"
         networks:
             default:
                 ipv4_address: 172.20.0.11
         restart: unless-stopped
+        healthcheck:
+            test: ["CMD", "redis-cli", "ping"]
+            interval: 5s
+            timeout: 3s
+            retries: 10
 
     dozzle:
         image: amir20/dozzle:latest
         container_name: dcs-dozzle
-        env_file:
-            - ./.env
-            - ./.env.global
+        # SECURITY: no env_file here. Third-party images must not receive
+        # BOT_TOKEN / client secrets / DB credentials.
         restart: unless-stopped
         volumes:
             - /var/run/docker.sock:/var/run/docker.sock:ro
@@ -213,9 +229,8 @@ services:
     uptime-kuma:
         image: louislam/uptime-kuma:1
         container_name: dcs-uptime-kuma
-        env_file:
-            - ./.env
-            - ./.env.global
+        # SECURITY: no env_file here. Third-party images must not receive
+        # BOT_TOKEN / client secrets / DB credentials.
         restart: unless-stopped
         volumes:
             - kuma_data:/app/data
@@ -238,4 +253,3 @@ volumes:
     worker_storage:
     traefik_letsencrypt:
     kuma_data:
-

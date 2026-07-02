@@ -191,14 +191,32 @@ async def on_raw_message_edit(payload: discord.RawMessageUpdateEvent):
 @bot.event
 async def on_raw_bulk_message_delete(payload: discord.RawBulkMessageDeleteEvent):
     """
-    Called when messages are bulk deleted (e.g., channel purge).
-    
+    Called when messages are bulk deleted (e.g., a moderation purge).
+
+    Without this handler, purged messages leave orphaned clips in the
+    database with dead CDN URLs. Queue a deletion job per message, the
+    same path as single deletions (worker skips messages it doesn't know).
+
     Payload attributes:
     - message_ids: Set[int]
     - channel_id: int
     - guild_id: Optional[int]
     - cached_messages: List[discord.Message]
     """
-    # TODO: Bulk mark messages as deleted (efficient batch operation)
-    # TODO: Important for handling channel purges
-    pass
+    # Only process guild messages (DMs have no guild_id)
+    if not payload.guild_id:
+        return
+
+    scan_service = get_scan_service()
+    for message_id in payload.message_ids:
+        try:
+            await scan_service.handle_message_deletion(
+                guild_id=str(payload.guild_id),
+                channel_id=str(payload.channel_id),
+                message_id=str(message_id)
+            )
+        except Exception:
+            logger.exception(
+                f"Failed to queue deletion for bulk-deleted message {message_id} "
+                f"in channel {payload.channel_id}"
+            )

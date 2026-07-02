@@ -13,6 +13,8 @@ class ChannelSnapshot:
     name: str
     type: str
     is_nsfw: bool = False
+    # Can @everyone view this channel on Discord? Synced for access control.
+    everyone_can_view: bool = True
     # Channel-specific settings overrides (partial). Merged into defaults server-side.
     settings_overrides: Optional[Dict[str, Any]] = None
 

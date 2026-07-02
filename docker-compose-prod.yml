@@ -37,7 +37,7 @@ services:
             - DB_NAME=${POSTGRES_DB}
         depends_on:
             dcs-postgres:
-                condition: service_started
+                condition: service_healthy
         restart: "no"
         command: ["python", "-m", "shared.db.schema"]
 
@@ -57,15 +57,16 @@ services:
             - DB_PASSWORD=${POSTGRES_PASSWORD}
             - DB_NAME=${POSTGRES_DB}
             - BOT_RUNTIME_MODE=api
+            - INTERNAL_API_TOKEN=${INTERNAL_API_TOKEN:?Set INTERNAL_API_TOKEN in .env}
         depends_on:
             dcs-postgres:
-                condition: service_started
+                condition: service_healthy
             db-schema:
                 condition: service_completed_successfully
         restart: unless-stopped
         volumes:
             # Optional: mount local settings file for rapid iteration without rebuilding image
-            - ./settings.default.json:/app/settings.default.json:ro
+            - ./settings.default.jsonc:/app/settings.default.jsonc:ro
 
     bot-discord:
         build:
@@ -85,15 +86,15 @@ services:
             - BOT_RUNTIME_MODE=discord
         depends_on:
             dcs-postgres:
-                condition: service_started
+                condition: service_healthy
             dcs-redis:
-                condition: service_started
+                condition: service_healthy
             db-schema:
                 condition: service_completed_successfully
         restart: unless-stopped
         volumes:
             # Optional: mount local settings file for rapid iteration without rebuilding image
-            - ./settings.default.json:/app/settings.default.json:ro
+            - ./settings.default.jsonc:/app/settings.default.jsonc:ro
 
     worker:
         build:
@@ -111,9 +112,9 @@ services:
             - WORKER_MODE=${WORKER_MODE:-all}
         depends_on:
             dcs-postgres:
-                condition: service_started
+                condition: service_healthy
             dcs-redis:
-                condition: service_started
+                condition: service_healthy
             db-schema:
                 condition: service_completed_successfully
         restart: unless-stopped
@@ -133,19 +134,20 @@ services:
         environment:
             - BOT_API_URL=http://bot-api:8000
             - INTERNAL_HEALTH_TOKEN=${INTERNAL_HEALTH_TOKEN}
+            - INTERNAL_API_TOKEN=${INTERNAL_API_TOKEN:?Set INTERNAL_API_TOKEN in .env}
             - DB_USER=${POSTGRES_USER}
             - DB_PASSWORD=${POSTGRES_PASSWORD}
             - DB_NAME=${POSTGRES_DB}
             - NEXTAUTH_URL=https://${PUBLIC_DOMAIN}
         depends_on:
             dcs-postgres:
-                condition: service_started
+                condition: service_healthy
             db-schema:
                 condition: service_completed_successfully
         restart: unless-stopped
         volumes:
             # Optional: mount local settings file to the same in-container path used by the image
-            - ./settings.default.json:/app/settings.default.json:ro
+            - ./settings.default.jsonc:/app/settings.default.jsonc:ro
             # Share worker storage volume to serve thumbnails
             - worker_storage:/app/storage:ro
         labels:
@@ -212,6 +214,11 @@ services:
             default:
                 ipv4_address: 172.20.0.10
         restart: unless-stopped
+        healthcheck:
+            test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-postgres}"]
+            interval: 5s
+            timeout: 3s
+            retries: 10
 
     dcs-redis:
         image: redis:7-alpine
@@ -223,13 +230,17 @@ services:
             default:
                 ipv4_address: 172.20.0.11
         restart: unless-stopped
+        healthcheck:
+            test: ["CMD", "redis-cli", "ping"]
+            interval: 5s
+            timeout: 3s
+            retries: 10
 
     dozzle:
         image: amir20/dozzle:latest
         container_name: dcs-dozzle
-        env_file:
-            - ./.env
-            - ./.env.global
+        # SECURITY: no env_file here. Third-party images must not receive
+        # BOT_TOKEN / client secrets / DB credentials.
         restart: unless-stopped
         volumes:
             - /var/run/docker.sock:/var/run/docker.sock:ro
@@ -241,9 +252,8 @@ services:
     uptime-kuma:
         image: louislam/uptime-kuma:1
         container_name: dcs-uptime-kuma
-        env_file:
-            - ./.env
-            - ./.env.global
+        # SECURITY: no env_file here. Third-party images must not receive
+        # BOT_TOKEN / client secrets / DB credentials.
         restart: unless-stopped
         volumes:
             - kuma_data:/app/data
@@ -258,12 +268,3 @@ networks:
         driver: bridge
         ipam:
             config:
-                - subnet: 172.20.0.0/24
-
-volumes:
-    postgres_data:
-    redis_data:
-    worker_storage:
-    traefik_letsencrypt:
-    kuma_data:
-

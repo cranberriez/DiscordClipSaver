@@ -68,6 +68,27 @@ class ClipQueryBuilder {
 		if (!filters.isGuildOwner) {
 			this.query = this.query.where("clip.deleted_at", "is", null);
 
+			// Channel access control: hide clips from restricted channels.
+			// A channel is restricted when the owner set access_override =
+			// "restricted", or when @everyone cannot view it on Discord
+			// (everyone_can_view = false) and no "visible" override exists.
+			this.query = this.query.where(({ exists, selectFrom }) =>
+				exists(
+					selectFrom("channel")
+						.select("channel.id")
+						.whereRef("channel.id", "=", "clip.channel_id")
+						.where((eb) =>
+							eb.or([
+								eb("channel.access_override", "=", "visible"),
+								eb.and([
+									eb("channel.access_override", "is", null),
+									eb("channel.everyone_can_view", "=", true),
+								]),
+							])
+						)
+				)
+			);
+
 			// Visibility filter: Public or Author's own clips
 			this.query = this.query.where((eb) => {
 				const conditions = [eb("clip.visibility", "=", "PUBLIC")];

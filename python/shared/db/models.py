@@ -107,6 +107,12 @@ class Channel(Model):
     parent_id = fields.CharField(max_length=64, null=True)  # Parent category ID if nested
     topic = fields.TextField(null=True)
     nsfw = fields.BooleanField(default=False)  # Whether channel is marked NSFW
+    # --- Access control (see docs: channel access model) ---
+    # Synced from Discord: can @everyone view this channel? False = private/role-gated.
+    everyone_can_view = fields.BooleanField(default=True)
+    # Owner override: None = auto (follow everyone_can_view), "visible" | "restricted".
+    # Never touched by sync; managed via the interface.
+    access_override = fields.CharField(max_length=10, null=True)
     message_scan_enabled = fields.BooleanField(default=False)  # Override for guild default
     last_channel_sync_at = fields.DatetimeField(null=True)
     next_allowed_channel_sync_at = fields.DatetimeField(null=True)

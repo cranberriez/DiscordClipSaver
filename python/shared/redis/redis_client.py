@@ -22,7 +22,6 @@ class RedisStreamClient:
     """Manages Redis stream for job queue"""
     
     STREAM_PREFIX = "jobs"
-    STREAM_MAXLEN = int(os.getenv("REDIS_STREAM_MAXLEN", "10000"))
     
     def __init__(
         self, 
@@ -51,6 +50,14 @@ class RedisStreamClient:
         self.consumer_name = consumer_name
         self.allowed_job_types = set(allowed_job_types) if allowed_job_types else None
         self.is_consumer = consumer_group is not None and consumer_name is not None
+
+        # Minimum idle time (ms) before a pending job is reclaimed from another
+        # consumer. This MUST be comfortably above the worst-case job duration:
+        # batch scans currently download videos + run ffmpeg inline and can run
+        # for many minutes. A low value causes a second worker to claim and
+        # re-run a job the first worker is still processing (duplicate scans,
+        # duplicate thumbnails, double-counted stats).
+        self._claim_min_idle_ms = int(os.getenv("REDIS_CLAIM_MIN_IDLE_MS", "900000"))  # 15 minutes
 
         self._connect_backoff_initial_seconds = float(os.getenv("REDIS_CONNECT_BACKOFF_INITIAL_SECONDS", "0.5"))
         self._connect_backoff_max_seconds = float(os.getenv("REDIS_CONNECT_BACKOFF_MAX_SECONDS", "30"))
@@ -212,11 +219,13 @@ class RedisStreamClient:
         # Ensure consumer group exists for this stream
         await self._ensure_consumer_group(stream_name)
         
+        # NOTE: no MAXLEN here. Trimming a work stream evicts the OLDEST
+        # entries regardless of acknowledgment, silently deleting unprocessed
+        # jobs under backlog. Acked jobs are XDEL'd on completion, so streams
+        # only grow with genuine backlog; monitor length instead of trimming.
         message_id = await self.client.xadd(
             name=stream_name,
-            fields=serialized_data,
-            maxlen=self.STREAM_MAXLEN,
-            approximate=True  # More efficient, allows slight overflow for performance
+            fields=serialized_data
         )
         
         logger.info(f"Pushed job {job_data.get('job_id', 'unknown')} to stream {stream_name}: {message_id}")
@@ -389,9 +398,10 @@ class RedisStreamClient:
         for stream in streams:
             await self._ensure_consumer_group(stream)
         
-        # First, try to claim any pending messages (from crashed workers)
-        # Claim messages idle for more than 60 seconds
-        pending_jobs = await self._claim_pending_jobs(streams, min_idle_time=60000)
+        # First, try to claim any pending messages (from crashed workers).
+        # Idle threshold is configurable via REDIS_CLAIM_MIN_IDLE_MS and
+        # defaults to 15 minutes to avoid double-processing long-running jobs.
+        pending_jobs = await self._claim_pending_jobs(streams, min_idle_time=self._claim_min_idle_ms)
         
         if pending_jobs:
             logger.info(f"Claimed {len(pending_jobs)} pending job(s) from previous worker")

@@ -1,0 +1,45 @@
+name: CI
+on:
+    pull_request:
+    push:
+        branches:
+            - master
+            - v2
+permissions:
+    contents: read
+jobs:
+    interface:
+        name: Interface (typecheck + lint)
+        runs-on: ubuntu-latest
+        defaults:
+            run:
+                working-directory: interface
+        steps:
+            - uses: actions/checkout@v4
+            - uses: actions/setup-node@v4
+              with:
+                  node-version: 22
+                  cache: npm
+                  cache-dependency-path: interface/package-lock.json
+            - run: npm ci
+            - name: Type check
+              run: npx tsc --noEmit
+            - name: Lint
+              run: npx eslint src
+
+    python:
+        name: Python (syntax + critical lint)
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@v4
+            - uses: actions/setup-python@v5
+              with:
+                  python-version: "3.13"
+            - name: Syntax check
+              run: python -m compileall -q python/bot python/worker python/shared
+            - name: Ruff (critical rules only)
+              # E9/F63/F7/F82 = syntax errors, invalid comparisons, undefined names.
+              # Deliberately narrow so CI fails only on real bugs, not style.
+              run: |
+                  pip install --quiet ruff
+                  ruff check --select E9,F63,F7,F82 python/bot python/worker python/shared

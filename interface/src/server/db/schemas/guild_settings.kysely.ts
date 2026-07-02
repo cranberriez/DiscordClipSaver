@@ -13,6 +13,17 @@ export interface GuildSettingsTable {
 		unknown | null | undefined,
 		unknown | null | undefined
 	>;
+	/**
+	 * MD5 hash of the settings, owned by the Python resolver
+	 * (shared/user_settings_resolver.py). Used for worker cache invalidation
+	 * and clip reprocessing detection. Any writer that changes settings MUST
+	 * null this column so the Python side recomputes it.
+	 */
+	settings_hash: ColumnType<
+		string | null,
+		string | null | undefined,
+		string | null | undefined
+	>;
 	created_at: ColumnType<Date, Date | undefined, Date | undefined>;
 	updated_at: ColumnType<Date, Date | undefined, Date | undefined>;
 	deleted_at: ColumnType<

@@ -28,6 +28,7 @@ export {
 	updateChannelEnabled,
 	getChannelById,
 	getChannelsByGuildIdWithClipCount,
+	setChannelAccessOverride,
 } from "./queries/channels";
 export {
 	getClipById,

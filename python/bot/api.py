@@ -1,14 +1,43 @@
+import hmac
 import logging
 import os
 from typing import Any, Optional
 
 import aiohttp
-from fastapi import FastAPI, HTTPException
+from fastapi import Depends, FastAPI, HTTPException, Request
 from pydantic import BaseModel
+
+logger = logging.getLogger(__name__)
+
+
+async def require_internal_token(request: Request) -> None:
+    """
+    Require the shared internal API token on every route except /health.
+
+    The bot API proxies Discord REST calls with the bot token's permissions,
+    so it must never be callable by unauthenticated clients (including other
+    containers on the compose network). Set INTERNAL_API_TOKEN in the
+    environment and send it as the X-Internal-Token header.
+    """
+    expected = os.getenv("INTERNAL_API_TOKEN", "").strip()
+    if not expected:
+        # Fail closed: an unset token would otherwise leave the API open.
+        logger.error("INTERNAL_API_TOKEN is not configured; rejecting request")
+        raise HTTPException(
+            status_code=503,
+            detail={
+                "error_type": "INTERNAL_AUTH_UNCONFIGURED",
+                "message": "INTERNAL_API_TOKEN is not configured on the bot API",
+            },
+        )
+
+    provided = request.headers.get("X-Internal-Token", "")
+    if not hmac.compare_digest(provided, expected):
+        raise HTTPException(status_code=401, detail="Invalid internal API token")
+
 
 # ----- FastAPI app -----
 api = FastAPI(title="Discord Bot API", version="0.1.0")
-logger = logging.getLogger(__name__)
 DISCORD_API_BASE = "https://discord.com/api/v10"
 _redis_client: Optional[Any] = None
 
@@ -115,12 +144,16 @@ async def queue_message_deletion_cleanup(request: RefreshCdnRequest) -> None:
         )
 
 
-@api.post("/refresh-cdn", response_model=RefreshCdnResponse)
+@api.post(
+    "/refresh-cdn",
+    response_model=RefreshCdnResponse,
+    dependencies=[Depends(require_internal_token)],
+)
 async def refresh_cdn_url(request: RefreshCdnRequest):
     """
     Fetch a Discord message and return fresh CDN URLs for its attachments.
     This is used when CDN URLs expire (typically after 24 hours).
-    
+
     Lazy deletion detection: If message is not found (deleted), queue cleanup job.
     """
     try:

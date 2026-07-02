@@ -1,9 +1,11 @@
-fastapi
-uvicorn[standard]
-pydantic
-python-dotenv
-APScheduler
-aiohttp
-psycopg-binary
-tortoise-orm[asyncpg]
-colorlog
+# Pinned to the majors in use (see python/env). Update deliberately;
+# unpinned deps previously meant any rebuild could pull breaking majors.
+fastapi>=0.119,<1
+uvicorn[standard]>=0.37,<1
+pydantic>=2.12,<3
+python-dotenv>=1.1,<2
+APScheduler>=3.11,<4
+aiohttp>=3.13,<4
+psycopg-binary>=3.2,<4
+tortoise-orm[asyncpg]>=0.25,<0.26
+colorlog>=6.10,<7

@@ -1,6 +1,67 @@
 import "server-only";
 import { NextResponse } from "next/server";
 
+// ============================================================================
+// Standard API error envelope
+//
+// Every non-2xx JSON response should have this shape (see docs/ERROR_HANDLING.md):
+//   {
+//     error:       string   - short, log-friendly message
+//     code:        string   - stable machine-readable code (SCREAMING_SNAKE)
+//     userMessage: string   - safe to render directly in the UI
+//     details?:    object   - optional structured context (ids, fields, ...)
+//     retryAfter?: number   - seconds, present on 429/503 when known
+//   }
+// ============================================================================
+
+export type ApiErrorCode =
+	| "UNAUTHORIZED"
+	| "FORBIDDEN"
+	| "NOT_FOUND"
+	| "CHANNEL_NOT_FOUND"
+	| "CLIP_NOT_FOUND"
+	| "GUILD_NOT_FOUND"
+	| "VALIDATION_ERROR"
+	| "RATE_LIMITED"
+	| "PAYLOAD_TOO_LARGE"
+	| "INVALID_ORIGIN"
+	| "DB_UNAVAILABLE"
+	| "REDIS_UNAVAILABLE"
+	| "QUEUE_UNAVAILABLE"
+	| "UPSTREAM_ERROR"
+	| "INTERNAL_ERROR";
+
+/**
+ * Throwable error carrying the full standard envelope.
+ * Route handlers can throw it anywhere; a catch-all `jsonError(err)` at the
+ * bottom of the handler turns it into the right response.
+ */
+export class ApiError extends Error {
+	constructor(
+		public status: number,
+		public code: ApiErrorCode,
+		message: string,
+		public userMessage: string = message,
+		public details?: Record<string, unknown>
+	) {
+		super(message);
+		this.name = "ApiError";
+	}
+}
+
+/** Build a standard error response directly (when not throwing). */
+export function apiError(
+	status: number,
+	code: ApiErrorCode,
+	error: string,
+	userMessage: string = error,
+	details?: Record<string, unknown>
+) {
+	const body: Record<string, unknown> = { error, code, userMessage };
+	if (details) body.details = details;
+	return NextResponse.json(body, { status });
+}
+
 function isDbUnavailableError(err: any): boolean {
 	if (!err) return false;
 	if (err?.code === "ECONNREFUSED") return true;
@@ -43,6 +104,17 @@ export function queueUnavailableResponse(err: any) {
 }
 
 export function jsonError(err: any, fallbackStatus = 500) {
+	// First-class ApiError: emit its envelope as-is
+	if (err instanceof ApiError) {
+		return apiError(
+			err.status,
+			err.code,
+			err.message,
+			err.userMessage,
+			err.details
+		);
+	}
+
 	let status = typeof err?.status === "number" ? err.status : fallbackStatus;
 	const body: any = { error: err?.message ?? "Unexpected error" };
 

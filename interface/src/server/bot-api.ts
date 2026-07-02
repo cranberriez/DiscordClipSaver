@@ -34,9 +34,18 @@ export async function fetchBotApi(
 	const timeout = setTimeout(() => controller.abort(), timeoutMs);
 	const normalizedPath = path.startsWith("/") ? path : `/${path}`;
 
+	// Authenticate to the bot API with the shared internal token.
+	// The bot API rejects requests without it (fail-closed).
+	const internalToken = process.env.INTERNAL_API_TOKEN?.trim();
+	const headers = new Headers(init?.headers);
+	if (internalToken && !headers.has("X-Internal-Token")) {
+		headers.set("X-Internal-Token", internalToken);
+	}
+
 	try {
 		return await fetch(`${botApiUrl}${normalizedPath}`, {
 			...init,
+			headers,
 			signal: init?.signal ?? controller.signal,
 		});
 	} catch (error) {

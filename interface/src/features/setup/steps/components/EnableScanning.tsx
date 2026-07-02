@@ -1,98 +1,19 @@
 "use client";
 
-import type { Guild } from "@/lib/api/guild";
 import { Step } from "./Step";
-import { useToggleScanning, useBulkUpdateChannels } from "@/lib/hooks";
-import { useEffect, useState } from "react";
-import { useSetupStoreHydrated } from "../../stores/useSetupStore";
 import { Button } from "@/components/ui/button";
+import type { SetupFlow } from "../../hooks/useSetupFlow";
 
 export function EnableScanning({
-	guild,
-	onComplete,
-	shouldStart = false,
+	enable,
 }: {
-	guild: Guild;
-	onComplete: () => void;
-	shouldStart?: boolean;
+	enable: SetupFlow["enable"];
 }) {
-	const [currentTask, setCurrentTask] = useState<string>("");
-	const toggleMutation = useToggleScanning(guild.id);
-	const toggleChannelMutation = useBulkUpdateChannels(guild.id);
-
-	const { startStep, updateStepState, completeStep, getStepData } =
-		useSetupStoreHydrated();
-
-	const stepData = getStepData("enable_scanning");
-
-	// Start the step when shouldStart becomes true
-	useEffect(() => {
-		if (shouldStart && stepData.state === null) {
-			startEnableScanning();
-		}
-	}, [shouldStart, stepData.state]);
-
-	const startEnableScanning = async () => {
-		try {
-			startStep("enable_scanning");
-
-			// Step 1: Enable scanning for the guild
-			setCurrentTask("Enabling scanning for guild...");
-			await toggleMutation.mutateAsync(true);
-
-			// Step 2: Enable all channels
-			setCurrentTask("Enabling scanning for all channels...");
-			await toggleChannelMutation.mutateAsync(true);
-
-			// Complete the step
-			setCurrentTask("Setup complete!");
-			completeStep("enable_scanning");
-
-			// Notify parent that this step is complete
-			console.log("EnableScanning: About to call onComplete");
-			setTimeout(() => {
-				console.log("EnableScanning: Calling onComplete now");
-				onComplete();
-			}, 1000);
-		} catch (error) {
-			console.error("Failed to enable scanning:", error);
-			updateStepState(
-				"enable_scanning",
-				"error",
-				error instanceof Error
-					? error.message
-					: "Unknown error occurred"
-			);
-		}
-	};
-
 	const getStepContent = () => {
-		// Debug logging removed to prevent infinite loops
-
-		if (stepData.state === null) {
+		if (enable.state === "loading") {
 			return (
 				<div className="space-y-2">
-					<p className="text-muted-foreground text-sm">
-						This step will enable message scanning for your guild
-						and configure all channels to be scanned for clips.
-					</p>
-					<div className="text-muted-foreground space-y-1 text-xs">
-						<div>• Enable scanning for the guild</div>
-						<div>• Enable scanning for all channels</div>
-					</div>
-					{shouldStart && (
-						<div className="mt-2 text-xs text-blue-600">
-							Ready to start...
-						</div>
-					)}
-				</div>
-			);
-		}
-
-		if (stepData.state === "loading") {
-			return (
-				<div className="space-y-2">
-					<p className="text-sm font-medium">{currentTask}</p>
+					<p className="text-sm font-medium">{enable.currentTask}</p>
 					<div className="text-muted-foreground text-xs">
 						Please wait while we configure your guild...
 					</div>
@@ -100,7 +21,7 @@ export function EnableScanning({
 			);
 		}
 
-		if (stepData.state === "success") {
+		if (enable.state === "success") {
 			return (
 				<div className="space-y-2">
 					<p className="text-sm font-medium text-green-600">
@@ -114,35 +35,41 @@ export function EnableScanning({
 			);
 		}
 
-		if (stepData.state === "error") {
+		if (enable.state === "error") {
 			return (
 				<div className="space-y-2">
 					<p className="text-sm font-medium text-red-600">
 						Failed to enable scanning
 					</p>
-					{stepData.error && (
+					{enable.error && (
 						<div className="rounded bg-red-50 p-2 text-xs text-red-500">
-							{stepData.error}
+							{enable.error}
 						</div>
 					)}
-					<Button
-						onClick={startEnableScanning}
-						disabled={
-							toggleMutation.isPending ||
-							toggleChannelMutation.isPending
-						}
-					>
+					<Button onClick={enable.retry} disabled={enable.isPending}>
 						Retry
 					</Button>
 				</div>
 			);
 		}
 
-		return null;
+		// state === null (waiting on previous step)
+		return (
+			<div className="space-y-2">
+				<p className="text-muted-foreground text-sm">
+					This step will enable message scanning for your guild and
+					configure all channels to be scanned for clips.
+				</p>
+				<div className="text-muted-foreground space-y-1 text-xs">
+					<div>• Enable scanning for the guild</div>
+					<div>• Enable scanning for all channels</div>
+				</div>
+			</div>
+		);
 	};
 
 	return (
-		<Step title="Enable Scanning" state={stepData.state}>
+		<Step title="Enable Scanning" state={enable.state}>
 			{getStepContent()}
 		</Step>
 	);

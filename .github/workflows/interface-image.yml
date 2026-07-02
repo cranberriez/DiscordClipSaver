@@ -30,6 +30,12 @@ jobs:
               if: steps.cache.outputs.cache-hit != 'true'
               run: npm ci --prefix interface
 
+            # Gate the image build on a type check. (The install above is used
+            # here; the Docker build runs its own npm ci inside the context.)
+            - name: Type check
+              working-directory: interface
+              run: npx tsc --noEmit
+
             - name: Log in to GHCR
               uses: docker/login-action@v3
               with:

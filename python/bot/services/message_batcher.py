@@ -30,7 +30,7 @@ class MessageBatcher:
     Batches messages with attachments to reduce worker job frequency.
     
     Messages are collected by guild > channel and sent to the worker
-    after a cooldown period (default 5 minutes) to batch frequent clips.
+    after a cooldown period (default 5 seconds) to batch bursts of clips.
     """
     
     def __init__(self, redis_client=None, cooldown_seconds: int = 5):
@@ -191,7 +191,7 @@ class MessageBatcher:
         total_batches = 0
         total_messages = 0
         oldest_batch_age = None
-        now = datetime.utcnow()
+        now = utcnow()  # timezone-aware, matches first_message_time
         
         for guild_channels in self._batches.values():
             for batch in guild_channels.values():
@@ -206,7 +206,7 @@ class MessageBatcher:
             "total_batches": total_batches,
             "total_messages": total_messages,
             "oldest_batch_age_seconds": oldest_batch_age.total_seconds() if oldest_batch_age else 0,
-            "cooldown_minutes": self.cooldown_minutes
+            "cooldown_seconds": self.cooldown_seconds
         }
     
     def remove_message_from_batch(self, guild_id: int, channel_id: int, message_id: int) -> bool:
