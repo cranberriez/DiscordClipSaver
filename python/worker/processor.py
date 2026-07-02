@@ -552,9 +552,22 @@ class JobProcessor:
         reset_scan_status = job_data.get("reset_scan_status", False)
         
         logger.info(f"Processing rescan: channel={channel_id}, reason={reason}")
-        
-        # For now, treat rescan as a full backward scan
-        # In the future, this could be optimized to only reprocess affected clips
+
+        if reset_scan_status:
+            # Clear scan boundaries so the rescan covers the full channel.
+            # (update_scan_status treats None as "no change", so clear the
+            # fields directly on the model.)
+            scan_status = await get_or_create_scan_status(guild_id, channel_id)
+            scan_status.forward_message_id = None
+            scan_status.backward_message_id = None
+            await scan_status.save(
+                update_fields=["forward_message_id", "backward_message_id", "updated_at"]
+            )
+
+        # Treat rescan as a full backward scan in "update" mode so existing
+        # messages are actually reprocessed (a plain "stop" batch would halt
+        # at the first already-seen message) and auto_continue so it covers
+        # the whole channel, not just one batch.
         await self.process_batch_scan({
             "type": "batch",
             "channel_id": channel_id,
@@ -562,7 +575,9 @@ class JobProcessor:
             "direction": "backward",
             "limit": 1000,  # Larger limit for rescans
             "before_message_id": None,
-            "after_message_id": None
+            "after_message_id": None,
+            "auto_continue": True,
+            "rescan": "update"
         })
 
     async def process_thumbnail_retry(self, job_data: dict):
@@ -798,4 +813,4 @@ class JobProcessor:
                 
         except Exception as e:
             logger.warning(f"Failed to stop scans for guild {guild_id}: {e}")
-            # Don't raise - purge should continue even if scan stop fails
+            # Don't raise - 

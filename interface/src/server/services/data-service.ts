@@ -195,6 +195,7 @@ export class DataService {
 	}
 
 	static async getClipsByChannelIds(
+		guildId: string,
 		channelIds: string[],
 		offset: number = 0,
 		limit: number = 50,
@@ -210,6 +211,7 @@ export class DataService {
 		searchQuery?: string
 	) {
 		const clips = await db.getClipsByChannelIds(
+			guildId,
 			channelIds,
 			limit,
 			offset,
@@ -236,6 +238,7 @@ export class DataService {
 	}
 
 	static async getClipsByChannelId(
+		guildId: string,
 		channelId: string,
 		offset: number = 0,
 		limit: number = 50,
@@ -246,6 +249,7 @@ export class DataService {
 		isGuildOwner?: boolean
 	) {
 		const clips = await db.getClipsByChannelId(
+			guildId,
 			channelId,
 			limit,
 			offset,

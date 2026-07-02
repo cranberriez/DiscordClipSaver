@@ -55,6 +55,7 @@ export async function getClipsByGuildId(
  * Get clips by channel IDs - DRY implementation using orchestrator
  */
 export async function getClipsByChannelIds(
+	guildId: string,
 	channelIds: string[],
 	limit: number = 50,
 	offset: number = 0,
@@ -71,6 +72,10 @@ export async function getClipsByChannelIds(
 ): Promise<ClipWithMetadata[]> {
 	return ClipQueryOrchestrator.getClips(
 		{
+			// SECURITY: always scope to the authorized guild. Without this,
+			// arbitrary channelIds from other guilds would leak their clips
+			// (and isGuildOwner would bypass their visibility settings).
+			guildId,
 			channelIds,
 			authorIds,
 			userId,
@@ -94,6 +99,7 @@ export async function getClipsByChannelIds(
  * Get clips by single channel ID - convenience wrapper
  */
 export async function getClipsByChannelId(
+	guildId: string,
 	channelId: string,
 	limit: number = 50,
 	offset: number = 0,
@@ -104,6 +110,7 @@ export async function getClipsByChannelId(
 	isGuildOwner?: boolean
 ): Promise<ClipWithMetadata[]> {
 	return getClipsByChannelIds(
+		guildId,
 		[channelId],
 		limit,
 		offset,

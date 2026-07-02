@@ -4,8 +4,9 @@ import {
 	setGuildOwnerIfUnclaimed,
 	consumeInstallIntent,
 } from "@/server/db";
-import { requireAuth } from "@/server/middleware/auth";
-import { getCurrentUser } from "@/server/discord/discordClient";
+import { requireAuth, canManageGuild } from "@/server/middleware/auth";
+import { getCurrentUser, discordFetch } from "@/server/discord/discordClient";
+import type { DiscordGuild } from "@/server/discord/types";
 import { rateLimit } from "@/server/rate-limit";
 
 /**
@@ -123,8 +124,37 @@ export async function GET(req: NextRequest) {
 		return NextResponse.json({ error: "User mismatch" }, { status: 403 });
 	}
 
-	// 5) Claim ownership if unclaimed
+	// 5) Verify the claimer can actually manage this guild on Discord.
+	// SECURITY: DB "ownership" grants full destructive control (purge, settings,
+	// scans), so it must not be claimable by a plain member who completes the
+	// OAuth flow. Check the cached guild list first; if the guild is missing or
+	// lacks permission (cache can be up to 1h stale right after joining),
+	// re-check once with a fresh fetch before rejecting.
 	if (!guild) throw new Error("Guild ID is required");
+
+	let discordGuild = auth.userGuilds.find((g) => g.id === guild);
+	if (!canManageGuild(discordGuild)) {
+		try {
+			const freshGuilds = await discordFetch<DiscordGuild[]>(
+				"/users/@me/guilds?limit=200",
+				tok
+			);
+			discordGuild = freshGuilds.find((g) => g.id === guild);
+		} catch (err) {
+			console.error("Failed to re-fetch guilds for claim check:", err);
+		}
+	}
+	if (!canManageGuild(discordGuild)) {
+		const baseUrl = process.env.NEXTAUTH_URL || req.url;
+		return NextResponse.redirect(
+			new URL(
+				`/install?guild=${guild}&status=forbidden`,
+				baseUrl
+			)
+		);
+	}
+
+	// 6) Claim ownership if unclaimed
 	const claimed = await setGuildOwnerIfUnclaimed(guild, appUser.id);
 	if (!claimed) {
 		// already claimed

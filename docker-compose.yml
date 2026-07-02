@@ -28,7 +28,9 @@ services:
             - traefik.http.middlewares.strip-dashboard.stripprefix.prefixes=/dashboard
 
             # Middleware: Authentication
-            - traefik.http.middlewares.auth.basicauth.users=admin:$$apr1$$ulssIwoF$$ctpjqfP9n0yDJhdwVXH050 # generated with htpasswd
+            # Set TRAEFIK_DASHBOARD_AUTH in .env (generate with: htpasswd -nB admin)
+            # SECURITY: never commit a real htpasswd hash to the repo.
+            - traefik.http.middlewares.auth.basicauth.users=${TRAEFIK_DASHBOARD_AUTH:?Set TRAEFIK_DASHBOARD_AUTH in .env}
         networks:
             - default
         restart: unless-stopped
@@ -65,6 +67,7 @@ services:
             - DB_PASSWORD=${POSTGRES_PASSWORD}
             - DB_NAME=${POSTGRES_DB}
             - BOT_RUNTIME_MODE=api
+            - INTERNAL_API_TOKEN=${INTERNAL_API_TOKEN:?Set INTERNAL_API_TOKEN in .env}
         depends_on:
             dcs-postgres:
                 condition: service_started
@@ -73,9 +76,10 @@ services:
         restart: unless-stopped
         volumes:
             # Optional: mount local settings file for rapid iteration without rebuilding image
-            - ./settings.default.json:/app/settings.default.json:ro
+            - ./settings.default.jsonc:/app/settings.default.jsonc:ro
         ports:
-            - "8000:8000"
+            # Localhost only: the bot API proxies Discord REST with the bot token
+            - "127.0.0.1:8000:8000"
 
     bot-discord:
         build:
@@ -102,7 +106,7 @@ services:
         restart: unless-stopped
         volumes:
             # Optional: mount local settings file for rapid iteration without rebuilding image
-            - ./settings.default.json:/app/settings.default.json:ro
+            - ./settings.default.jsonc:/app/settings.default.jsonc:ro
 
     worker:
         build:
@@ -144,6 +148,7 @@ services:
             - DB_USER=${POSTGRES_USER}
             - DB_PASSWORD=${POSTGRES_PASSWORD}
             - DB_NAME=${POSTGRES_DB}
+            - INTERNAL_API_TOKEN=${INTERNAL_API_TOKEN:?Set INTERNAL_API_TOKEN in .env}
         depends_on:
             dcs-postgres:
                 condition: service_started
@@ -152,7 +157,7 @@ services:
         restart: unless-stopped
         volumes:
             # Optional: mount local settings file to the same in-container path used by the image
-            - ./settings.default.json:/app/settings.default.json:ro
+            - ./settings.default.jsonc:/app/settings.default.jsonc:ro
             # Share worker storage volume to serve thumbnails
             - worker_storage:/app/storage:ro
         labels:
@@ -177,7 +182,8 @@ services:
         volumes:
             - postgres_data:/var/lib/postgresql/data
         ports:
-            - "5432:5432"
+            # Localhost only: never expose the database to the network
+            - "127.0.0.1:5432:5432"
         networks:
             default:
                 ipv4_address: 172.20.0.10
@@ -190,7 +196,8 @@ services:
         volumes:
             - redis_data:/data
         ports:
-            - "6379:6379"
+            # Localhost only: Redis has no authentication configured
+            - "127.0.0.1:6379:6379"
         networks:
             default:
                 ipv4_address: 172.20.0.11
@@ -199,9 +206,8 @@ services:
     dozzle:
         image: amir20/dozzle:latest
         container_name: dcs-dozzle
-        env_file:
-            - ./.env
-            - ./.env.global
+        # SECURITY: no env_file here. Third-party images must not receive
+        # BOT_TOKEN / client secrets / DB credentials.
         restart: unless-stopped
         volumes:
             - /var/run/docker.sock:/var/run/docker.sock:ro
@@ -213,29 +219,4 @@ services:
     uptime-kuma:
         image: louislam/uptime-kuma:1
         container_name: dcs-uptime-kuma
-        env_file:
-            - ./.env
-            - ./.env.global
-        restart: unless-stopped
-        volumes:
-            - kuma_data:/app/data
-        networks:
-            - default
-        ports:
-            - "127.0.0.1:3001:3001" # Exposed locally at http://localhost:3001
-
-networks:
-    default:
-        name: discord-clip-saver
-        driver: bridge
-        ipam:
-            config:
-                - subnet: 172.20.0.0/24
-
-volumes:
-    postgres_data:
-    redis_data:
-    worker_storage:
-    traefik_letsencrypt:
-    kuma_data:
-
+        # SECURITY: no env_file here. Thi

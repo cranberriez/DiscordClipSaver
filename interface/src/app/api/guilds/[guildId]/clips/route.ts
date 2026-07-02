@@ -111,6 +111,7 @@ export async function GET(
 		// Pass user ID for favorites support
 		const clips = channelIds
 			? await DataService.getClipsByChannelIds(
+					guildId, // SECURITY: scope channel queries to the authorized guild
 					channelIds,
 					offset,
 					limit + 1,
