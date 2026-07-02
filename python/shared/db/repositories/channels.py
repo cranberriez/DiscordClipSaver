@@ -8,10 +8,25 @@ from shared.db.models import Channel, Guild, ChannelType
 from shared.time import utcnow
 
 
+# discord.py channel type names that don't match our enum values directly.
+# Announcement ("news") channels are text-based and scannable; stages are voice.
+_CHANNEL_TYPE_ALIASES = {
+    "news": ChannelType.TEXT,
+    "stage_voice": ChannelType.VOICE,
+}
+
+
 def _to_channel_type(value: str) -> ChannelType:
     try:
         return ChannelType(value)
     except Exception:
+        alias = _CHANNEL_TYPE_ALIASES.get(str(value))
+        if alias is not None:
+            return alias
+        import logging
+        logging.getLogger(__name__).warning(
+            "Unknown Discord channel type %r; defaulting to TEXT", value
+        )
         return ChannelType.TEXT
 
 

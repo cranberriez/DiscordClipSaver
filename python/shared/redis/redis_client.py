@@ -22,7 +22,6 @@ class RedisStreamClient:
     """Manages Redis stream for job queue"""
     
     STREAM_PREFIX = "jobs"
-    STREAM_MAXLEN = int(os.getenv("REDIS_STREAM_MAXLEN", "10000"))
     
     def __init__(
         self, 
@@ -220,11 +219,13 @@ class RedisStreamClient:
         # Ensure consumer group exists for this stream
         await self._ensure_consumer_group(stream_name)
         
+        # NOTE: no MAXLEN here. Trimming a work stream evicts the OLDEST
+        # entries regardless of acknowledgment, silently deleting unprocessed
+        # jobs under backlog. Acked jobs are XDEL'd on completion, so streams
+        # only grow with genuine backlog; monitor length instead of trimming.
         message_id = await self.client.xadd(
             name=stream_name,
-            fields=serialized_data,
-            maxlen=self.STREAM_MAXLEN,
-            approximate=True  # More efficient, allows slight overflow for performance
+            fields=serialized_data
         )
         
         logger.info(f"Pushed job {job_data.get('job_id', 'unknown')} to stream {stream_name}: {message_id}")

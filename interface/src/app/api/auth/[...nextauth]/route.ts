@@ -5,6 +5,55 @@ import type { DiscordProfile } from "next-auth/providers/discord";
 
 import { upsertUser } from "@/server/db";
 
+type DiscordJWT = {
+	discordUserId?: string;
+	accessToken?: string;
+	refreshToken?: string;
+	accessTokenExpiresAt?: number;
+	error?: "RefreshTokenError";
+};
+
+/**
+ * Refresh the Discord access token using the stored refresh token.
+ * Discord access tokens expire (~7 days) while sessions last 30 days;
+ * without this, guild fetches start failing mid-session.
+ */
+async function refreshDiscordAccessToken<T extends DiscordJWT>(
+	token: T
+): Promise<T> {
+	if (!token.refreshToken) {
+		return { ...token, error: "RefreshTokenError" as const };
+	}
+	try {
+		const response = await fetch("https://discord.com/api/oauth2/token", {
+			method: "POST",
+			headers: {
+				"Content-Type": "application/x-www-form-urlencoded",
+			},
+			body: new URLSearchParams({
+				client_id: process.env.DISCORD_CLIENT_ID ?? "",
+				client_secret: process.env.DISCORD_CLIENT_SECRET ?? "",
+				grant_type: "refresh_token",
+				refresh_token: token.refreshToken,
+			}),
+		});
+		const refreshed = await response.json();
+		if (!response.ok) {
+			throw refreshed;
+		}
+		return {
+			...token,
+			accessToken: refreshed.access_token,
+			refreshToken: refreshed.refresh_token ?? token.refreshToken,
+			accessTokenExpiresAt: Date.now() + refreshed.expires_in * 1000,
+			error: undefined,
+		};
+	} catch (error) {
+		console.error("Failed to refresh Discord access token:", error);
+		return { ...token, error: "RefreshTokenError" as const };
+	}
+}
+
 /**
  * Get the base URL for NextAuth callbacks.
  * In development, this allows dynamic URLs (localhost, local IP, etc.)
@@ -93,13 +142,30 @@ function createAuthOptions(baseUrl?: string): NextAuthOptions {
 					).discordUserId = discordUserId;
 				}
 
-				// Keep the provider access token server-only on the JWT
+				const t = token as typeof token & DiscordJWT;
+
+				// Initial sign-in: persist tokens + expiry server-only on the JWT
 				if (account?.access_token) {
-					(
-						token as typeof token & { accessToken?: string }
-					).accessToken = account.access_token;
+					t.accessToken = account.access_token;
+					t.refreshToken = account.refresh_token ?? t.refreshToken;
+					// account.expires_at is epoch seconds
+					t.accessTokenExpiresAt = account.expires_at
+						? account.expires_at * 1000
+						: Date.now() + 7 * 24 * 60 * 60 * 1000;
+					t.error = undefined;
+					return t;
 				}
-				return token;
+
+				// Token still valid (60s clock-skew buffer): keep it
+				if (
+					!t.accessTokenExpiresAt ||
+					Date.now() < t.accessTokenExpiresAt - 60_000
+				) {
+					return t;
+				}
+
+				// Token expired: refresh it
+				return refreshDiscordAccessToken(t);
 			},
 			async session({ session, token }) {
 				if (session.user) {

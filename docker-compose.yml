@@ -48,7 +48,7 @@ services:
             - DB_NAME=${POSTGRES_DB}
         depends_on:
             dcs-postgres:
-                condition: service_started
+                condition: service_healthy
         restart: "no"
         command: ["python", "-m", "shared.db.schema"]
 
@@ -70,7 +70,7 @@ services:
             - INTERNAL_API_TOKEN=${INTERNAL_API_TOKEN:?Set INTERNAL_API_TOKEN in .env}
         depends_on:
             dcs-postgres:
-                condition: service_started
+                condition: service_healthy
             db-schema:
                 condition: service_completed_successfully
         restart: unless-stopped
@@ -98,9 +98,9 @@ services:
             - BOT_RUNTIME_MODE=discord
         depends_on:
             dcs-postgres:
-                condition: service_started
+                condition: service_healthy
             dcs-redis:
-                condition: service_started
+                condition: service_healthy
             db-schema:
                 condition: service_completed_successfully
         restart: unless-stopped
@@ -123,9 +123,9 @@ services:
             - WORKER_MODE=${WORKER_MODE:-all}
         depends_on:
             dcs-postgres:
-                condition: service_started
+                condition: service_healthy
             dcs-redis:
-                condition: service_started
+                condition: service_healthy
             db-schema:
                 condition: service_completed_successfully
         restart: unless-stopped
@@ -151,7 +151,7 @@ services:
             - INTERNAL_API_TOKEN=${INTERNAL_API_TOKEN:?Set INTERNAL_API_TOKEN in .env}
         depends_on:
             dcs-postgres:
-                condition: service_started
+                condition: service_healthy
             db-schema:
                 condition: service_completed_successfully
         restart: unless-stopped
@@ -188,6 +188,11 @@ services:
             default:
                 ipv4_address: 172.20.0.10
         restart: unless-stopped
+        healthcheck:
+            test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-postgres}"]
+            interval: 5s
+            timeout: 3s
+            retries: 10
 
     dcs-redis:
         image: redis:7-alpine
@@ -202,6 +207,11 @@ services:
             default:
                 ipv4_address: 172.20.0.11
         restart: unless-stopped
+        healthcheck:
+            test: ["CMD", "redis-cli", "ping"]
+            interval: 5s
+            timeout: 3s
+            retries: 10
 
     dozzle:
         image: amir20/dozzle:latest

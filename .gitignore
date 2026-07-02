@@ -23,3 +23,6 @@ python/tests/*
 
 # Deployment scripts
 deploy.sh
+
+# Internal review docs (keep local, not for the userbase)
+docs/FINAL-*.md
