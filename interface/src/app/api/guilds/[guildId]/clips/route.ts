@@ -3,7 +3,7 @@ import { requireGuildAccess } from "@/server/middleware/auth";
 import { DataService } from "@/server/services/data-service";
 import { z } from "zod";
 import { rateLimit } from "@/server/rate-limit";
-import { jsonError } from "@/server/http";
+import { apiError, jsonError } from "@/server/http";
 
 const ClipsQuerySchema = z.object({
 	channelIds: z
@@ -107,6 +107,31 @@ export async function GET(
 	const favoritesOnly = favorites === "true";
 
 	try {
+		// SECURITY/UX: channel IDs are only ever queried guild-scoped, so a
+		// tampered ID from another guild can't leak clips - but it used to
+		// silently return an empty list. Validate against the guild's actual
+		// channels and 404 instead so the client can say "channel not found".
+		if (channelIds) {
+			const guildChannels =
+				await DataService.getChannelsByGuildId(guildId);
+			const knownIds = new Set((guildChannels ?? []).map((c) => c.id));
+			const unknownChannelIds = channelIds.filter(
+				(id) => !knownIds.has(id)
+			);
+
+			if (unknownChannelIds.length > 0) {
+				return apiError(
+					404,
+					"CHANNEL_NOT_FOUND",
+					`Unknown channel(s) for guild ${guildId}: ${unknownChannelIds.join(",")}`,
+					unknownChannelIds.length === 1
+						? "This channel doesn't exist in this server."
+						: "Some of the requested channels don't exist in this server.",
+					{ unknownChannelIds }
+				);
+			}
+		}
+
 		// Fetch one extra to determine if there are more results
 		// Pass user ID for favorites support
 		const clips = channelIds
