@@ -229,4 +229,27 @@ services:
     uptime-kuma:
         image: louislam/uptime-kuma:1
         container_name: dcs-uptime-kuma
-        # SECURITY: no env_file here. Thi
+        # SECURITY: no env_file here. Third-party images must not receive
+        # BOT_TOKEN / client secrets / DB credentials.
+        restart: unless-stopped
+        volumes:
+            - kuma_data:/app/data
+        networks:
+            - default
+        ports:
+            - "127.0.0.1:3001:3001" # Exposed locally at http://localhost:3001
+
+networks:
+    default:
+        name: discord-clip-saver
+        driver: bridge
+        ipam:
+            config:
+                - subnet: 172.20.0.0/24
+
+volumes:
+    postgres_data:
+    redis_data:
+    worker_storage:
+    traefik_letsencrypt:
+    kuma_data:

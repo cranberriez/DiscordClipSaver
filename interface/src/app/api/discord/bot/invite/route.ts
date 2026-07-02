@@ -42,7 +42,12 @@ export async function GET(req: NextRequest) {
 		);
 	}
 
-	const ownerDiscordId = process.env.OWNER_DISCORD_ID;
+	// Treat empty / "null" / "undefined" as unset (env vars are always strings)
+	const rawOwnerId = process.env.OWNER_DISCORD_ID?.trim();
+	const ownerDiscordId =
+		rawOwnerId && rawOwnerId !== "null" && rawOwnerId !== "undefined"
+			? rawOwnerId
+			: undefined;
 	if (ownerDiscordId && auth.discordUserId !== ownerDiscordId) {
 		const redirectUrl = new URL("/invite", publicBaseUrl);
 		redirectUrl.searchParams.set("error", "invites_restricted");

@@ -813,4 +813,4 @@ class JobProcessor:
                 
         except Exception as e:
             logger.warning(f"Failed to stop scans for guild {guild_id}: {e}")
-            # Don't raise - 
+            # Don't raise - purge should continue even if scan stop fails
