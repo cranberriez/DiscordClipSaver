@@ -4,25 +4,44 @@ Main worker entry point
 import asyncio
 import os
 import signal
+from typing import TYPE_CHECKING, Optional
 from dotenv import load_dotenv
 from shared.db.utils import init_db, close_db, start_health_check_loop
 from shared.db.models import ScanStatus
-from worker.discord.bot import WorkerBot
 from shared.redis.redis_client import RedisStreamClient, RedisUnavailableError
 from worker.processor import JobProcessor
 from worker.logger import logger  # Centralized logger setup
 from shared.settings_loader import initialize_settings
 from shared.settings import settings
 
+if TYPE_CHECKING:
+    from worker.discord.bot import WorkerBot
+
 # Load environment variables
 load_dotenv()
+
+DISCORD_JOB_TYPES = {"batch", "message", "rescan", "purge_guild"}
+MAINTENANCE_JOB_TYPES = {
+    "thumbnail_retry",
+    "thumbnail_cleanup",
+    "message_deletion",
+    "purge_channel",
+}
+ALL_WORKER_MODES = {"all", "discord", "maintenance"}
 
 
 class Worker:
     """Main worker class that orchestrates all components"""
     
     def __init__(self):
-        self.bot = WorkerBot()
+        self.mode = os.getenv("WORKER_MODE", "all").strip().lower()
+        if self.mode not in ALL_WORKER_MODES:
+            raise ValueError(
+                f"Invalid WORKER_MODE '{self.mode}'. "
+                f"Expected one of: {', '.join(sorted(ALL_WORKER_MODES))}"
+            )
+
+        self.bot: Optional["WorkerBot"] = self._create_discord_bot() if self.requires_discord_bot() else None
         # Generate unique consumer name using hostname (unique per container)
         import socket
         hostname = socket.gethostname()
@@ -35,7 +54,8 @@ class Worker:
         self.redis = RedisStreamClient(
             stream_pattern="*",
             consumer_group="worker_group",
-            consumer_name=consumer_name
+            consumer_name=consumer_name,
+            allowed_job_types=self.get_allowed_job_types()
         )
         self.processor = None
         self.running = False
@@ -43,9 +63,32 @@ class Worker:
         self.worker_id = worker_id
         self.health_check_task = None
         self.stale_scan_cleanup_task = None
+        logger.info(f"Worker mode: {self.mode}")
         
         logger.info(f"🔧 Worker #{worker_id} initialized (consumer: {consumer_name})")
     
+    def get_allowed_job_types(self):
+        """Return the Redis job types this worker mode is allowed to claim."""
+        if self.mode == "discord":
+            return DISCORD_JOB_TYPES
+        if self.mode == "maintenance":
+            return MAINTENANCE_JOB_TYPES
+        return None
+
+    def requires_discord_bot(self) -> bool:
+        """Return True when this worker mode needs the Discord gateway."""
+        return self.mode in {"all", "discord"}
+
+    def _create_discord_bot(self) -> "WorkerBot":
+        """Create the Discord gateway bot only for worker modes that need it."""
+        from worker.discord.bot import WorkerBot
+
+        return WorkerBot()
+
+    def runs_maintenance_tasks(self) -> bool:
+        """Return True when this worker mode should run DB/storage maintenance loops."""
+        return self.mode in {"all", "maintenance"}
+
     async def initialize(self):
         """Initialize database and Redis."""
         # Initialize settings first (must be done before anything else)
@@ -58,6 +101,7 @@ class Worker:
             logger.error(f"Initial Redis connection failed; worker will keep running and retry on demand. Error: {e}")
         self.processor = JobProcessor(bot=self.bot, redis_client=self.redis)
         logger.info("Worker components initialized successfully")
+        self.running = True
 
         # Start database health check loop
         health_check_interval = settings.get_db_health_check_interval_seconds()
@@ -65,25 +109,28 @@ class Worker:
             start_health_check_loop(interval_seconds=health_check_interval)
         )
         
-        # Start stale scan cleanup loop
-        stale_scan_interval = settings.get_stale_scan_cleanup_interval_seconds()
-        stale_scan_timeout = settings.get_stale_scan_timeout_minutes()
-        self.stale_scan_cleanup_task = asyncio.create_task(
-            self.stale_scan_cleanup_loop(
-                interval_seconds=stale_scan_interval,
-                timeout_minutes=stale_scan_timeout
+        if self.runs_maintenance_tasks():
+            # Start stale scan cleanup loop
+            stale_scan_interval = settings.get_stale_scan_cleanup_interval_seconds()
+            stale_scan_timeout = settings.get_stale_scan_timeout_minutes()
+            self.stale_scan_cleanup_task = asyncio.create_task(
+                self.stale_scan_cleanup_loop(
+                    interval_seconds=stale_scan_interval,
+                    timeout_minutes=stale_scan_timeout
+                )
             )
-        )
-        
-        # Start stale thumbnail cleanup loop
-        stale_thumb_interval = settings.get_stale_thumbnail_cleanup_interval_seconds()
-        stale_thumb_timeout = settings.get_stale_thumbnail_timeout_minutes()
-        self.stale_thumbnail_cleanup_task = asyncio.create_task(
-            self.stale_thumbnail_cleanup_loop(
-                interval_seconds=stale_thumb_interval,
-                timeout_minutes=stale_thumb_timeout
+
+            # Start stale thumbnail cleanup loop
+            stale_thumb_interval = settings.get_stale_thumbnail_cleanup_interval_seconds()
+            stale_thumb_timeout = settings.get_stale_thumbnail_timeout_minutes()
+            self.stale_thumbnail_cleanup_task = asyncio.create_task(
+                self.stale_thumbnail_cleanup_loop(
+                    interval_seconds=stale_thumb_interval,
+                    timeout_minutes=stale_thumb_timeout
+                )
             )
-        )
+        else:
+            logger.info("Skipping maintenance loops in discord worker mode")
     
     async def shutdown(self):
         """Shutdown the worker gracefully"""
@@ -266,19 +313,24 @@ class Worker:
             # Initialize components first
             await self.initialize()
 
-            # Now start the bot
-            logger.info("Starting Discord bot...")
-            bot_task = asyncio.create_task(self.bot.start_bot())
+            if self.requires_discord_bot():
+                if self.bot is None:
+                    raise RuntimeError("Discord worker mode requires a WorkerBot instance")
+                # Now start the bot
+                logger.info("Starting Discord bot...")
+                bot_task = asyncio.create_task(self.bot.start_bot())
 
-            logger.info("Waiting for bot to come online...")
-            # Wait for bot with timeout to detect connection issues
-            try:
-                bot_timeout = settings.get_bot_ready_timeout_seconds()
-                await asyncio.wait_for(self.bot.ready_event.wait(), timeout=bot_timeout)
-                logger.info("Bot is online, starting job processing.")
-            except asyncio.TimeoutError:
-                logger.error(f"Bot failed to come online within {bot_timeout} seconds!")
-                raise
+                logger.info("Waiting for bot to come online...")
+                # Wait for bot with timeout to detect connection issues
+                try:
+                    bot_timeout = settings.get_bot_ready_timeout_seconds()
+                    await asyncio.wait_for(self.bot.ready_event.wait(), timeout=bot_timeout)
+                    logger.info("Bot is online, starting job processing.")
+                except asyncio.TimeoutError:
+                    logger.error(f"Bot failed to come online within {bot_timeout} seconds!")
+                    raise
+            else:
+                logger.info("Worker mode does not require Discord; starting job processing.")
 
             # Start job processing loop
             await self.process_jobs()
@@ -290,7 +342,7 @@ class Worker:
             raise
         finally:
             logger.info("Initiating final shutdown sequence...")
-            if not bot_task.done():
+            if bot_task and not bot_task.done():
                 bot_task.cancel()
                 try:
                     await bot_task

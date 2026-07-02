@@ -20,6 +20,13 @@ DB_RETRY_BASE_DELAY = float(os.getenv("DB_RETRY_BASE_DELAY", "0.5"))  # seconds
 DB_RETRY_MAX_DELAY = float(os.getenv("DB_RETRY_MAX_DELAY", "10.0"))  # seconds
 
 
+def get_env_bool(name: str, default: bool = False) -> bool:
+    value = os.getenv(name)
+    if value is None:
+        return default
+    return value.strip().lower() in {"1", "true", "yes", "on"}
+
+
 def db_retry(
     max_attempts: Optional[int] = None,
     base_delay: Optional[float] = None,

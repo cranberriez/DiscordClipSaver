@@ -23,6 +23,18 @@ export interface ChannelTable {
 		string | null | undefined
 	>;
 	nsfw: ColumnType<boolean, boolean | undefined, boolean | undefined>;
+	/** Synced from Discord: can @everyone view this channel? False = private/role-gated. */
+	everyone_can_view: ColumnType<
+		boolean,
+		boolean | undefined,
+		boolean | undefined
+	>;
+	/** Owner override: null = auto (follow everyone_can_view), "visible" | "restricted". */
+	access_override: ColumnType<
+		"visible" | "restricted" | null,
+		"visible" | "restricted" | null | undefined,
+		"visible" | "restricted" | null | undefined
+	>;
 	message_scan_enabled: ColumnType<
 		boolean,
 		boolean | undefined,

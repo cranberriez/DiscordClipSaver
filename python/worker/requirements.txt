@@ -1,29 +1,31 @@
+# Pinned to the majors in use (see python/env). Update deliberately;
+# unpinned deps previously meant any rebuild could pull breaking majors.
 # Discord API
-discord.py
+discord.py>=2.6,<3
 
 # Database
-tortoise-orm
-asyncpg
+tortoise-orm>=0.25,<0.26
+asyncpg>=0.30,<0.31
 
 # Redis
-redis
+redis>=6.4,<7
 
 # Data validation
-pydantic
+pydantic>=2.12,<3
 
 # Environment variables
-python-dotenv
+python-dotenv>=1.1,<2
 
 # Logging and utilities
-python-json-logger
-colorlog
+python-json-logger>=4,<5
+colorlog>=6.10,<7
 
 # Async file I/O for storage
-aiofiles
+aiofiles>=25.1,<26
 
 # Video processing (requires ffmpeg binary installed on system)
-ffmpeg-python
-Pillow
+ffmpeg-python>=0.2,<0.3
+Pillow>=11.3,<12
 
 # Optional: Cloud storage (uncomment if using GCS)
 # google-cloud-storage

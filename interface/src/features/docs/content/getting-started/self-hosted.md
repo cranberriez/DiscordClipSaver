@@ -16,12 +16,17 @@ Before you begin, ensure you have the following:
 Our provided `docker-compose-prod.yml` will spin up the following containers:
 
 - **Next.js Interface**: The web dashboard you're reading this on.
-- **Python Bot**: The Discord bot that listens to messages in real-time.
+- **Bot API**: FastAPI service for Discord-backed API actions.
+- **Discord Bot**: Gateway listener that watches messages in real-time.
 - **Python Worker**: Background task processor for downloading clips and generating thumbnails.
 - **PostgreSQL**: The main database for storing clips, messages, and settings.
 - **Redis**: Used for task queuing (RQ) and caching.
 - **Dozzle**: Used for Docker log aggregation and viewing.
 - **Uptime Kuma**: Used for service uptime monitoring.
+
+The web interface depends on PostgreSQL for normal browsing. Redis, the bot
+services, and workers can be temporarily offline; scan, purge, thumbnail, and
+live Discord update features will be degraded until those services recover.
 
 ## Quick Start
 
@@ -55,7 +60,7 @@ cp .env.global.example .env.global
 
 Edit `.env` using your preferred text editor (like `nano` or `vim`) and fill in the required variables:
 
-- `DISCORD_TOKEN`: Your Bot Token.
+- `BOT_TOKEN`: Your Bot Token.
 - `NEXTAUTH_SECRET`: Generate a random string (e.g., `openssl rand -hex 32`).
 - `DISCORD_CLIENT_ID` & `DISCORD_CLIENT_SECRET`: From your Discord app.
 - `PUBLIC_DOMAIN`: Your website domain for Traefik routing.

@@ -63,6 +63,9 @@ export async function upsertGuildSettings(
 				settings: updatedSettings as unknown,
 				default_channel_settings:
 					updatedDefaultChannelSettings as unknown,
+				// Invalidate the stored hash so the Python settings resolver
+				// recomputes it and worker caches pick up this change.
+				settings_hash: null,
 				updated_at: new Date(),
 			})
 			.where("id", "=", existing.id)
@@ -79,6 +82,7 @@ export async function upsertGuildSettings(
 				settings: (settings ?? {}) as unknown,
 				default_channel_settings: (defaultChannelSettings ??
 					{}) as unknown,
+				settings_hash: null,
 				created_at: now,
 				updated_at: now,
 			})

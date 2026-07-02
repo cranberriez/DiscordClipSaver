@@ -11,6 +11,8 @@ export class ChannelMapper {
 			position: dbChannel.position,
 			parent_id: dbChannel.parent_id,
 			nsfw: dbChannel.nsfw,
+			everyone_can_view: dbChannel.everyone_can_view,
+			access_override: dbChannel.access_override,
 			message_scan_enabled: dbChannel.message_scan_enabled,
 			last_channel_sync_at: dbChannel.last_channel_sync_at,
 			next_allowed_channel_sync_at:
@@ -34,6 +36,8 @@ export class ChannelMapper {
 			position: dbChannel.position,
 			parent_id: dbChannel.parent_id,
 			nsfw: dbChannel.nsfw,
+			everyone_can_view: dbChannel.everyone_can_view,
+			access_override: dbChannel.access_override,
 			clip_count: dbChannel.clip_count,
 			message_scan_enabled: dbChannel.message_scan_enabled,
 			last_channel_sync_at: dbChannel.last_channel_sync_at,

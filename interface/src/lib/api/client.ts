@@ -37,6 +37,26 @@ export class APIError extends Error {
 		super(message);
 		this.name = "APIError";
 	}
+
+	/** Stable machine-readable code from the standard error envelope. */
+	get code(): string | undefined {
+		return (this.data as any)?.code;
+	}
+
+	/** Message from the standard envelope that is safe to render in the UI. */
+	get userMessage(): string | undefined {
+		return (this.data as any)?.userMessage;
+	}
+
+	/** Optional structured context from the standard envelope. */
+	get details(): Record<string, unknown> | undefined {
+		return (this.data as any)?.details;
+	}
+}
+
+/** Narrowing helper: `if (isAPIError(err) && err.code === "CHANNEL_NOT_FOUND")` */
+export function isAPIError(err: unknown): err is APIError {
+	return err instanceof APIError;
 }
 
 // ============================================================================

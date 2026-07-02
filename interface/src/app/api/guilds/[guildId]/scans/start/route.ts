@@ -7,6 +7,18 @@ import {
 } from "@/server/db/queries/scan_status";
 import { getChannelById } from "@/server/db/queries/channels";
 import { rateLimit } from "@/server/rate-limit";
+import {
+	isRedisUnavailableError,
+	queueUnavailableResponse,
+} from "@/server/http";
+
+type ScanStartResult = {
+	channelId: string;
+	success: boolean;
+	error?: string;
+	jobId?: string;
+	messageId?: string;
+};
 
 /**
  * POST /api/guilds/[guildId]/scans/start
@@ -115,127 +127,143 @@ export async function POST(
 	}
 
 	// Process each channel
-	const results = await Promise.all(
-		channelIds.map(async (channelId: string) => {
-			try {
-				// Validate channel exists and belongs to guild
-				if (!validChannelIds.has(channelId)) {
-					return {
-						channelId,
-						success: false,
-						error: "Channel not found or does not belong to this guild",
-					};
-				}
+	let results: ScanStartResult[];
+	try {
+		results = await Promise.all(
+			channelIds.map(async (channelId: string) => {
+				try {
+					// Validate channel exists and belongs to guild
+					if (!validChannelIds.has(channelId)) {
+						return {
+							channelId,
+							success: false,
+							error: "Channel not found or does not belong to this guild",
+						};
+					}
 
-				// Fetch full channel data for message_scan_enabled check
-				// We could have fetched this in the bulk query above.
-				const channel = await getChannelById(guildId, channelId);
-				if (!channel) {
-					return {
-						channelId,
-						success: false,
-						error: "Channel not found",
-					};
-				}
+					// Fetch full channel data for message_scan_enabled check
+					// We could have fetched this in the bulk query above.
+					const channel = await getChannelById(guildId, channelId);
+					if (!channel) {
+						return {
+							channelId,
+							success: false,
+							error: "Channel not found",
+						};
+					}
 
-				if (!channel.message_scan_enabled) {
-					return {
-						channelId,
-						success: false,
-						error: "Message scanning is disabled for this channel",
-					};
-				}
+					if (!channel.message_scan_enabled) {
+						return {
+							channelId,
+							success: false,
+							error: "Message scanning is disabled for this channel",
+						};
+					}
 
-				// Check if scan is already running using our pre-fetched map
-				const existingStatus = statusMap.get(channelId);
+					// Check if scan is already running using our pre-fetched map
+					const existingStatus = statusMap.get(channelId);
 
-				if (
-					existingStatus?.status === "RUNNING" ||
-					existingStatus?.status === "QUEUED"
-				) {
-					return {
-						channelId,
-						success: false,
-						error: "Scan is already running for this channel",
-					};
-				}
-
-				// Determine scan parameters
-				let direction: "forward" | "backward";
-				let afterMessageId: string | undefined;
-				let beforeMessageId: string | undefined;
-
-				if (isHistorical) {
-					// Historical scan: backward from beginning
-					direction = "backward";
-					beforeMessageId = undefined;
-					afterMessageId = undefined;
-				} else if (isBackfill) {
-					// Backfill scan: backward from oldest known message
-					direction = "backward";
-					beforeMessageId =
-						existingStatus?.backward_message_id || undefined;
-					afterMessageId = undefined;
-				} else if (isUpdate) {
-					// Update scan: forward from last position
-					direction = "forward";
-					afterMessageId =
-						existingStatus?.forward_message_id || undefined;
-				} else {
-					// Initial/continuation scan
 					if (
-						existingStatus?.forward_message_id ||
-						existingStatus?.backward_message_id
+						existingStatus?.status === "RUNNING" ||
+						existingStatus?.status === "QUEUED"
 					) {
-						// Continue from last position
+						return {
+							channelId,
+							success: false,
+							error: "Scan is already running for this channel",
+						};
+					}
+
+					// Determine scan parameters
+					let direction: "forward" | "backward";
+					let afterMessageId: string | undefined;
+					let beforeMessageId: string | undefined;
+
+					if (isHistorical) {
+						// Historical scan: backward from beginning
+						direction = "backward";
+						beforeMessageId = undefined;
+						afterMessageId = undefined;
+					} else if (isBackfill) {
+						// Backfill scan: backward from oldest known message
+						direction = "backward";
+						beforeMessageId =
+							existingStatus?.backward_message_id || undefined;
+						afterMessageId = undefined;
+					} else if (isUpdate) {
+						// Update scan: forward from last position
 						direction = "forward";
 						afterMessageId =
-							existingStatus.forward_message_id || undefined;
+							existingStatus?.forward_message_id || undefined;
 					} else {
-						// First scan
-						direction = "forward";
+						// Initial/continuation scan
+						if (
+							existingStatus?.forward_message_id ||
+							existingStatus?.backward_message_id
+						) {
+							// Continue from last position
+							direction = "forward";
+							afterMessageId =
+								existingStatus.forward_message_id ||
+								undefined;
+						} else {
+							// First scan
+							direction = "forward";
+						}
 					}
+
+					// Start the scan
+					const { jobId, messageId } = await startBatchScan({
+						guildId,
+						channelId,
+						direction,
+						afterMessageId,
+						beforeMessageId,
+						autoContinue,
+						rescan,
+					});
+
+					// Mark QUEUED only after the Redis job exists.
+					await upsertChannelScanStatus(guildId, channelId, {
+						status: "QUEUED",
+					});
+
+					return {
+						channelId,
+						success: true,
+						jobId,
+						messageId,
+					};
+				} catch (error) {
+					console.error(
+						`Failed to start scan for channel ${channelId}:`,
+						error
+					);
+					if (isRedisUnavailableError(error)) {
+						throw error;
+					}
+					return {
+						channelId,
+						success: false,
+						error:
+							error instanceof Error
+								? error.message
+								: "Unknown error",
+					};
 				}
+			})
+		);
+	} catch (error) {
+		if (isRedisUnavailableError(error)) {
+			return queueUnavailableResponse(error);
+		}
 
-				// Upsert channel scan status to QUEUED
-				// This prevents the "unscanned" flash when UI refetches before worker picks up job
-				await upsertChannelScanStatus(guildId, channelId, {
-					status: "QUEUED",
-				});
-
-				// Start the scan
-				const { jobId, messageId } = await startBatchScan({
-					guildId,
-					channelId,
-					direction,
-					afterMessageId,
-					beforeMessageId,
-					autoContinue,
-					rescan,
-				});
-
-				return {
-					channelId,
-					success: true,
-					jobId,
-					messageId,
-				};
-			} catch (error) {
-				console.error(
-					`Failed to start scan for channel ${channelId}:`,
-					error
-				);
-				return {
-					channelId,
-					success: false,
-					error:
-						error instanceof Error
-							? error.message
-							: "Unknown error",
-				};
-			}
-		})
-	);
+		console.error("Failed to start scans:", error);
+		return NextResponse.json(
+			{ error: "Failed to start scans" },
+			{ status: 500 }
+		);
+	}
 
 	// Count successes and failures
 	const success = results.filter((r) => r.success).length;

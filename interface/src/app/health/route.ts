@@ -1,4 +1,18 @@
 import { NextRequest, NextResponse } from "next/server";
+import { access } from "fs/promises";
+import { join } from "path";
+import { sql } from "kysely";
+import { withRedis } from "@/lib/redis/client";
+import { fetchBotApi, getBotApiUrl } from "@/server/bot-api";
+import { getDb } from "@/server/db";
+
+type DependencyHealth = {
+	ok: boolean;
+	required: boolean;
+	latencyMs?: number;
+	error?: string;
+	details?: Record<string, unknown>;
+};
 
 function getClientIp(req: NextRequest): string | null {
 	const forwardedFor = req.headers.get("x-forwarded-for");
@@ -64,7 +78,106 @@ async function handleHealthRequest(
 		}
 	}
 
-	return NextResponse.json({ ok: true }, { status: 200 });
+	const dependencies = {
+		database: await checkDatabaseHealth(),
+		redis: await checkRedisHealth(),
+		botApi: await checkBotApiHealth(),
+		storage: await checkStorageHealth(),
+	};
+	const ok = dependencies.database.ok;
+
+	return NextResponse.json(
+		{
+			ok,
+			dependencies,
+		},
+		{ status: ok ? 200 : 503 }
+	);
+}
+
+async function timedCheck(
+	required: boolean,
+	fn: () => Promise<void>
+): Promise<DependencyHealth> {
+	const start = performance.now();
+
+	try {
+		await fn();
+		return {
+			ok: true,
+			required,
+			latencyMs: Math.round(performance.now() - start),
+		};
+	} catch (error) {
+		return {
+			ok: false,
+			required,
+			latencyMs: Math.round(performance.now() - start),
+			error: error instanceof Error ? error.message : "Unknown error",
+		};
+	}
+}
+
+function checkDatabaseHealth() {
+	return timedCheck(true, async () => {
+		await sql`select 1`.execute(getDb());
+	});
+}
+
+function checkRedisHealth() {
+	return timedCheck(false, async () => {
+		await withRedis(async (redis) => {
+			await redis.ping();
+		});
+	});
+}
+
+async function checkBotApiHealth(): Promise<DependencyHealth> {
+	if (!getBotApiUrl()) {
+		return {
+			ok: false,
+			required: false,
+			error: "BOT_API_URL is not configured",
+		};
+	}
+
+	const start = performance.now();
+
+	try {
+		const response = await fetchBotApi("/health");
+
+		if (!response.ok) {
+			throw new Error(`Bot API returned ${response.status}`);
+		}
+
+		const contentType = response.headers.get("content-type") ?? "";
+		const details = contentType.includes("application/json")
+			? ((await response.json()) as Record<string, unknown>)
+			: undefined;
+
+		return {
+			ok: true,
+			required: false,
+			latencyMs: Math.round(performance.now() - start),
+			details,
+		};
+	} catch (error) {
+		return {
+			ok: false,
+			required: false,
+			latencyMs: Math.round(performance.now() - start),
+			error: error instanceof Error ? error.message : "Unknown error",
+		};
+	}
+}
+
+function checkStorageHealth() {
+	const storagePath =
+		process.env.STORAGE_PATH || join(process.cwd(), "storage");
+
+	return timedCheck(false, async () => {
+		await access(storagePath);
+	});
 }
 
 export async function GET(req: NextRequest) {

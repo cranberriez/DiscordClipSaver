@@ -15,13 +15,15 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 -   Docker (optional, recommended for production)
 -   FFmpeg (required for thumbnail generation - see worker README for installation)
 
-Docker or a Postgres and Redis cloud server are required for the bot to function.
+Docker is recommended for the full stack. PostgreSQL is the hard requirement for
+the interface and API to browse existing data; Redis is required for queued
+background work such as live scans, thumbnail jobs, and purge jobs.
 
 ## Setup
 
 1. Clone the repository
 2. Copy the `.env.global.example` file to `.env.global` and fill in the values
-3. Run `docker compose up -d` to start the containers, this will start the bot, interface, postgres server, and redis server
+3. Run `docker compose up -d` to start the containers, this will start the bot API, Discord bot listener, interface, postgres server, and redis server
 4. Open the interface in your browser at `http://localhost:3000`
 
 ## Setup Local Interface / Bot
@@ -30,6 +32,7 @@ Docker or a Postgres and Redis cloud server are required for the bot to function
 2. Fill in the values in the `.env.global.example` file.
 3. Copy the `.env.global.example` file to `.env` in the /python/bot or /interface directories depending on which you want to work on
 4. Start the Postgres Server and Redis server with `docker compose up -d dcs-postgres dcs-redis`
+5. Initialize missing database tables from the `/python` directory with `python -m shared.db.schema`
 
 ### Bot
 
@@ -43,9 +46,13 @@ At the time of writing this, some functionality is tied to the interface calling
 4. Navigate back to python folder with `cd ..`
 5. Run the bot in module mode with `python -m bot.main`
 
+The Docker stack runs the `db-schema` initializer automatically. For standalone bot-only development, set `DB_GENERATE_SCHEMAS=1` only if you intentionally want the bot process to create missing tables on startup.
+
+Set `BOT_RUNTIME_MODE=api` to run only the FastAPI server, or `BOT_RUNTIME_MODE=discord` to run only the Discord gateway side for standalone Python runs. Docker Compose models these as separate `bot-api` and `bot-discord` services.
+
 ### Interface
 
-The interface requires the bot to be running to function.
+The interface requires PostgreSQL to browse existing data. The bot, Redis, and workers are only required for background jobs and Discord-driven actions.
 
 1. Navigate to the interface folder with `cd /interface`
 2. Install the dependencies with `npm install`
@@ -56,4 +63,4 @@ The interface requires the bot to be running to function.
    ```
 4. Run the interface with `npm run dev`
 
-**Note:** When running in Docker, `BOT_API_URL` is automatically set to `http://bot:8000` in `docker-compose.yml`.
+**Note:** When running in Docker, `BOT_API_URL` is automatically set to `http://bot-api:8000` in `docker-compose.yml`.

@@ -8,39 +8,61 @@ with fallbacks to static defaults from the centralized settings loader.
 import hashlib
 import json
 import logging
+import os
+import time
 from typing import Dict, Any, Optional, Tuple
 from shared.db.models import GuildSettings, ChannelSettings
 from shared.settings_loader import get_guild_admin_defaults, get_server_admin_channel_defaults
 
 logger = logging.getLogger(__name__)
 
+# TTL for the in-process settings cache. Without a TTL, a long-running worker
+# would never observe settings changed via the interface (which writes to the
+# DB) until the process restarts.
+SETTINGS_CACHE_TTL_SECONDS = int(os.getenv("SETTINGS_CACHE_TTL_SECONDS", "300"))
+
 
 class UserSettingsCache:
     """
-    Simple in-memory cache for user settings with hash-based invalidation.
-    
+    Simple in-memory cache for user settings with hash-based invalidation
+    and a TTL backstop (SETTINGS_CACHE_TTL_SECONDS, default 300s).
+
     This prevents repeated database queries during batch processing while
     allowing settings to be updated mid-scan if needed.
     """
-    
-    def __init__(self):
+
+    def __init__(self, ttl_seconds: int = SETTINGS_CACHE_TTL_SECONDS):
         self._cache: Dict[str, Dict[str, Any]] = {}
         self._hashes: Dict[str, str] = {}
-    
+        self._cached_at: Dict[str, float] = {}
+        self._ttl_seconds = ttl_seconds
+
     def get_cache_key(self, guild_id: str, channel_id: str) -> str:
         """Generate cache key for guild+channel combination."""
         return f"{guild_id}:{channel_id}"
-    
+
+    def _is_expired(self, cache_key: str) -> bool:
+        cached_at = self._cached_at.get(cache_key)
+        if cached_at is None:
+            return True
+        return (time.monotonic() - cached_at) >= self._ttl_seconds
+
     def get_cached_settings(self, guild_id: str, channel_id: str) -> Optional[Dict[str, Any]]:
-        """Get cached settings if they exist."""
+        """Get cached settings if they exist and are not expired."""
         cache_key = self.get_cache_key(guild_id, channel_id)
+        if self._is_expired(cache_key):
+            self._cache.pop(cache_key, None)
+            self._hashes.pop(cache_key, None)
+            self._cached_at.pop(cache_key, None)
+            return None
         return self._cache.get(cache_key)
-    
+
     def cache_settings(self, guild_id: str, channel_id: str, settings: Dict[str, Any], settings_hash: str) -> None:
         """Cache settings with their hash."""
         cache_key = self.get_cache_key(guild_id, channel_id)
         self._cache[cache_key] = settings.copy()
         self._hashes[cache_key] = settings_hash
+        self._cached_at[cache_key] = time.monotonic()
     
     def get_cached_hash(self, guild_id: str, channel_id: str) -> Optional[str]:
         """Get cached settings hash."""
@@ -54,12 +76,14 @@ class UserSettingsCache:
             cache_key = self.get_cache_key(guild_id, channel_id)
             self._cache.pop(cache_key, None)
             self._hashes.pop(cache_key, None)
+            self._cached_at.pop(cache_key, None)
         else:
             # Clear all channels for guild
             keys_to_remove = [key for key in self._cache.keys() if key.startswith(f"{guild_id}:")]
             for key in keys_to_remove:
                 self._cache.pop(key, None)
                 self._hashes.pop(key, None)
+                self._cached_at.pop(key, None)
 
 
 # Global cache instance

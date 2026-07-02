@@ -1,12 +1,8 @@
 # Pinned to the majors in use (see python/env). Update deliberately;
 # unpinned deps previously meant any rebuild could pull breaking majors.
 discord.py>=2.6,<3
-fastapi>=0.119,<1
-uvicorn[standard]>=0.37,<1
 pydantic>=2.12,<3
 python-dotenv>=1.1,<2
-APScheduler>=3.11,<4
-aiohttp>=3.13,<4
 audioop-lts>=0.2,<0.3
 psycopg-binary>=3.2,<4
 tortoise-orm[asyncpg]>=0.25,<0.26

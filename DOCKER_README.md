@@ -11,7 +11,9 @@ docker-compose up --build
 
 This starts:
 
--   **Bot** (Discord bot + API server) on port 8000
+-   **DB Schema** (one-shot initializer) to create missing PostgreSQL tables
+-   **Bot API** (FastAPI server for Discord-backed API actions) on port 8000
+-   **Discord Bot** (Discord gateway listener for live updates)
 -   **Worker** (Job processor) - 1 instance by default
 -   **Interface** (Web UI) on port 3000
 -   **Redis** (Job queue) on port 6379
@@ -31,12 +33,45 @@ docker-compose up --scale worker=5 -d
 
 Each worker will process jobs from the Redis queue independently.
 
-### 3. Run Specific Services
+Workers can be scoped with `WORKER_MODE`:
 
-**Start only bot and dependencies:**
+-   `all` - default; processes every job type and requires Discord bot connectivity.
+-   `discord` - processes Discord-bound jobs: scans, message jobs, rescans, guild purge leave step.
+-   `maintenance` - processes DB/storage jobs without Discord: thumbnail retry/cleanup, message deletion cleanup, channel purge.
+
+For example, run maintenance jobs while the Discord bot is down:
 
 ```bash
-docker-compose up bot dcs-postgres dcs-redis
+WORKER_MODE=maintenance docker-compose up worker dcs-postgres dcs-redis
+```
+
+### 3. Run Bot Services
+
+The bot image is split into two Docker services:
+
+-   `bot-api` - serves FastAPI and API-owned scheduled maintenance without the Discord gateway or Redis startup dependency. Discord REST-backed routes return 503 if `BOT_TOKEN` is unavailable or rejected.
+-   `bot-discord` - runs the Discord gateway client and live message batching without binding the API port.
+
+`BOT_RUNTIME_MODE=all|api|discord` is still available for standalone Python
+runs, but Docker Compose sets the mode per service.
+
+The Docker builds also install mode-specific dependency sets:
+`bot-api` uses `python/bot/requirements.api.txt`, `bot-discord` uses
+`python/bot/requirements.discord.txt`, and `python/bot/requirements.txt`
+remains the full standalone/local-development set.
+
+### 4. Run Specific Services
+
+**Start only the bot API and database:**
+
+```bash
+docker-compose up bot-api dcs-postgres
+```
+
+**Start only the Discord gateway listener:**
+
+```bash
+docker-compose up bot-discord dcs-postgres dcs-redis
 ```
 
 **Start only worker and dependencies:**
@@ -44,6 +79,19 @@ docker-compose up bot dcs-postgres dcs-redis
 ```bash
 docker-compose up worker dcs-postgres dcs-redis
 ```
+
+**Start only the web interface and database:**
+
+```bash
+docker-compose up interface dcs-postgres
+```
+
+The `db-schema` one-shot service is pulled in automatically by these app
+services and must complete before they start.
+
+The interface can browse existing data with PostgreSQL available. Redis, the bot
+services, and workers are still needed for background jobs such as scans, purge
+requests, thumbnail generation, and live Discord updates.
 
 ## Environment Configuration
 
@@ -91,7 +139,8 @@ docker-compose logs -f
 
 # Specific service
 docker-compose logs -f worker
-docker-compose logs -f bot
+docker-compose logs -f bot-api
+docker-compose logs -f bot-discord
 
 # All workers
 docker-compose logs -f worker
@@ -103,8 +152,8 @@ docker-compose logs -f worker
 # Restart all workers
 docker-compose restart worker
 
-# Restart bot
-docker-compose restart bot
+# Restart bot services
+docker-compose restart bot-api bot-discord
 
 # Restart everything
 docker-compose restart
@@ -123,6 +172,9 @@ docker-compose down -v
 ### Database Access
 
 ```bash
+# Initialize or repair missing tables manually
+docker-compose run --rm db-schema
+
 # Connect to PostgreSQL
 docker exec -it dcs-postgres psql -U discord -d discord_clip_saver
 
@@ -182,6 +234,34 @@ worker:
 ```
 
 ### 3. Health Checks
+
+The interface exposes `/health` for uptime monitoring. The response separates
+required and optional dependencies:
+
+```json
+{
+    "ok": true,
+    "dependencies": {
+        "database": { "ok": true, "required": true, "latencyMs": 12 },
+        "redis": { "ok": false, "required": false, "error": "Redis unavailable" },
+        "botApi": {
+            "ok": true,
+            "required": false,
+            "latencyMs": 8,
+            "details": {
+                "status": "ok",
+                "discordRestAvailable": true
+            }
+        },
+        "storage": { "ok": true, "required": false, "latencyMs": 1 }
+    }
+}
+```
+
+An unavailable database returns HTTP 503. Optional dependency failures keep the
+endpoint HTTP 200 so monitoring can distinguish a degraded interface from a down
+interface. `BOT_API_TIMEOUT_MS` controls how long interface requests wait on the
+optional bot API before continuing in degraded mode.
 
 Add to worker service:
 

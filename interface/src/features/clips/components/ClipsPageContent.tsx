@@ -16,6 +16,7 @@ import {
 import { TagFilterModal } from "@/features/clips/components/clip-filtering";
 import { useClipFiltersStore } from "@/features/clips/stores/useClipFiltersStore";
 import type { FullClip } from "@/lib/api/types";
+import { isAPIError } from "@/lib/api/client";
 import { toast } from "sonner";
 
 /**
@@ -378,16 +379,27 @@ function ErrorOverlay({
 	}
 
 	if (error) {
-		const userMessage = (error as any)?.data?.userMessage as
-			| string
-			| undefined;
+		const apiErr = isAPIError(error) ? error : undefined;
+
+		// Code-aware headline (standard envelope, see docs/ERROR_HANDLING.md)
+		let headline = "Error loading clips. Please try again.";
+		if (apiErr?.code === "CHANNEL_NOT_FOUND") {
+			headline = "Channel doesn't exist";
+		} else if (apiErr?.status === 404) {
+			headline = "Not found";
+		} else if (apiErr?.status === 429) {
+			headline = "You're doing that too fast - please wait a moment.";
+		} else if (apiErr && apiErr.status >= 500) {
+			headline = "Server error. Please try again.";
+		}
+
 		return (
 			<div className="bg-background/80 pointer-events-auto absolute inset-0 flex items-center justify-center backdrop-blur-sm">
 				<div className="text-destructive py-24 text-center">
-					<div>Error loading clips. Please try again.</div>
-					{userMessage ? (
+					<div>{headline}</div>
+					{apiErr?.userMessage ? (
 						<div className="mt-2 text-sm opacity-80">
-							{userMessage}
+							{apiErr.userMessage}
 						</div>
 					) : null}
 				</div>

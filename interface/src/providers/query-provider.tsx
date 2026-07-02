@@ -18,10 +18,13 @@ export function QueryProvider({ children }: { children: React.ReactNode }) {
 						refetchOnWindowFocus: false,
 						// Retry failed requests once
 						retry: (failureCount, error: any) => {
-							// Don't retry on auth errors
+							// Don't retry client errors (auth, not-found,
+							// validation, rate limit) - only transient ones
+							const status = error?.status;
 							if (
-								error?.status === 401 ||
-								error?.status === 403
+								typeof status === "number" &&
+								status >= 400 &&
+								status < 500
 							) {
 								return false;
 							}

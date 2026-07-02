@@ -6,8 +6,9 @@ FROM python:3.13-slim
 WORKDIR /app
 
 # Install Python dependencies (leverage caching)
-COPY python/bot/requirements.txt /app/requirements.txt
-RUN pip install --no-cache-dir -r /app/requirements.txt
+ARG BOT_REQUIREMENTS_FILE=requirements.txt
+COPY python/bot/requirements*.txt /app/bot-requirements/
+RUN pip install --no-cache-dir -r /app/bot-requirements/${BOT_REQUIREMENTS_FILE}
 
 # Copy source code
 COPY python/bot/ /app/bot/

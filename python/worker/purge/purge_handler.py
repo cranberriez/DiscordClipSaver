@@ -1,13 +1,17 @@
 """
 Purge handler for deleting clips, messages, and thumbnails
 """
+from __future__ import annotations
+
 import os
 import logging
 from datetime import datetime, timezone, timedelta
-from typing import Optional
-from worker.discord.bot import WorkerBot
+from typing import Optional, TYPE_CHECKING
 from shared.db.models import Guild, Channel, Message, Clip, Thumbnail, ChannelScanStatus
 from shared.storage import get_storage_backend
+
+if TYPE_CHECKING:
+    from worker.discord.bot import WorkerBot
 
 logger = logging.getLogger(__name__)
 
@@ -15,7 +19,7 @@ logger = logging.getLogger(__name__)
 class PurgeHandler:
     """Handles purge operations for channels and guilds"""
     
-    def __init__(self, bot: WorkerBot):
+    def __init__(self, bot: Optional["WorkerBot"]):
         self.bot = bot
         self.storage = get_storage_backend()
     
@@ -202,13 +206,16 @@ class PurgeHandler:
             
             # Leave the guild via bot
             try:
-                discord_guild = self.bot.get_guild(int(guild_id))
-                if discord_guild:
-                    await discord_guild.leave()
-                    stats["guild_left"] = True
-                    logger.info(f"Bot left guild {guild_id}")
+                if self.bot is None:
+                    logger.warning("Discord worker bot is unavailable; skipping guild leave")
                 else:
-                    logger.warning(f"Guild {guild_id} not found in bot cache (already left?)")
+                    discord_guild = self.bot.get_guild(int(guild_id))
+                    if discord_guild:
+                        await discord_guild.leave()
+                        stats["guild_left"] = True
+                        logger.info(f"Bot left guild {guild_id}")
+                    else:
+                        logger.warning(f"Guild {guild_id} not found in bot cache (already left?)")
             except Exception as e:
                 logger.error(f"Failed to leave guild {guild_id}: {e}")
                 # Continue even if leaving fails

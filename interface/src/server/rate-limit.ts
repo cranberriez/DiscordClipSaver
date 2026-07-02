@@ -1,4 +1,4 @@
-import { withRedis } from "@/lib/redis/client";
+import { RedisUnavailableError, withRedis } from "@/lib/redis/client";
 
 /**
  * Rate Limit Helper
@@ -47,19 +47,41 @@ export async function rateLimit(
 	// Or we can use sliding window with Lua script if needed.
 	// Fixed window is often enough for simple DDoS protection.
 
-	const { current, ttl } = await withRedis(async (redis) => {
-		const current = await redis.incr(key);
-		if (current === 1) {
-			await redis.pexpire(key, windowMs);
+	let current: number;
+	let ttl: number;
+
+	try {
+		({ current, ttl } = await withRedis(async (redis) => {
+			const current = await redis.incr(key);
+			if (current === 1) {
+				await redis.pexpire(key, windowMs);
+			}
+			const ttl = await redis.pttl(key);
+			return { current, ttl };
+		}));
+	} catch (error) {
+		if (error instanceof RedisUnavailableError) {
+			console.warn(
+				`Rate limit skipped for ${identifier}: Redis unavailable`
+			);
+			return {
+				success: true,
+				limit,
+				remaining: limit,
+				reset: Date.now() + windowMs,
+				degraded: true,
+				retryAfterSeconds: error.retryAfterSeconds,
+			};
 		}
-		const ttl = await redis.pttl(key);
-		return { current, ttl };
-	});
+
+		throw error;
+	}
 
 	return {
 		success: current <= limit,
 		limit,
 		remaining: Math.max(0, limit - current),
 		reset: Date.now() + (ttl > 0 ? ttl : windowMs),
+		degraded: false,
 	};
 }

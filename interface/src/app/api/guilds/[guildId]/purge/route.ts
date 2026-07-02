@@ -3,6 +3,10 @@ import { requireGuildAccess } from "@/server/middleware/auth";
 import { queueGuildPurge } from "@/lib/redis/jobs";
 import { db } from "@/server/db";
 import { rateLimit } from "@/server/rate-limit";
+import {
+	isRedisUnavailableError,
+	queueUnavailableResponse,
+} from "@/server/http";
 
 /**
  * POST /api/guilds/[guildId]/purge
@@ -73,6 +77,10 @@ export async function POST(
 		});
 	} catch (error) {
 		console.error("Failed to queue guild purge:", error);
+		if (isRedisUnavailableError(error)) {
+			return queueUnavailableResponse(error);
+		}
+
 		return NextResponse.json(
 			{ error: "Failed to queue purge job" },
 			{ status: 500 }

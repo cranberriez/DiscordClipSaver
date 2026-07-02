@@ -41,9 +41,25 @@ def build_channel_snapshot(channel: discord.abc.GuildChannel) -> ChannelSnapshot
     channel_type = getattr(channel, "type", None)
     type_value = getattr(channel_type, "name", None) or str(channel_type or "0")
 
+    # Access control: can @everyone view this channel? Private/role-gated
+    # channels resolve to False and their clips are hidden from regular
+    # members in the interface (unless the owner overrides to "visible").
+    everyone_can_view = True
+    try:
+        guild = getattr(channel, "guild", None)
+        default_role = getattr(guild, "default_role", None)
+        if default_role is not None:
+            perms = channel.permissions_for(default_role)
+            everyone_can_view = bool(perms.view_channel)
+    except Exception:
+        # Fail open (visible) rather than hiding clips on a permission
+        # calculation error; sync will correct it next pass.
+        everyone_can_view = True
+
     return ChannelSnapshot(
         id=str(getattr(channel, "id", "")),
         name=getattr(channel, "name", "unknown"),
         type=type_value,
-        is_nsfw=getattr(channel, "nsfw", False)
+        is_nsfw=getattr(channel, "nsfw", False),
+        everyone_can_view=everyone_can_view
     )

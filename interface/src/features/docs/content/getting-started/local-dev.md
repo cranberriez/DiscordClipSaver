@@ -47,6 +47,11 @@ source .venv/bin/activate
 pip install -r requirements.txt
 ```
 
+Initialize missing database tables:
+```bash
+python -m shared.db.schema
+```
+
 Start the bot:
 ```bash
 python -m bot.main
