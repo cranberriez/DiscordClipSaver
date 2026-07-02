@@ -10,6 +10,10 @@ export interface Channel {
 	position: number;
 	parent_id: string | null;
 	nsfw: boolean;
+	/** Synced from Discord: can @everyone view this channel? */
+	everyone_can_view: boolean;
+	/** Owner override: null = auto, "visible" | "restricted". */
+	access_override: "visible" | "restricted" | null;
 	clip_count?: number;
 	message_scan_enabled: boolean;
 	last_channel_sync_at: Date | null;

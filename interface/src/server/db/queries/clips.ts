@@ -150,6 +150,25 @@ export async function getFavoriteClips(
 		.where("clip.deleted_at", "is", null)
 		.where("message.deleted_at", "is", null)
 		.where("favorite_clip.user_id", "=", userId)
+		// Channel access control: favorites must not leak clips from
+		// restricted channels (same rule as the clip grid; the requester
+		// here is never the guild owner context, so apply unconditionally)
+		.where(({ exists, selectFrom }) =>
+			exists(
+				selectFrom("channel")
+					.select("channel.id")
+					.whereRef("channel.id", "=", "clip.channel_id")
+					.where((eb) =>
+						eb.or([
+							eb("channel.access_override", "=", "visible"),
+							eb.and([
+								eb("channel.access_override", "is", null),
+								eb("channel.everyone_can_view", "=", true),
+							]),
+						])
+					)
+			)
+		)
 		.orderBy("favorite_clip.created_at", sortOrder) // Order by when favorited
 		.limit(limit)
 		.offset(offset)

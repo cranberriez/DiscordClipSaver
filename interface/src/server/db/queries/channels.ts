@@ -80,6 +80,24 @@ export async function updateChannelEnabled(
 	return Number(result.numUpdatedRows ?? 0) > 0;
 }
 
+export async function setChannelAccessOverride(
+	guildId: string,
+	channelId: string,
+	accessOverride: "visible" | "restricted" | null
+): Promise<boolean> {
+	const result = await getDb()
+		.updateTable("channel")
+		.set({
+			access_override: accessOverride,
+			updated_at: new Date(),
+		})
+		.where("guild_id", "=", guildId)
+		.where("id", "=", channelId)
+		.executeTakeFirst();
+
+	return Number(result.numUpdatedRows ?? 0) > 0;
+}
+
 export async function getChannelsByGuildIdWithClipCount(
 	guildId: string
 ): Promise<DbChannelWithClipCount[]> {
