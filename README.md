@@ -22,15 +22,16 @@ background work such as live scans, thumbnail jobs, and purge jobs.
 ## Setup
 
 1. Clone the repository
-2. Copy the `.env.global.example` file to `.env.global` and fill in the values
-3. Run `docker compose up -d` to start the containers, this will start the bot API, Discord bot listener, interface, postgres server, and redis server
-4. Open the interface in your browser at `http://localhost:3000`
+2. Copy `.env.example` to `.env` and fill in the required secrets and public URLs
+3. Copy `.env.global.example` to `.env.global` and tweak advanced defaults only if needed
+4. Run `docker compose up -d` to start the containers, this will start the bot API, Discord bot listener, interface, postgres server, and redis server
+5. Open the interface in your browser at `http://localhost:3000`
 
 ## Setup Local Interface / Bot
 
 1. Clone the repository
-2. Fill in the values in the `.env.global.example` file.
-3. Copy the `.env.global.example` file to `.env` in the /python/bot or /interface directories depending on which you want to work on
+2. Copy `.env.example` to `.env` and `.env.global.example` to `.env.global` for Docker infrastructure.
+3. Copy the relevant service-local `.env` file in `/python/bot`, `/python/worker`, or `/interface` when running that service directly outside Docker.
 4. Start the Postgres Server and Redis server with `docker compose up -d dcs-postgres dcs-redis`
 5. Initialize missing database tables from the `/python` directory with `python -m shared.db.schema`
 

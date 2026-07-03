@@ -97,10 +97,12 @@ requests, thumbnail generation, and live Discord updates.
 
 ### Required Files
 
-1. **`.env.global`** - Global configuration (database, Redis, storage)
-2. **`python/bot/.env`** - Bot-specific settings
-3. **`python/worker/.env`** - Worker-specific settings
-4. **`interface/.env`** - Interface-specific settings
+1. **`.env`** - Required user configuration and secrets used by Docker Compose
+2. **`.env.global`** - Shared runtime defaults used by Docker Compose
+
+The service-local env files under `python/bot/`, `python/worker/`, and
+`interface/` are only for running those services directly outside Docker.
+Docker Compose must not require them.
 
 ### Storage Configuration
 

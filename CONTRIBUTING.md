@@ -99,8 +99,9 @@ cd DiscordClipSaver
 
 ### 2. Set Up Environment Variables
 
-Copy the example environment file:
+Copy the example environment files:
 ```bash
+cp .env.example .env
 cp .env.global.example .env.global
 ```
 
@@ -109,6 +110,8 @@ Fill in the required values:
 - `DISCORD_CLIENT_ID` - Your Discord application client ID
 - `DISCORD_CLIENT_SECRET` - Your Discord application client secret
 - `NEXTAUTH_SECRET` - Generate with `openssl rand -base64 32`
+- `NEXTAUTH_URL` - Public URL for NextAuth callbacks
+- `INTERNAL_API_TOKEN` - Shared secret for interface-to-bot API calls
 - Database and Redis URLs (if not using Docker)
 
 ### 3. Start Infrastructure Services

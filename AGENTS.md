@@ -83,8 +83,9 @@ npm run lint      # ESLint
 
 The project uses a layered env file pattern:
 
-- `.env.global` / `.env.global.example` — shared secrets (DB credentials, Discord tokens, Redis URL)
-- `python/bot/.env`, `python/worker/.env`, `interface/.env` — service-specific variables
+- `.env` / `.env.example` — required user configuration and secrets for Docker Compose
+- `.env.global` / `.env.global.example` — shared runtime defaults for Docker Compose
+- `python/bot/.env`, `python/worker/.env`, `interface/.env` — service-local variables only for running those services directly outside Docker
 
 Key variables: `BOT_TOKEN`, `DISCORD_CLIENT_ID`, `DISCORD_CLIENT_SECRET`, `POSTGRES_USER/PASSWORD/DB`, `REDIS_URL`, `NEXTAUTH_SECRET`, `NEXTAUTH_URL`, `BOT_API_URL`.
 
