@@ -2,7 +2,6 @@
 
 import { Navbar } from "../composite/navbar";
 import { useEffect, useState } from "react";
-import { AnnouncementBar } from "./AnnouncementBar";
 import { cn } from "@/lib/utils";
 
 export function HeroNavScrollContainer() {
@@ -20,7 +19,6 @@ export function HeroNavScrollContainer() {
 
 	return (
 		<div className="z-99 flex flex-col">
-			<AnnouncementBar />
 			<div
 				className={cn(
 					"transition-opacity duration-300",

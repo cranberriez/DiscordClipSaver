@@ -4,6 +4,7 @@ import { requireAuth } from "@/server/middleware/auth";
 import { createInstallIntent } from "@/server/db";
 import { buildInviteUrl } from "@/server/discord/generateBotInvite";
 import { rateLimit } from "@/server/rate-limit";
+import { areDiscordInvitesDisabled } from "@/server/discord/invites";
 
 /**
  * GET /api/discord/bot/invite
@@ -18,7 +19,7 @@ export async function GET(req: NextRequest) {
 	const guildId = url.searchParams.get("guildId") || undefined;
 	const publicBaseUrl = process.env.NEXTAUTH_URL ?? url.origin;
 
-	if (process.env.DISCORD_INVITES_DISABLED === "1") {
+	if (areDiscordInvitesDisabled()) {
 		const redirectUrl = new URL("/invite", publicBaseUrl);
 		redirectUrl.searchParams.set("error", "invites_disabled");
 		if (guildId) redirectUrl.searchParams.set("guildId", guildId);
