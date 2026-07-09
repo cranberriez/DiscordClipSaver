@@ -174,6 +174,7 @@ export async function getFavoriteClips(
 			)
 		)
 		.orderBy("favorite_clip.created_at", sortOrder) // Order by when favorited
+		.orderBy("clip.id", "desc")
 		.limit(limit)
 		.offset(offset)
 		.execute();
