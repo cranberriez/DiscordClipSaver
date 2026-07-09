@@ -11,6 +11,7 @@ from shared.db.repositories.channel_scan_status import update_scan_status
 from shared.db.models import ChannelScanStatus, ScanStatus
 from bot.logger import logger
 from bot.lib.guild_gather import gather_guilds, build_guild_snapshot
+from bot.services.settings_service import SettingsService
 
 
 class GuildService:

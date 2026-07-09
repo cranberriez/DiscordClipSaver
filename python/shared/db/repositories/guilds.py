@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Iterable, Any
+from typing import Iterable, Any, List
 
 from tortoise.expressions import Q
 

@@ -4,8 +4,10 @@ Google Cloud Storage backend
 Requires: pip install google-cloud-storage
 """
 import os
-from .base import StorageBackend
 import logging
+from typing import Optional
+
+from .base import StorageBackend
 
 logger = logging.getLogger(__name__)
 
