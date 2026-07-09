@@ -62,6 +62,10 @@ export const clipsQuery = (params: ClipListParams) =>
 						sortOrder: params.sortOrder,
 						sortType: params.sortType,
 						favorites: params.favorites,
+						seed:
+							params.sortType === "random"
+								? params.seed
+								: undefined,
 					})
 				: clipKeys.byGuild({
 						guildId: params.guildId,
@@ -73,6 +77,10 @@ export const clipsQuery = (params: ClipListParams) =>
 						sortOrder: params.sortOrder,
 						sortType: params.sortType,
 						favorites: params.favorites,
+						seed:
+							params.sortType === "random"
+								? params.seed
+								: undefined,
 					}),
 		queryFn: () => api.clips.list(params),
 		enabled: !!params.guildId,
@@ -98,6 +106,10 @@ export const clipsInfiniteQuery = (params: ClipListParams) =>
 						sortOrder: params.sortOrder,
 						sortType: params.sortType,
 						favorites: params.favorites,
+						seed:
+							params.sortType === "random"
+								? params.seed
+								: undefined,
 					})
 				: clipKeys.byGuild({
 						guildId: params.guildId,
@@ -109,6 +121,10 @@ export const clipsInfiniteQuery = (params: ClipListParams) =>
 						sortOrder: params.sortOrder,
 						sortType: params.sortType,
 						favorites: params.favorites,
+						seed:
+							params.sortType === "random"
+								? params.seed
+								: undefined,
 					}),
 		queryFn: ({ pageParam }) =>
 			api.clips.list({

@@ -1,6 +1,6 @@
 "use client";
 
-import { useDeferredValue, useEffect, useMemo } from "react";
+import { useDeferredValue, useEffect, useMemo, useRef } from "react";
 import {
 	useGuildsWithClipCount,
 	useChannelStats,
@@ -26,6 +26,21 @@ export function useClipsData(opts: { hydrated: boolean; targetPage?: number }) {
 	} = useClipFiltersStore();
 
 	const deferredSearchQuery = useDeferredValue(searchQuery);
+
+	// Per-shuffle seed for random sort. Generated once and held stable across
+	// paginated requests so the random order is deterministic (server sorts by
+	// md5(clip.id || seed)); a fresh seed is minted whenever the user newly
+	// selects "random", giving a new shuffle. Kept out of the persisted filter
+	// store on purpose — it is ephemeral UI state, not a shareable filter.
+	const genSeed = () =>
+		Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+	const randomSeedRef = useRef<string>(genSeed());
+	const prevSortTypeRef = useRef(sortType);
+	if (sortType === "random" && prevSortTypeRef.current !== "random") {
+		randomSeedRef.current = genSeed();
+	}
+	prevSortTypeRef.current = sortType;
+	const randomSeed = sortType === "random" ? randomSeedRef.current : undefined;
 
 	// Use selectedGuildId immediately if available, but still wait for hydration for other URL params
 	// This prevents the race condition where URL hydrates before Zustand store on first navigation
@@ -75,6 +90,7 @@ export function useClipsData(opts: { hydrated: boolean; targetPage?: number }) {
 		sortOrder: sortOrder,
 		sortType: sortType,
 		favorites: favoritesOnly,
+		seed: randomSeed,
 	});
 
 	const {

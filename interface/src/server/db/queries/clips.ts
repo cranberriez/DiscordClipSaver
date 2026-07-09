@@ -28,7 +28,8 @@ export async function getClipsByGuildId(
 	tagsAny?: string[],
 	tagsAll?: string[],
 	tagsExclude?: string[],
-	searchQuery?: string
+	searchQuery?: string,
+	seed?: string
 ): Promise<ClipWithMetadata[]> {
 	return ClipQueryOrchestrator.getClips(
 		{
@@ -47,6 +48,7 @@ export async function getClipsByGuildId(
 			offset,
 			sortOrder,
 			sortType,
+			seed,
 		}
 	);
 }
@@ -68,7 +70,8 @@ export async function getClipsByChannelIds(
 	tagsAny?: string[],
 	tagsAll?: string[],
 	tagsExclude?: string[],
-	searchQuery?: string
+	searchQuery?: string,
+	seed?: string
 ): Promise<ClipWithMetadata[]> {
 	return ClipQueryOrchestrator.getClips(
 		{
@@ -91,6 +94,7 @@ export async function getClipsByChannelIds(
 			offset,
 			sortOrder,
 			sortType,
+			seed,
 		}
 	);
 }

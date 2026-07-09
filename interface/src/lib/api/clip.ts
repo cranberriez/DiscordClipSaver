@@ -84,6 +84,10 @@ export interface ClipListParams {
 	sortOrder?: SortOrder;
 	sortType?: SortType;
 	favorites?: boolean;
+	// Per-shuffle seed used only when sortType === "random". Generated once
+	// by the client per shuffle and held constant across paginated requests
+	// so the random ordering is stable (no skipped/duplicated clips).
+	seed?: string;
 }
 
 export interface RefreshCdnResponse {

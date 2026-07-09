@@ -346,6 +346,10 @@ export const api = {
 				searchParams.set("sortOrder", params.sortOrder);
 			if (params.sortType) searchParams.set("sortType", params.sortType);
 			if (params.favorites) searchParams.set("favorites", "true");
+			// Only meaningful for sortType=random; keeps the shuffle stable
+			// across paginated requests.
+			if (params.seed && params.sortType === "random")
+				searchParams.set("seed", params.seed);
 
 			const query = searchParams.toString();
 			return apiRequest<ClipListResponse>(

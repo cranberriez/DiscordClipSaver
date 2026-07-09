@@ -36,6 +36,13 @@ const ClipsQuerySchema = z.object({
 	sortType: z
 		.enum(["date", "duration", "size", "likes", "random"])
 		.default("date"),
+	// Per-shuffle seed for sortType=random. Kept stable by the client across
+	// paginated requests so the random order is deterministic
+	seed: z
+		.string()
+		.regex(/^[A-Za-z0-9]+$/)
+		.max(64)
+		.optional(),
 });
 
 /**
@@ -102,6 +109,7 @@ export async function GET(
 		offset,
 		sortOrder,
 		sortType,
+		seed,
 	} = validation.data;
 
 	const favoritesOnly = favorites === "true";
@@ -149,7 +157,8 @@ export async function GET(
 					tagsAny,
 					tagsAll,
 					tagsExclude,
-					searchQuery
+					searchQuery,
+					seed
 				)
 			: await DataService.getClipsByGuildId(
 					guildId,
@@ -164,7 +173,8 @@ export async function GET(
 					tagsAny,
 					tagsAll,
 					tagsExclude,
-					searchQuery
+					searchQuery,
+					seed
 				);
 
 		if (!clips) {

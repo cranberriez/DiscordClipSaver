@@ -24,6 +24,11 @@ export interface ClipQueryOptions {
 	sortOrder?: "asc" | "desc";
 	sortType?: "date" | "duration" | "size" | "likes" | "random";
 	fetchMultiplier?: number; // For handling deleted message filtering
+	// Stable per-shuffle seed for sortType === "random". The client generates
+	// this once per shuffle and keeps it constant across paginated requests so
+	// the pseudo-random ordering is deterministic and no clips are skipped or
+	// duplicated across page boundaries. Ignored for all other sort types.
+	seed?: string;
 }
 
 export interface ClipWithMetadata {
@@ -227,6 +232,7 @@ class ClipQueryBuilder {
 			sortOrder = "desc",
 			sortType = "date",
 			fetchMultiplier = 2,
+			seed = "",
 		} = options;
 		const fetchLimit = Math.min(limit * fetchMultiplier, 200);
 
@@ -254,12 +260,28 @@ class ClipQueryBuilder {
 				this.query = this.query.orderBy("favorite_count", sortOrder);
 				break;
 			case "random":
-				this.query = this.query.orderBy(sql`RANDOM()`);
+				// Deterministic pseudo-random ordering keyed on a per-shuffle
+				// seed. md5(clip.id || seed) is stable across paginated requests
+				// (so OFFSET paging never skips/duplicates rows) and unique
+				// (clip.id is the PK), while still reshuffling whenever the
+				// client sends a new seed. Replaces bare RANDOM(), which
+				// re-rolled on every page query and dropped/repeated clips.
+				this.query = this.query.orderBy(sql`md5(clip.id || ${seed})`);
 				break;
 			case "date":
 			default:
 				this.query = this.query.orderBy("message.timestamp", sortOrder);
 				break;
+		}
+
+		// Deterministic tiebreaker on the primary key. Every sort key above
+		// (favorite_count, timestamp, duration, size) can tie across many rows;
+		// without a unique final ordering, Postgres may return tied rows in a
+		// different order for each OFFSET page, silently skipping some clips and
+		// duplicating others. clip.id is the unique PK, so this guarantees a
+		// total order and stable pagination for all sort types.
+		if (sortType !== "random") {
+			this.query = this.query.orderBy("clip.id", "desc");
 		}
 
 		this.query = this.query.limit(fetchLimit).offset(offset);
