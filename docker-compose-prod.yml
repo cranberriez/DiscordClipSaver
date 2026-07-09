@@ -24,9 +24,7 @@ services:
         restart: unless-stopped
 
     db-schema:
-        build:
-            context: .
-            dockerfile: ./python/worker/Dockerfile
+        image: ghcr.io/cranberriez/discordclipsaver-worker:latest
         container_name: dcs-db-schema
         env_file:
             - ./.env
@@ -42,11 +40,7 @@ services:
         command: ["python", "-m", "shared.db.schema"]
 
     bot-api:
-        build:
-            context: .
-            dockerfile: ./python/bot/Dockerfile
-            args:
-                BOT_REQUIREMENTS_FILE: requirements.api.txt
+        image: ghcr.io/cranberriez/discordclipsaver-bot-api:latest
         container_name: dcs-bot-api
         env_file:
             - ./.env
@@ -68,11 +62,7 @@ services:
             - ./settings.default.jsonc:/app/settings.default.jsonc:ro
 
     bot-discord:
-        build:
-            context: .
-            dockerfile: ./python/bot/Dockerfile
-            args:
-                BOT_REQUIREMENTS_FILE: requirements.discord.txt
+        image: ghcr.io/cranberriez/discordclipsaver-bot-discord:latest
         container_name: dcs-bot-discord
         env_file:
             - ./.env
@@ -95,9 +85,7 @@ services:
             - ./settings.default.jsonc:/app/settings.default.jsonc:ro
 
     worker:
-        build:
-            context: .
-            dockerfile: ./python/worker/Dockerfile
+        image: ghcr.io/cranberriez/discordclipsaver-worker:latest
         # No container_name - allows scaling with --scale worker=N
         env_file:
             - ./.env
@@ -211,7 +199,11 @@ services:
                 ipv4_address: 172.20.0.10
         restart: unless-stopped
         healthcheck:
-            test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-postgres}"]
+            test:
+                [
+                    "CMD-SHELL",
+                    "pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-postgres}",
+                ]
             interval: 5s
             timeout: 3s
             retries: 10
