@@ -65,7 +65,7 @@ function isLiteralMatch(
 	query: string
 ) {
 	const pattern = `%${escapeLikePattern(query)}%`;
-	return sql<boolean>`${document} ilike ${pattern} escape '\\'`;
+	return sql<boolean>`(${document}) ilike ${pattern} escape '\\'`;
 }
 
 /**
@@ -106,9 +106,9 @@ function getSearchPredicate(query: string) {
 	// similarity for short searches against long Discord messages.
 	return sql<boolean>`(
 		${literalPredicate}
-		or ${query} <% ${clipDocument}
-		or ${query} <% ${authorDocument}
-		or ${query} <% ${messageDocument}
+		or ${query} <% (${clipDocument})
+		or ${query} <% (${authorDocument})
+		or ${query} <% (${messageDocument})
 	)`;
 }
 
