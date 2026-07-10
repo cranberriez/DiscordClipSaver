@@ -3,6 +3,7 @@
 import {
 	MediaPlayer,
 	MediaProvider,
+	Poster,
 	type MediaPlayerInstance,
 } from "@vidstack/react";
 import {
@@ -113,7 +114,12 @@ export function VideoPlayer({
 						} as any
 					}
 				>
-					<MediaProvider />
+					<MediaProvider>
+						<Poster
+							className="vds-poster"
+							crossOrigin="use-credentials"
+						/>
+					</MediaProvider>
 					<DefaultVideoLayout icons={defaultLayoutIcons} />
 				</MediaPlayer>
 			</div>
