@@ -5,6 +5,7 @@ from dataclasses import dataclass, field
 from typing import Dict, Set, List, Optional
 from datetime import datetime, timezone
 from shared.settings_resolver import ResolvedSettings
+from shared.author_profile import build_member_profile
 import discord
 
 
@@ -110,22 +111,15 @@ class BatchContext:
         """Add author data for batch upsert"""
         user_id = str(author.id)
 
-        nickname = getattr(author, "nick", None)
-        display_name = getattr(author, "display_name", None) or getattr(author, "global_name", None) or author.name
-
         # If it's an update scan, always add/update the author.
         # If it's a normal scan, only add if they are new.
         if self.is_update_scan or user_id not in self.existing_author_ids:
             if user_id not in self.authors_to_upsert:
+                profile = build_member_profile(author)
                 self.authors_to_upsert[user_id] = AuthorData(
                     user_id=user_id,
                     guild_id=self.guild_id,
-                    username=author.name,
-                    discriminator=author.discriminator or "0",
-                    avatar_url=str(author.avatar.url) if author.avatar else None,
-                    nickname=nickname,
-                    display_name=display_name,
-                    guild_avatar_url=str(author.display_avatar.url) if author.display_avatar else None,
+                    **profile,
                 )
 
     def add_user(self, user: discord.User) -> None:

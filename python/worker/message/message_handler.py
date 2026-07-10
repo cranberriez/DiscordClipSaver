@@ -5,6 +5,7 @@ import logging
 from typing import Optional
 import discord
 from shared.db.models import Message, Clip, Author
+from shared.author_profile import build_member_profile
 from shared.settings import settings
 from worker.thumbnail.thumbnail_handler import ThumbnailHandler
 from worker.message.utils import compute_settings_hash, extract_cdn_expiry
@@ -82,20 +83,10 @@ class MessageHandler:
             # This is not critical but good to know for debugging missing nicknames/roles
             logger.debug(f"Upserting author {author.id} as {type(author).__name__} (missing guild context)")
 
-        nickname = getattr(author, "nick", None)
-        display_name = getattr(author, "display_name", None) or getattr(author, "global_name", None) or author.name
-        
         await Author.update_or_create(
             user_id=str(author.id),
             guild_id=guild_id,
-            defaults={
-                "username": author.name,
-                "discriminator": author.discriminator or "0",
-                "avatar_url": str(author.avatar.url) if author.avatar else None,
-                "nickname": nickname,
-                "display_name": display_name,
-                "guild_avatar_url": str(author.display_avatar.url) if author.display_avatar else None,
-            }
+            defaults=build_member_profile(author),
         )
     
     async def _upsert_message(

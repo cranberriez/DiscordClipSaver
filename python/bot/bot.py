@@ -1,7 +1,7 @@
 import os
 
 import discord
-from bot.services.container import guild_service, channel_service
+from bot.services.container import author_service, guild_service, channel_service
 from bot.services.scan_service import get_scan_service
 from bot.services.message_batcher import get_message_batcher
 from bot.logger import logger
@@ -33,6 +33,10 @@ async def on_ready():
         # Redis may have survived a gateway outage/restart; never trust an old
         # decision after the startup reconciliation pass.
         await invalidate_guild_permissions(str(guild.id))
+
+    # Repair stale author metadata and keep existing installations current after
+    # deploying profile synchronization changes.
+    await author_service.sync_existing_authors(bot)
     
     # Start message batcher for batching live messages
     message_batcher = get_message_batcher()
@@ -122,8 +126,7 @@ async def on_user_update(before: discord.User, after: discord.User):
     
     ⚠️ Requires SERVER MEMBERS INTENT enabled in Discord Developer Portal
     """
-    # TODO: Update user record in database (username, avatar_url, discriminator)
-    pass
+    await author_service.on_user_update(before, after)
 
 
 @bot.event
@@ -134,6 +137,8 @@ async def on_member_update(before: discord.Member, after: discord.Member):
     """
     if {role.id for role in before.roles} != {role.id for role in after.roles}:
         await invalidate_member_permissions(str(after.guild.id), str(after.id))
+
+    await author_service.on_member_update(after)
 
 
 @bot.event
