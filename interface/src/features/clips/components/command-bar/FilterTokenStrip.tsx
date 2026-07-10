@@ -79,7 +79,7 @@ export function FilterTokenStrip({
 			<button
 				type="button"
 				onClick={clearFilters}
-				className="inline-flex h-7 w-7 flex-none cursor-pointer items-center justify-center rounded-lg border border-rose-400/30 bg-rose-500/15 text-rose-300 shadow-[inset_0_1px_0_rgba(255,255,255,0.12),0_6px_18px_rgba(190,24,93,0.16)] backdrop-blur-md transition-colors hover:border-rose-400/45 hover:bg-rose-500/25 focus-visible:ring-2 focus-visible:ring-rose-400/60 focus-visible:outline-none active:translate-y-px"
+				className="border-border/35 bg-sidebar/55 text-rose-400 hover:border-border/55 hover:bg-accent/70 focus-visible:ring-ring inline-flex h-7 w-7 flex-none cursor-pointer items-center justify-center rounded-lg border shadow-[inset_0_1px_0_rgba(255,255,255,0.1)] backdrop-blur-md transition-colors focus-visible:ring-2 focus-visible:outline-none active:translate-y-px"
 				aria-label="Clear all filters"
 				title="Clear all filters"
 			>
