@@ -5,7 +5,8 @@ import { useClipsUrlSync } from "@/features/clips/hooks/useClipsUrlSync";
 import { useClipsData } from "@/features/clips/hooks/useClipsData";
 import { useClip } from "@/lib/hooks";
 import { Button } from "@/components/ui/button";
-import { FilterBar } from "@/features/clips/components/FilterBar";
+import { ClipCommandBar } from "@/features/clips/components/command-bar/ClipCommandBar";
+import { ClipCommandPalette } from "@/features/clips/components/command-palette/ClipCommandPalette";
 import { ClipGrid } from "@/features/clips";
 import {
 	GuildSelectModal,
@@ -24,8 +25,28 @@ import { toast } from "sonner";
  * This component is wrapped in Suspense to handle useSearchParams() properly.
  */
 export function ClipsPageContent() {
-	const { selectedGuildId, openGuildModal, isTagModalOpen, closeTagModal } =
-		useClipFiltersStore();
+	const {
+		selectedGuildId,
+		openGuildModal,
+		isTagModalOpen,
+		closeTagModal,
+		selectedChannelIds,
+		selectedAuthorIds,
+		tagsAny,
+		tagsAll,
+		tagsExclude,
+		searchQuery,
+		favoritesOnly,
+	} = useClipFiltersStore();
+
+	const hasActiveFilters =
+		selectedChannelIds.length > 0 ||
+		selectedAuthorIds.length > 0 ||
+		tagsAny.length > 0 ||
+		tagsAll.length > 0 ||
+		tagsExclude.length > 0 ||
+		!!searchQuery.trim() ||
+		favoritesOnly;
 
 	// URL <-> Store synchronization and page param
 	const { hydrated, page, setPage, clipId, setClipId } = useClipsUrlSync();
@@ -186,16 +207,16 @@ export function ClipsPageContent() {
 			{/* Full-screen clips grid background */}
 			<div className="bg-background inset-0 flex h-screen flex-col">
 				<div className="relative flex h-full flex-col">
-					<FilterBar
-						guildName={selectedGuild?.name}
-						guildIcon={selectedGuild?.icon_url}
-						channelCount={channels.length}
-						authorCount={authors.length}
+					<ClipCommandBar
 						guilds={guilds}
 						guildsLoading={guildsLoading}
+						selectedGuild={selectedGuild}
 						channels={channels}
-						channelsLoading={channelsLoading}
 						authors={authors}
+						totalClipCount={selectedGuild?.clip_count}
+						resultCount={
+							clipsQuery.data?.pages[0]?.pagination.total
+						}
 					/>
 					<ClipGrid
 						clips={filteredClips}
@@ -214,7 +235,7 @@ export function ClipsPageContent() {
 						fetchNextPage={clipsQuery.fetchNextPage}
 						scrollToClipId={scrollToClipId}
 						highlightClipId={lastHighlightedId}
-						className="pt-18!"
+						className={hasActiveFilters ? "pt-30!" : "pt-18!"}
 					/>
 				</div>
 			</div>
@@ -233,6 +254,9 @@ export function ClipsPageContent() {
 				openGuildModal={openGuildModal}
 				allClipCount={allClipCount}
 			/>
+
+			{/* Command palette */}
+			<ClipCommandPalette channels={channels} authors={authors} />
 
 			{/* Modals */}
 			<GuildSelectModal guilds={guilds} isLoading={guildsLoading} />

@@ -16,6 +16,7 @@ import { cn } from "@/lib/utils";
 import { TagManager } from "@/features/clips/components/tags/TagManager";
 import { useUser } from "@/lib/hooks/useUser";
 import { useGuild } from "@/lib/hooks/useGuilds";
+import { useClipFiltersStore } from "@/features/clips/stores/useClipFiltersStore";
 
 interface InfoBarProps {
 	vidTitle: string;
@@ -27,6 +28,8 @@ interface InfoBarProps {
 	onPrevious?: () => void;
 	onNext?: () => void;
 	onShowInfo: () => void;
+	/** Called after a click-to-filter action (author/channel/tag) so the modal can close */
+	onFilterApplied?: () => void;
 }
 
 export function InfoBar({
@@ -39,9 +42,30 @@ export function InfoBar({
 	onPrevious,
 	onNext,
 	onShowInfo,
+	onFilterApplied,
 }: InfoBarProps) {
 	const { data: isFavorited } = useFavoriteStatus(clip.id);
 	const toggleFavorite = useToggleFavorite();
+
+	// Click-to-filter: clicking the author, channel, or a tag applies it as a
+	// clips filter and closes the modal.
+	const {
+		selectedChannelIds,
+		selectedAuthorIds,
+		tagsAny,
+		setChannelIds,
+		setAuthorIds,
+		setTagsAny,
+	} = useClipFiltersStore();
+
+	const addToFilter = (
+		list: string[],
+		setter: (v: string[]) => void,
+		id: string
+	) => {
+		if (!list.includes(id)) setter([...list, id]);
+		onFilterApplied?.();
+	};
 
 	// Permissions for TagManager
 	const { data: userData } = useUser();
@@ -77,13 +101,37 @@ export function InfoBar({
 							<div className="flex min-w-0 flex-1 flex-col">
 								{/* Metadata Row */}
 								<div className="text-muted-foreground flex flex-wrap items-center gap-2 text-sm">
-									<span className="text-foreground font-semibold">
+									<button
+										type="button"
+										onClick={() =>
+											addToFilter(
+												selectedAuthorIds,
+												setAuthorIds,
+												message.author_id
+											)
+										}
+										title={`Filter clips by ${author?.display_name || "this user"}`}
+										className="text-foreground hover:text-primary cursor-pointer font-semibold transition-colors hover:underline"
+									>
 										{author?.display_name || "Unknown User"}
-									</span>
+									</button>
 									<span className="hidden sm:inline">•</span>
 									{channelName && (
 										<>
-											<span>#{channelName}</span>
+											<button
+												type="button"
+												onClick={() =>
+													addToFilter(
+														selectedChannelIds,
+														setChannelIds,
+														clip.channel_id
+													)
+												}
+												title={`Filter clips in #${channelName}`}
+												className="hover:text-primary cursor-pointer transition-colors hover:underline"
+											>
+												#{channelName}
+											</button>
 											<span className="hidden sm:inline">
 												•
 											</span>
@@ -102,6 +150,13 @@ export function InfoBar({
 										guildId={clip.guild_id}
 										currentTagSlugs={fullClip.tags || []}
 										readOnly={!canEditTags}
+										onTagClick={(tag) =>
+											addToFilter(
+												tagsAny,
+												setTagsAny,
+												tag.slug
+											)
+										}
 									/>
 								</div>
 							</div>

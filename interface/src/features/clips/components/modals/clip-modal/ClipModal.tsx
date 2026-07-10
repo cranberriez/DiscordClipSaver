@@ -283,6 +283,7 @@ export function ClipModal({
 							vidTitle={vidTitle}
 							author={author}
 							channelName={channel?.name}
+							onFilterApplied={onClose}
 							message={message}
 							clip={clip}
 							fullClip={effectiveClip}

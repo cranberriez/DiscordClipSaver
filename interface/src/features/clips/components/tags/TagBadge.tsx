@@ -6,6 +6,8 @@ import type { Tag } from "@/lib/api/clip";
 interface TagBadgeProps {
 	tag: Tag;
 	onRemove?: () => void;
+	/** Makes the badge clickable (e.g. filter clips by this tag) */
+	onClick?: () => void;
 	className?: string;
 	size?: "sm" | "md";
 }
@@ -13,6 +15,7 @@ interface TagBadgeProps {
 export function TagBadge({
 	tag,
 	onRemove,
+	onClick,
 	className,
 	size = "md",
 }: TagBadgeProps) {
@@ -38,9 +41,12 @@ export function TagBadge({
 	return (
 		<Badge
 			variant="secondary"
+			onClick={onClick}
+			title={onClick ? `Filter clips tagged "${tag.name}"` : undefined}
 			className={cn(
 				"gap-1 transition-all hover:brightness-110",
 				size === "sm" ? "px-1.5 py-0 text-[10px]" : "px-2 py-0.5",
+				onClick && "cursor-pointer",
 				className
 			)}
 			style={style}

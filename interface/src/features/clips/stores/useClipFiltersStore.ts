@@ -21,6 +21,11 @@ interface ClipFiltersState {
 	isAuthorModalOpen: boolean;
 	isTagModalOpen: boolean;
 
+	// Command palette state
+	isPaletteOpen: boolean;
+	/** Pre-seeded palette input, e.g. "c:" to open in channel mode */
+	paletteSeed: string;
+
 	// Actions
 	setGuildId: (guildId: string | null) => void;
 	setChannelIds: (channelIds: string[]) => void;
@@ -43,8 +48,14 @@ interface ClipFiltersState {
 	openTagModal: () => void;
 	closeTagModal: () => void;
 
+	// Palette actions
+	openPalette: (seed?: string) => void;
+	closePalette: () => void;
+
 	// Reset
 	resetFilters: () => void;
+	/** Clear all filters but keep the selected guild and sort */
+	clearFilters: () => void;
 }
 
 export const useClipFiltersStore = create<ClipFiltersState>()(
@@ -66,6 +77,9 @@ export const useClipFiltersStore = create<ClipFiltersState>()(
 			isChannelModalOpen: false,
 			isAuthorModalOpen: false,
 			isTagModalOpen: false,
+
+			isPaletteOpen: false,
+			paletteSeed: "",
 
 			// Filter actions
 			setGuildId: (guildId) =>
@@ -105,6 +119,11 @@ export const useClipFiltersStore = create<ClipFiltersState>()(
 			openTagModal: () => set({ isTagModalOpen: true }),
 			closeTagModal: () => set({ isTagModalOpen: false }),
 
+			// Palette actions
+			openPalette: (seed = "") =>
+				set({ isPaletteOpen: true, paletteSeed: seed }),
+			closePalette: () => set({ isPaletteOpen: false, paletteSeed: "" }),
+
 			// Reset
 			resetFilters: () =>
 				set({
@@ -118,6 +137,17 @@ export const useClipFiltersStore = create<ClipFiltersState>()(
 					sortType: "date",
 					favoritesOnly: false,
 					sortOrder: "desc",
+				}),
+
+			clearFilters: () =>
+				set({
+					selectedChannelIds: [],
+					selectedAuthorIds: [],
+					tagsAny: [],
+					tagsAll: [],
+					tagsExclude: [],
+					searchQuery: "",
+					favoritesOnly: false,
 				}),
 		}),
 		{

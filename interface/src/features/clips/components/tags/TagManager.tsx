@@ -24,6 +24,8 @@ interface TagManagerProps {
 	readOnly?: boolean;
 	maxTags?: number;
 	maxChars?: number;
+	/** Called when a tag badge is clicked (e.g. to filter clips by it) */
+	onTagClick?: (tag: Tag) => void;
 }
 
 const DEFAULT_MAX_TAGS = 10;
@@ -36,6 +38,7 @@ export function TagManager({
 	readOnly = false,
 	maxTags = DEFAULT_MAX_TAGS,
 	maxChars = DEFAULT_MAX_CHARS,
+	onTagClick,
 }: TagManagerProps) {
 	const [isOpen, setIsOpen] = useState(false);
 	const [searchQuery, setSearchQuery] = useState("");
@@ -114,6 +117,7 @@ export function TagManager({
 				<TagBadge
 					key={tag.id}
 					tag={tag}
+					onClick={onTagClick ? () => onTagClick(tag) : undefined}
 					onRemove={
 						!readOnly ? () => handleRemoveTag(tag) : undefined
 					}
@@ -138,6 +142,11 @@ export function TagManager({
 								<TagBadge
 									key={tag.id}
 									tag={tag}
+									onClick={
+										onTagClick
+											? () => onTagClick(tag)
+											: undefined
+									}
 									onRemove={
 										!readOnly
 											? () => handleRemoveTag(tag)

@@ -34,12 +34,20 @@ export function useClipsUrlSync() {
 		selectedGuildId,
 		selectedChannelIds,
 		selectedAuthorIds,
+		tagsAny,
+		tagsAll,
+		tagsExclude,
+		favoritesOnly,
 		searchQuery,
 		sortOrder,
 		sortType,
 		setGuildId,
 		setChannelIds,
 		setAuthorIds,
+		setTagsAny,
+		setTagsAll,
+		setTagsExclude,
+		setFavoritesOnly,
 		setSearchQuery,
 		setSortOrder,
 		setSortType,
@@ -81,6 +89,10 @@ export function useClipsUrlSync() {
 		() => (selectedAuthorIds?.length ? selectedAuthorIds.join(",") : ""),
 		[selectedAuthorIds]
 	);
+	const tagsKey = useMemo(
+		() => [tagsAny.join(","), tagsAll.join(","), tagsExclude.join(",")].join("|"),
+		[tagsAny, tagsAll, tagsExclude]
+	);
 
 	// Hydrate store from URL once
 	useEffect(() => {
@@ -89,6 +101,10 @@ export function useClipsUrlSync() {
 		const guildId = searchParams.get("guildId");
 		const channelIds = parseCsv(searchParams.get("channelIds"));
 		const authorIds = parseCsv(searchParams.get("authorIds"));
+		const urlTagsAny = parseCsv(searchParams.get("tagsAny"));
+		const urlTagsAll = parseCsv(searchParams.get("tagsAll"));
+		const urlTagsExclude = parseCsv(searchParams.get("tagsExclude"));
+		const fav = searchParams.get("fav");
 		const q = searchParams.get("q") || "";
 		const sort = (searchParams.get("sort") as SortOrder | null) || null;
 		const type = (searchParams.get("sortType") as SortType | null) || null;
@@ -98,6 +114,10 @@ export function useClipsUrlSync() {
 		if (guildId != null) setGuildId(guildId || null);
 		if (channelIds) setChannelIds(channelIds);
 		if (authorIds) setAuthorIds(authorIds);
+		if (urlTagsAny) setTagsAny(urlTagsAny);
+		if (urlTagsAll) setTagsAll(urlTagsAll);
+		if (urlTagsExclude) setTagsExclude(urlTagsExclude);
+		if (fav != null) setFavoritesOnly(fav === "1");
 		if (q !== "") setSearchQuery(q);
 		if (sort === "asc" || sort === "desc") setSortOrder(sort);
 		if (type === "date" || type === "duration" || type === "size")
@@ -133,6 +153,11 @@ export function useClipsUrlSync() {
 				selectedAuthorIds && selectedAuthorIds.length > 0
 					? selectedAuthorIds.join(",")
 					: undefined,
+			tagsAny: tagsAny.length > 0 ? tagsAny.join(",") : undefined,
+			tagsAll: tagsAll.length > 0 ? tagsAll.join(",") : undefined,
+			tagsExclude:
+				tagsExclude.length > 0 ? tagsExclude.join(",") : undefined,
+			fav: favoritesOnly ? "1" : undefined,
 			// Intentionally do not sync search query to URL to avoid router.replace churn
 			// and main-thread jank while typing.
 			q: undefined,
@@ -154,6 +179,10 @@ export function useClipsUrlSync() {
 		selectedGuildId,
 		selectedChannelIds,
 		selectedAuthorIds,
+		tagsAny,
+		tagsAll,
+		tagsExclude,
+		favoritesOnly,
 		sortOrder,
 		sortType,
 		pageFromUrl,
@@ -176,6 +205,13 @@ export function useClipsUrlSync() {
 					selectedAuthorIds && selectedAuthorIds.length > 0
 						? selectedAuthorIds.join(",")
 						: undefined,
+				tagsAny: tagsAny.length > 0 ? tagsAny.join(",") : undefined,
+				tagsAll: tagsAll.length > 0 ? tagsAll.join(",") : undefined,
+				tagsExclude:
+					tagsExclude.length > 0
+						? tagsExclude.join(",")
+						: undefined,
+				fav: favoritesOnly ? "1" : undefined,
 				q: searchQuery?.trim() ? searchQuery.trim() : undefined,
 				sort: sortOrder === "desc" ? undefined : sortOrder,
 				sortType: sortType === "date" ? undefined : sortType,
@@ -191,6 +227,10 @@ export function useClipsUrlSync() {
 			selectedGuildId,
 			selectedChannelIds,
 			selectedAuthorIds,
+			tagsAny,
+			tagsAll,
+			tagsExclude,
+			favoritesOnly,
 			searchQuery,
 			sortOrder,
 			sortType,
@@ -210,6 +250,11 @@ export function useClipsUrlSync() {
 				selectedAuthorIds && selectedAuthorIds.length > 0
 					? selectedAuthorIds.join(",")
 					: undefined,
+			tagsAny: tagsAny.length > 0 ? tagsAny.join(",") : undefined,
+			tagsAll: tagsAll.length > 0 ? tagsAll.join(",") : undefined,
+			tagsExclude:
+				tagsExclude.length > 0 ? tagsExclude.join(",") : undefined,
+			fav: favoritesOnly ? "1" : undefined,
 			q: undefined,
 			sort: sortOrder === "desc" ? undefined : sortOrder,
 			sortType: sortType === "date" ? undefined : sortType,
@@ -222,7 +267,15 @@ export function useClipsUrlSync() {
 		if (qs === searchParams.toString()) return;
 		scheduleReplace(qs);
 		// eslint-disable-next-line react-hooks/exhaustive-deps
-	}, [selectedGuildId, channelIdsKey, authorIdsKey, sortOrder, sortType]);
+	}, [
+		selectedGuildId,
+		channelIdsKey,
+		authorIdsKey,
+		tagsKey,
+		favoritesOnly,
+		sortOrder,
+		sortType,
+	]);
 
 	return {
 		hydrated: hydratedState,
@@ -242,6 +295,13 @@ export function useClipsUrlSync() {
 					selectedAuthorIds && selectedAuthorIds.length > 0
 						? selectedAuthorIds.join(",")
 						: undefined,
+				tagsAny: tagsAny.length > 0 ? tagsAny.join(",") : undefined,
+				tagsAll: tagsAll.length > 0 ? tagsAll.join(",") : undefined,
+				tagsExclude:
+					tagsExclude.length > 0
+						? tagsExclude.join(",")
+						: undefined,
+				fav: favoritesOnly ? "1" : undefined,
 				q: searchQuery?.trim() ? searchQuery.trim() : undefined,
 				sort: sortOrder === "desc" ? undefined : sortOrder,
 				sortType: sortType === "date" ? undefined : sortType,
