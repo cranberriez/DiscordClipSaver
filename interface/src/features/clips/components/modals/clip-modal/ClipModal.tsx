@@ -66,9 +66,7 @@ export function ClipModal({
 	const latest = useLatestVideoUrl(effectiveClip);
 	const clip = effectiveClip.clip;
 
-	const [videoUrl, setVideoUrl] = useState<string>(
-		latest.url ?? clip.cdn_url
-	);
+	const videoUrl = latest.url ?? clip.cdn_url;
 	const [hasPlaybackError, setHasPlaybackError] = useState(false);
 	const [showDetailsModal, setShowDetailsModal] = useState(false);
 
@@ -78,17 +76,15 @@ export function ClipModal({
 		clip.title
 	);
 
-	// Update video URL when clip changes (for navigation)
+	// Reset playback errors when the active clip or its refreshed URL changes.
 	useEffect(() => {
-		const url = latest.url ?? clip.cdn_url;
-		setVideoUrl(url);
 		// If we have a refresh error, treat it as a playback error immediately
 		if (latest.isError) {
 			setHasPlaybackError(true);
 		} else {
 			setHasPlaybackError(false);
 		}
-	}, [latest.url, clip.cdn_url, clip.id, latest.isError]);
+	}, [videoUrl, clip.id, latest.isError]);
 
 	// Keep a reference to the Vidstack player instance
 	const [playerInstance, setPlayerInstance] = useState<any>(null);

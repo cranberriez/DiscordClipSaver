@@ -21,6 +21,7 @@ export function VideoSection({
 	videoUrl,
 	posterUrl,
 	clipTitle,
+	clipId,
 	onError,
 	onPlayerReady,
 }: VideoSectionProps) {
@@ -60,6 +61,7 @@ export function VideoSection({
 					</div>
 				) : (
 					<VideoPlayer
+						key={clipId}
 						src={videoUrl}
 						poster={posterUrl || undefined}
 						title={clipTitle}
