@@ -83,27 +83,32 @@ export const DEFAULT_SORT: { sortType: SortType; sortOrder: SortOrder } = {
 
 export type PaletteMode = "channel" | "author" | "tag" | "sort";
 
-/** Maps input prefixes (e.g. "c:") to palette modes. */
+/** Maps input selectors to palette modes. */
 export const PALETTE_PREFIXES: Record<string, PaletteMode> = {
-	c: "channel",
-	a: "author",
-	t: "tag",
+	"#": "channel",
+	"@": "author",
+	"!": "tag",
 	sort: "sort",
 };
 
 /**
  * Parse palette input into a mode + remaining query.
- * "c:tar" -> { mode: "channel", query: "tar" }
+ * "#tar" -> { mode: "channel", query: "tar" }
  * "hello" -> { mode: null, query: "hello" }
  */
 export function parsePaletteInput(value: string): {
 	mode: PaletteMode | null;
 	query: string;
 } {
-	const m = value.match(/^(\w+):(.*)$/);
-	if (m) {
-		const mode = PALETTE_PREFIXES[m[1].toLowerCase()];
-		if (mode) return { mode, query: m[2] };
+	const selectorMode = PALETTE_PREFIXES[value[0]];
+	if (selectorMode) {
+		return { mode: selectorMode, query: value.slice(1) };
 	}
+
+	const sortMatch = value.match(/^sort:(.*)$/i);
+	if (sortMatch) {
+		return { mode: "sort", query: sortMatch[1] };
+	}
+
 	return { mode: null, query: value };
 }

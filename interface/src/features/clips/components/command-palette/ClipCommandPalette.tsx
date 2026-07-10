@@ -59,10 +59,10 @@ interface ClipCommandPaletteProps {
 }
 
 /**
- * Ctrl-K command palette — the single hub for filtering clips.
+ * Ctrl-K command palette - the single hub for filtering clips.
  *
- * Plain text = clip search. Prefixes switch modes: `c:` channels, `a:`
- * authors, `t:` tags, `sort:` sort order. Values are committed by selection
+ * Plain text = clip search. Selectors switch modes: `#` channels, `@`
+ * authors, `!` tags, `sort:` sort order. Values are committed by selection
  * (IDs/slugs go to the store), so channel and author names containing emoji,
  * spaces, or symbols never need parsing. Matching is case- and
  * diacritic-insensitive.
@@ -230,10 +230,16 @@ export function ClipCommandPalette({
 			const matches = selectableChannels.filter((c) =>
 				matchesQuery(c.name, query)
 			);
+			const withClips = matches.filter((c) => c.clip_count > 0);
+			const withoutClips = matches.filter((c) => c.clip_count === 0);
 			return [
 				{
-					heading: `Channels — ${matches.length} of ${selectableChannels.length}`,
-					rows: matches.map(channelRow),
+					heading: `Channels with clips - ${withClips.length}`,
+					rows: withClips.map(channelRow),
+				},
+				{
+					heading: `Channels with no clips - ${withoutClips.length}`,
+					rows: withoutClips.map(channelRow),
 				},
 			];
 		}
@@ -242,10 +248,18 @@ export function ClipCommandPalette({
 			const matches = sortedAuthors.filter((a) =>
 				matchesQuery(a.display_name, query)
 			);
+			const withClips = matches.filter((a) => (a.clip_count ?? 0) > 0);
+			const withoutClips = matches.filter(
+				(a) => (a.clip_count ?? 0) === 0
+			);
 			return [
 				{
-					heading: `Authors — ${matches.length} of ${sortedAuthors.length}`,
-					rows: matches.map(authorRow),
+					heading: `Authors with clips - ${withClips.length}`,
+					rows: withClips.map(authorRow),
+				},
+				{
+					heading: `Authors with no clips - ${withoutClips.length}`,
+					rows: withoutClips.map(authorRow),
 				},
 			];
 		}
@@ -257,7 +271,7 @@ export function ClipCommandPalette({
 			);
 			return [
 				{
-					heading: `Tags — ${matches.length} of ${activeTags.length}`,
+					heading: `Tags - ${matches.length} of ${activeTags.length}`,
 					rows: matches.map((t) => ({
 						key: `tag-${t.slug}`,
 						keepOpen: true,
@@ -359,9 +373,24 @@ export function ClipCommandPalette({
 			heading: "Refine",
 			rows: (
 				[
-					["c:", "Filter by channel", `${selectableChannels.length} channels`, MODE_COLORS.channel],
-					["a:", "Filter by author", `${sortedAuthors.length} authors`, MODE_COLORS.author],
-					["t:", "Filter by tag", `${activeTags.length} tags`, MODE_COLORS.tag],
+					[
+						"#",
+						"Filter by channel",
+						`${selectableChannels.length} channels`,
+						MODE_COLORS.channel,
+					],
+					[
+						"@",
+						"Filter by author",
+						`${sortedAuthors.length} authors`,
+						MODE_COLORS.author,
+					],
+					[
+						"!",
+						"Filter by tag",
+						`${activeTags.length} tags`,
+						MODE_COLORS.tag,
+					],
 					["sort:", "Change sort order", "", MODE_COLORS.sort],
 				] as const
 			).map(([prefix, label, right, colorClass]) => ({
@@ -569,7 +598,7 @@ export function ClipCommandPalette({
 						placeholder={
 							inputTokens.length > 0
 								? "Search..."
-								: "Type to search, or c: a: t: sort:"
+								: "Type to search, or use # @ ! sort:"
 						}
 						maxLength={100}
 						autoFocus

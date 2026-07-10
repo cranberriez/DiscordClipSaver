@@ -135,19 +135,19 @@ export function ClipCommandBar({
 						<ModeButton
 							label="#"
 							title="Filter by channel"
-							seed="c:"
+							seed="#"
 							colorClass="text-indigo-300"
 						/>
 						<ModeButton
 							label="@"
 							title="Filter by author"
-							seed="a:"
+							seed="@"
 							colorClass="text-emerald-300"
 						/>
 						<ModeButton
-							label="◆"
+							label="!"
 							title="Filter by tag"
-							seed="t:"
+							seed="!"
 							colorClass="text-amber-300"
 						/>
 					</span>

@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
+import { Trash2 } from "lucide-react";
 import { useClipFiltersStore } from "../../stores/useClipFiltersStore";
 import { useGuildTags } from "@/lib/queries/tags";
 import { FilterToken } from "./FilterToken";
@@ -74,7 +75,16 @@ export function FilterTokenStrip({
 			setter(list.filter((v) => v !== value));
 
 	return (
-		<div className="border-border/25 bg-sidebar/50 mt-2 flex flex-wrap items-center gap-1.5 rounded-2xl border px-3 py-1.5 backdrop-blur-sm">
+		<div className="mt-2 flex flex-wrap items-center gap-1.5">
+			<button
+				type="button"
+				onClick={clearFilters}
+				className="inline-flex h-7 w-7 flex-none cursor-pointer items-center justify-center rounded-lg border border-rose-400/30 bg-rose-500/15 text-rose-300 shadow-[inset_0_1px_0_rgba(255,255,255,0.12),0_6px_18px_rgba(190,24,93,0.16)] backdrop-blur-md transition-colors hover:border-rose-400/45 hover:bg-rose-500/25 focus-visible:ring-2 focus-visible:ring-rose-400/60 focus-visible:outline-none active:translate-y-px"
+				aria-label="Clear all filters"
+				title="Clear all filters"
+			>
+				<Trash2 className="h-3.5 w-3.5" />
+			</button>
 			{resultCount != null && (
 				<span className="text-muted-foreground mr-1 text-xs font-medium whitespace-nowrap">
 					{resultCount.toLocaleString()} clip
@@ -139,13 +149,6 @@ export function FilterTokenStrip({
 					onRemove={() => setFavoritesOnly(false)}
 				/>
 			)}
-			<button
-				type="button"
-				onClick={clearFilters}
-				className="text-primary/90 ml-1 cursor-pointer text-xs font-medium whitespace-nowrap hover:underline"
-			>
-				Clear all
-			</button>
 		</div>
 	);
 }

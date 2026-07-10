@@ -23,7 +23,7 @@ interface ClipFiltersState {
 
 	// Command palette state
 	isPaletteOpen: boolean;
-	/** Pre-seeded palette input, e.g. "c:" to open in channel mode */
+	/** Pre-seeded palette input, e.g. "#" to open in channel mode */
 	paletteSeed: string;
 
 	// Actions
