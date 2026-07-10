@@ -20,6 +20,21 @@ MANUAL_MIGRATIONS = [
     # Channel access control (feat/channel-access)
     'ALTER TABLE "channel" ADD COLUMN IF NOT EXISTS "everyone_can_view" BOOLEAN NOT NULL DEFAULT TRUE',
     'ALTER TABLE "channel" ADD COLUMN IF NOT EXISTS "access_override" VARCHAR(10)',
+    # PostgreSQL-native fuzzy clip search. These expression indexes match the
+    # search documents assembled by the interface query builder.
+    "CREATE EXTENSION IF NOT EXISTS pg_trgm",
+    '''CREATE INDEX IF NOT EXISTS "clip_search_trgm_idx"
+       ON "clip" USING GIN (
+           ((COALESCE("title", '') || ' ' || "filename")) gin_trgm_ops
+       )''',
+    '''CREATE INDEX IF NOT EXISTS "message_content_search_trgm_idx"
+       ON "message" USING GIN ((COALESCE("content", '')) gin_trgm_ops)''',
+    '''CREATE INDEX IF NOT EXISTS "author_name_search_trgm_idx"
+       ON "author" USING GIN (
+           ((COALESCE("display_name", '') || ' ' ||
+             COALESCE("nickname", '') || ' ' ||
+             COALESCE("username", ''))) gin_trgm_ops
+       )''',
 ]
 
 

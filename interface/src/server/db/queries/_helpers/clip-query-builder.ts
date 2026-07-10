@@ -42,10 +42,81 @@ export interface ClipWithMetadata {
 	favorite_count: number;
 }
 
+const MIN_FUZZY_SEARCH_LENGTH = 3;
+
+function escapeLikePattern(value: string): string {
+	return value.replace(/[\\%_]/g, "\\$&");
+}
+
+function getClipSearchDocument() {
+	return sql<string>`coalesce(clip.title, '') || ' ' || clip.filename`;
+}
+
+function getAuthorSearchDocument() {
+	return sql<string>`coalesce(author.display_name, '') || ' ' || coalesce(author.nickname, '') || ' ' || coalesce(author.username, '')`;
+}
+
+function getMessageSearchDocument() {
+	return sql<string>`coalesce(message.content, '')`;
+}
+
+function isLiteralMatch(
+	document: ReturnType<typeof sql<string>>,
+	query: string
+) {
+	const pattern = `%${escapeLikePattern(query)}%`;
+	return sql<boolean>`${document} ilike ${pattern} escape '\\'`;
+}
+
+/**
+ * Rank exact phrase matches ahead of fuzzy matches, then favor clip metadata,
+ * author names, and message content in that order.
+ */
+function getSearchRank(query: string) {
+	const clipDocument = getClipSearchDocument();
+	const authorDocument = getAuthorSearchDocument();
+	const messageDocument = getMessageSearchDocument();
+
+	return sql<number>`greatest(
+		(case when ${isLiteralMatch(clipDocument, query)} then 2.0 else 0.0 end)
+			+ word_similarity(${query}, ${clipDocument}) * 1.15,
+		(case when ${isLiteralMatch(authorDocument, query)} then 2.0 else 0.0 end)
+			+ word_similarity(${query}, ${authorDocument}) * 1.05,
+		(case when ${isLiteralMatch(messageDocument, query)} then 2.0 else 0.0 end)
+			+ word_similarity(${query}, ${messageDocument})
+	)`;
+}
+
+function getSearchPredicate(query: string) {
+	const clipDocument = getClipSearchDocument();
+	const authorDocument = getAuthorSearchDocument();
+	const messageDocument = getMessageSearchDocument();
+	const literalPredicate = sql<boolean>`(
+		${isLiteralMatch(clipDocument, query)}
+		or ${isLiteralMatch(authorDocument, query)}
+		or ${isLiteralMatch(messageDocument, query)}
+	)`;
+
+	if (query.length < MIN_FUZZY_SEARCH_LENGTH) {
+		return literalPredicate;
+	}
+
+	// pg_trgm's word-similarity operator compares the query to the closest
+	// continuous portion of each document. This works better than whole-string
+	// similarity for short searches against long Discord messages.
+	return sql<boolean>`(
+		${literalPredicate}
+		or ${query} <% ${clipDocument}
+		or ${query} <% ${authorDocument}
+		or ${query} <% ${messageDocument}
+	)`;
+}
+
 /**
  * Single Responsibility: Build the base clip query with all filters
  */
 class ClipQueryBuilder {
+	private searchQuery?: string;
 	private query: SelectQueryBuilder<
 		any,
 		"clip" | "message" | "author",
@@ -224,7 +295,8 @@ class ClipQueryBuilder {
 			);
 		}
 
-		if (filters.searchQuery) {
+		const searchQuery = filters.searchQuery?.trim();
+		if (searchQuery) {
 			// Conditionally join author table only when searching
 			this.query = this.query.leftJoin("author", (join) =>
 				join
@@ -232,14 +304,8 @@ class ClipQueryBuilder {
 					.onRef("author.guild_id", "=", "message.guild_id")
 			);
 
-			const searchTerm = `%${filters.searchQuery}%`;
-			this.query = this.query.where((eb) =>
-				eb.or([
-					eb("message.content", "ilike", searchTerm),
-					eb("clip.filename", "ilike", searchTerm),
-					eb("clip.title", "ilike", searchTerm),
-				])
-			);
+			this.searchQuery = searchQuery;
+			this.query = this.query.where(getSearchPredicate(searchQuery));
 		}
 
 		return this;
@@ -259,6 +325,13 @@ class ClipQueryBuilder {
 			seed = "",
 		} = options;
 		const fetchLimit = Math.min(limit * fetchMultiplier, 200);
+
+		if (this.searchQuery) {
+			this.query = this.query.orderBy(
+				getSearchRank(this.searchQuery),
+				"desc"
+			);
+		}
 
 		switch (sortType) {
 			case "duration":
