@@ -22,7 +22,8 @@ export function getBotApiTimeoutMs(): number {
 
 export async function fetchBotApi(
 	path: string,
-	init?: RequestInit
+	init?: RequestInit,
+	options?: { timeoutMs?: number }
 ): Promise<Response> {
 	const botApiUrl = getBotApiUrl();
 	if (!botApiUrl) {
@@ -30,7 +31,7 @@ export async function fetchBotApi(
 	}
 
 	const controller = new AbortController();
-	const timeoutMs = getBotApiTimeoutMs();
+	const timeoutMs = options?.timeoutMs ?? getBotApiTimeoutMs();
 	const timeout = setTimeout(() => controller.abort(), timeoutMs);
 	const normalizedPath = path.startsWith("/") ? path : `/${path}`;
 

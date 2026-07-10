@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireGuildAccess } from "@/server/middleware/auth";
-import { filterChannelsByPermissions } from "@/server/middleware/channels";
 import { DataService } from "@/server/services/data-service";
 import { rateLimit } from "@/server/rate-limit";
+import { resolveAccessibleChannelIds } from "@/server/services/channel-access-service";
 
 /**
  * GET /api/guilds/[guildId]/channels
@@ -44,13 +44,24 @@ export async function GET(
 			);
 		}
 
-		// Filter channels based on user's Discord permissions
-		const visibleChannels = filterChannelsByPermissions(
-			allChannels,
-			auth.discordGuild
+		const access = await resolveAccessibleChannelIds(
+			guildId,
+			auth.discordUserId,
+			auth.isOwner,
+			allChannels
 		);
+		const allowedIds = access.channelIds
+			? new Set(access.channelIds)
+			: null;
+		const visibleChannels = allowedIds
+			? allChannels.filter((channel) => allowedIds.has(channel.id))
+			: allChannels;
 
-		return NextResponse.json(visibleChannels);
+		return NextResponse.json(visibleChannels, {
+			headers: access.degraded
+				? { "X-Channel-Permissions-Degraded": "true" }
+				: undefined,
+		});
 	} catch (error) {
 		console.error("Failed to fetch channels:", error);
 		return NextResponse.json(

@@ -4,6 +4,7 @@ import { DataService } from "@/server/services/data-service";
 import { z } from "zod";
 import { rateLimit } from "@/server/rate-limit";
 import { apiError, jsonError } from "@/server/http";
+import { resolveAccessibleChannelIds } from "@/server/services/channel-access-service";
 
 const ClipsQuerySchema = z.object({
 	channelIds: z
@@ -115,13 +116,20 @@ export async function GET(
 	const favoritesOnly = favorites === "true";
 
 	try {
+		const guildChannels =
+			(await DataService.getChannelsByGuildId(guildId)) ?? [];
+		const access = await resolveAccessibleChannelIds(
+			guildId,
+			auth.discordUserId,
+			auth.isOwner,
+			guildChannels
+		);
+
 		// SECURITY/UX: channel IDs are only ever queried guild-scoped, so a
 		// tampered ID from another guild can't leak clips - but it used to
 		// silently return an empty list. Validate against the guild's actual
 		// channels and 404 instead so the client can say "channel not found".
 		if (channelIds) {
-			const guildChannels =
-				await DataService.getChannelsByGuildId(guildId);
 			const knownIds = new Set((guildChannels ?? []).map((c) => c.id));
 			const unknownChannelIds = channelIds.filter(
 				(id) => !knownIds.has(id)
@@ -137,6 +145,21 @@ export async function GET(
 						: "Some of the requested channels don't exist in this server.",
 					{ unknownChannelIds }
 				);
+			}
+
+			if (access.channelIds !== undefined) {
+				const allowedIds = new Set(access.channelIds);
+				const unauthorizedChannelIds = channelIds.filter(
+					(id) => !allowedIds.has(id)
+				);
+				if (unauthorizedChannelIds.length > 0) {
+					return apiError(
+						404,
+						"CHANNEL_NOT_FOUND",
+						"Requested channel is not visible to this member",
+						"This channel doesn't exist or you don't have access to it."
+					);
+				}
 			}
 		}
 
@@ -158,7 +181,8 @@ export async function GET(
 					tagsAll,
 					tagsExclude,
 					searchQuery,
-					seed
+					seed,
+					access.channelIds
 				)
 			: await DataService.getClipsByGuildId(
 					guildId,
@@ -174,7 +198,8 @@ export async function GET(
 					tagsAll,
 					tagsExclude,
 					searchQuery,
-					seed
+					seed,
+					access.channelIds
 				);
 
 		if (!clips) {
@@ -193,14 +218,21 @@ export async function GET(
 		const hasMore = clips.length > limit;
 		const clipsToReturn = hasMore ? clips.slice(0, limit) : clips;
 
-		return NextResponse.json({
-			clips: clipsToReturn,
-			pagination: {
-				offset,
-				limit,
-				hasMore,
+		return NextResponse.json(
+			{
+				clips: clipsToReturn,
+				pagination: {
+					offset,
+					limit,
+					hasMore,
+				},
 			},
-		});
+			{
+				headers: access.degraded
+					? { "X-Channel-Permissions-Degraded": "true" }
+					: undefined,
+			}
+		);
 	} catch (error) {
 		console.error("Failed to fetch clips:", error);
 		return jsonError(error);

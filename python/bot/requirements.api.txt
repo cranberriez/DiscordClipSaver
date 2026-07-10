@@ -8,4 +8,5 @@ APScheduler>=3.11,<4
 aiohttp>=3.13,<4
 psycopg-binary>=3.2,<4
 tortoise-orm[asyncpg]>=0.25,<0.26
+redis>=6.4,<7
 colorlog>=6.10,<7

@@ -1,13 +1,24 @@
+import os
+
 import discord
 from bot.services.container import guild_service, channel_service
 from bot.services.scan_service import get_scan_service
 from bot.services.message_batcher import get_message_batcher
 from bot.logger import logger
+from bot.services.channel_permissions import (
+    invalidate_guild_permissions,
+    invalidate_member_permissions,
+)
 
 # ----- Discord bot -----
 intents = discord.Intents.default()
 intents.message_content = True  # Required for message.content access
-# intents.members = True  # TODO: Enable in Discord Developer Portal when implementing member events
+intents.members = os.getenv("DISCORD_MEMBERS_INTENT", "true").strip().lower() in {
+    "1",
+    "true",
+    "yes",
+    "on",
+}
 
 bot = discord.Client(intents=intents)
 
@@ -19,6 +30,9 @@ async def on_ready():
     
     for guild in bot.guilds:
         await channel_service.sync_channels(bot, guild)
+        # Redis may have survived a gateway outage/restart; never trust an old
+        # decision after the startup reconciliation pass.
+        await invalidate_guild_permissions(str(guild.id))
     
     # Start message batcher for batching live messages
     message_batcher = get_message_batcher()
@@ -35,6 +49,7 @@ async def on_ready():
 async def on_guild_join(guild: discord.Guild):
     await guild_service.on_guild_join(guild)
     await channel_service.sync_channels(bot, guild)
+    await invalidate_guild_permissions(str(guild.id))
     
     # Check for gaps if scanning was previously enabled
     scan_service = get_scan_service()
@@ -44,33 +59,60 @@ async def on_guild_join(guild: discord.Guild):
 @bot.event
 async def on_guild_update(before: discord.Guild, after: discord.Guild):
     await guild_service.on_guild_update(after)
+    await invalidate_guild_permissions(str(after.id))
 
 
 @bot.event
 async def on_guild_remove(guild: discord.Guild):
     await guild_service.on_guild_remove(guild)
     await channel_service.remove_channels(guild)
+    await invalidate_guild_permissions(str(guild.id))
 
 
 # --- Channel Events ---
 @bot.event
 async def on_guild_channel_create(channel: discord.abc.GuildChannel):
     await channel_service.on_channel_crup(channel.guild, channel)
+    await invalidate_guild_permissions(str(channel.guild.id))
 
 
 @bot.event
 async def on_guild_channel_update(before: discord.abc.GuildChannel, after: discord.abc.GuildChannel):
-    await channel_service.on_channel_crup(after.guild, after)
+    # A category overwrite change affects every synchronized child channel.
+    if isinstance(after, discord.CategoryChannel):
+        await channel_service.sync_channels(bot, after.guild)
+    else:
+        await channel_service.on_channel_crup(after.guild, after)
+    await invalidate_guild_permissions(str(after.guild.id))
 
 
 @bot.event
 async def on_guild_channel_delete(channel: discord.abc.GuildChannel):
     await channel_service.on_channel_delete(channel.guild, channel)
+    await invalidate_guild_permissions(str(channel.guild.id))
+
+
+# Role permissions can change effective channel access without a channel event.
+@bot.event
+async def on_guild_role_create(role: discord.Role):
+    await channel_service.sync_channels(bot, role.guild)
+    await invalidate_guild_permissions(str(role.guild.id))
+
+
+@bot.event
+async def on_guild_role_update(before: discord.Role, after: discord.Role):
+    await channel_service.sync_channels(bot, after.guild)
+    await invalidate_guild_permissions(str(after.guild.id))
+
+
+@bot.event
+async def on_guild_role_delete(role: discord.Role):
+    await channel_service.sync_channels(bot, role.guild)
+    await invalidate_guild_permissions(str(role.guild.id))
 
 
 # --- User Events ---
-# NOTE: These events require SERVER MEMBERS INTENT to be enabled in Discord Developer Portal
-# Currently disabled - enable intents.members = True above when ready to implement
+# These events require SERVER MEMBERS INTENT in the Discord Developer Portal.
 
 @bot.event
 async def on_user_update(before: discord.User, after: discord.User):
@@ -90,22 +132,20 @@ async def on_member_update(before: discord.Member, after: discord.Member):
     Called when a guild member updates (nickname, roles, status, activities).
     This is guild-specific.
     """
-    # TODO: Update member-specific data (nickname, roles) if needed
-    pass
+    if {role.id for role in before.roles} != {role.id for role in after.roles}:
+        await invalidate_member_permissions(str(after.guild.id), str(after.id))
 
 
 @bot.event
 async def on_member_join(member: discord.Member):
     """Called when a member joins a guild."""
-    # TODO: Add member to database or log join event
-    pass
+    await invalidate_member_permissions(str(member.guild.id), str(member.id))
 
 
 @bot.event
 async def on_member_remove(member: discord.Member):
     """Called when a member leaves or is kicked from a guild."""
-    # TODO: Mark member as left or soft-delete
-    pass
+    await invalidate_member_permissions(str(member.guild.id), str(member.id))
 
 
 # --- Message Events ---

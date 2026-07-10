@@ -169,7 +169,8 @@ export class DataService {
 		tagsAll?: string[],
 		tagsExclude?: string[],
 		searchQuery?: string,
-		seed?: string
+		seed?: string,
+		accessibleChannelIds?: string[]
 	) {
 		const clips = await db.getClipsByGuildId(
 			guildId,
@@ -185,7 +186,8 @@ export class DataService {
 			tagsAll,
 			tagsExclude,
 			searchQuery,
-			seed
+			seed,
+			accessibleChannelIds
 		);
 
 		if (!clips) {
@@ -211,7 +213,8 @@ export class DataService {
 		tagsAll?: string[],
 		tagsExclude?: string[],
 		searchQuery?: string,
-		seed?: string
+		seed?: string,
+		accessibleChannelIds?: string[]
 	) {
 		const clips = await db.getClipsByChannelIds(
 			guildId,
@@ -228,7 +231,8 @@ export class DataService {
 			tagsAll,
 			tagsExclude,
 			searchQuery,
-			seed
+			seed,
+			accessibleChannelIds
 		);
 
 		if (!clips) {
@@ -291,6 +295,10 @@ export class DataService {
 	static async getClipGuildId(clipId: string): Promise<string | undefined> {
 		const clip = await db.getClipGuildId(clipId);
 		return clip;
+	}
+
+	static async getClipAccessScope(clipId: string) {
+		return db.getClipAccessScope(clipId);
 	}
 
 	// New method for user's favorites across guilds

@@ -40,24 +40,28 @@ async def main():
     await init_db(generate_schemas=generate_schemas)
     
     redis_client = None
-    if start_discord:
+    if start_api or start_discord:
         from shared.redis.redis_client import RedisStreamClient
 
-        # Initialize Redis client for job queue (bot is a producer, not a consumer).
-        # API-only mode must not require Redis; it can serve REST-backed routes
-        # without queueing best-effort cleanup jobs.
+        # Shared Redis client. API-only mode connects lazily on the first cache
+        # request, preserving its Redis-independent startup behavior.
         redis_client = RedisStreamClient(
             stream_pattern="*",
             consumer_group=None,  # Bot doesn't consume jobs
             consumer_name=None    # Bot only produces jobs
         )
-        try:
-            await redis_client.connect(max_attempts=None)
-        except Exception as e:
-            logger.error(
-                "Initial Redis connection failed; bot will keep running and retry on demand. "
-                f"Error: {e}"
-            )
+        if start_discord:
+            try:
+                await redis_client.connect(max_attempts=None)
+            except Exception as e:
+                logger.error(
+                    "Initial Redis connection failed; bot will keep running and retry on demand. "
+                    f"Error: {e}"
+                )
+
+        from bot.services.channel_permissions import set_permission_redis_client
+
+        set_permission_redis_client(redis_client)
 
     message_batcher = None
     if start_discord:

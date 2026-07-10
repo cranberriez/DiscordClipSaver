@@ -4,6 +4,8 @@ import { join } from "path";
 import { existsSync } from "fs";
 import { requireAuth } from "@/server/middleware/auth";
 import { rateLimit } from "@/server/rate-limit";
+import { DataService } from "@/server/services/data-service";
+import { resolveAccessibleChannelIds } from "@/server/services/channel-access-service";
 
 /**
  * GET /api/storage/[...path]
@@ -71,6 +73,47 @@ export async function GET(
 				);
 			}
 			return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+		}
+
+		const clipIdMatch = filePath.match(
+			/\/([a-f0-9]{32})_(?:small|large)\.(?:webp|png|jpe?g)$/i
+		);
+		if (!clipIdMatch) {
+			return NextResponse.json(
+				{ error: "Invalid resource path" },
+				{ status: 403 }
+			);
+		}
+
+		const scope = await DataService.getClipAccessScope(clipIdMatch[1]);
+		if (!scope || scope.guild_id !== guildId) {
+			return NextResponse.json(
+				{ error: "File not found" },
+				{ status: 404 }
+			);
+		}
+
+		const guild = await DataService.getSingleGuildById(guildId);
+		const isOwner = guild?.owner_id === auth.discordUserId;
+		const channels =
+			(await DataService.getChannelsByGuildId(guildId)) ?? [];
+		const access = await resolveAccessibleChannelIds(
+			guildId,
+			auth.discordUserId,
+			isOwner,
+			channels
+		);
+		if (
+			(access.channelIds !== undefined &&
+				!access.channelIds.includes(scope.channel_id)) ||
+			(!isOwner &&
+				scope.visibility !== "PUBLIC" &&
+				scope.author_id !== auth.discordUserId)
+		) {
+			return NextResponse.json(
+				{ error: "File not found" },
+				{ status: 404 }
+			);
 		}
 	} else {
 		// If we can't determine the guild from the path, strictly block access
@@ -140,7 +183,7 @@ export async function GET(
 		return new NextResponse(blob, {
 			headers: {
 				"Content-Type": contentType,
-				"Cache-Control": "public, max-age=31536000, immutable",
+				"Cache-Control": "private, max-age=31536000, immutable",
 			},
 		});
 	} catch (error) {

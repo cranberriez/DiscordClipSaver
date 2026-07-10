@@ -1,10 +1,10 @@
 import hmac
 import logging
 import os
-from typing import Any, Optional
+from typing import Annotated, Any, Optional
 
 import aiohttp
-from fastapi import Depends, FastAPI, HTTPException, Request
+from fastapi import Depends, FastAPI, HTTPException, Path, Request
 from pydantic import BaseModel
 
 logger = logging.getLogger(__name__)
@@ -55,6 +55,15 @@ class RefreshCdnRequest(BaseModel):
 
 class RefreshCdnResponse(BaseModel):
     attachments: list[dict]
+
+
+class ChannelAccessResponse(BaseModel):
+    guild_id: str
+    user_id: str
+    channel_ids: list[str]
+    is_member: bool
+    is_administrator: bool
+    source: str
 
 
 @api.get("/health")
@@ -178,3 +187,27 @@ async def refresh_cdn_url(request: RefreshCdnRequest):
         raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to refresh CDN URL: {str(e)}")
+
+
+@api.get(
+    "/guilds/{guild_id}/members/{user_id}/channel-access",
+    response_model=ChannelAccessResponse,
+    dependencies=[Depends(require_internal_token)],
+)
+async def get_member_channel_access(
+    guild_id: Annotated[str, Path(pattern=r"^\d{17,21}$")],
+    user_id: Annotated[str, Path(pattern=r"^\d{17,21}$")],
+):
+    """Return the member's effective Discord VIEW_CHANNEL grants."""
+    from bot.services.channel_permissions import (
+        DiscordPermissionLookupError,
+        resolve_channel_access,
+    )
+
+    try:
+        result = await resolve_channel_access(guild_id, user_id)
+    except DiscordPermissionLookupError as error:
+        raise HTTPException(
+            status_code=error.status_code, detail=error.detail
+        ) from error
+    return ChannelAccessResponse(**result.to_dict())

@@ -40,6 +40,7 @@ export {
 	isClipExpired,
 	getFavoriteClips,
 	getClipGuildId,
+	getClipAccessScope,
 } from "./queries/clips";
 export type { ClipQueryOptions, ClipQueryFilters } from "./queries/clips";
 export {

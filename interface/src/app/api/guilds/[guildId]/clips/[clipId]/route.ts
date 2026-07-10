@@ -4,6 +4,7 @@ import { DataService } from "@/server/services/data-service";
 import { updateClipCdnUrl } from "@/server/db/queries/clips";
 import { rateLimit } from "@/server/rate-limit";
 import { fetchBotApi, getBotApiUrl } from "@/server/bot-api";
+import { resolveAccessibleChannelIds } from "@/server/services/channel-access-service";
 
 /**
  * GET /api/guilds/[guildId]/clips/[clipId]
@@ -53,6 +54,35 @@ export async function GET(
 		// Verify clip belongs to the guild
 		if (clipWithMetadata.message.guild_id !== guildId) {
 			return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+		}
+
+		const guildChannels =
+			(await DataService.getChannelsByGuildId(guildId)) ?? [];
+		const access = await resolveAccessibleChannelIds(
+			guildId,
+			auth.discordUserId,
+			auth.isOwner,
+			guildChannels
+		);
+		if (
+			access.channelIds !== undefined &&
+			!access.channelIds.includes(clipWithMetadata.clip.channel_id)
+		) {
+			return NextResponse.json(
+				{ error: "Clip not found" },
+				{ status: 404 }
+			);
+		}
+
+		if (
+			!auth.isOwner &&
+			clipWithMetadata.clip.visibility !== "PUBLIC" &&
+			clipWithMetadata.message.author_id !== auth.discordUserId
+		) {
+			return NextResponse.json(
+				{ error: "Clip not found" },
+				{ status: 404 }
+			);
 		}
 
 		// Check if CDN URL has expired and refresh if needed

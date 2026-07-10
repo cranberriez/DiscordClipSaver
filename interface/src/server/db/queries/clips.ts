@@ -29,7 +29,8 @@ export async function getClipsByGuildId(
 	tagsAll?: string[],
 	tagsExclude?: string[],
 	searchQuery?: string,
-	seed?: string
+	seed?: string,
+	accessibleChannelIds?: string[]
 ): Promise<ClipWithMetadata[]> {
 	return ClipQueryOrchestrator.getClips(
 		{
@@ -42,6 +43,7 @@ export async function getClipsByGuildId(
 			tagsAll,
 			tagsExclude,
 			searchQuery,
+			accessibleChannelIds,
 		},
 		{
 			limit,
@@ -71,7 +73,8 @@ export async function getClipsByChannelIds(
 	tagsAll?: string[],
 	tagsExclude?: string[],
 	searchQuery?: string,
-	seed?: string
+	seed?: string,
+	accessibleChannelIds?: string[]
 ): Promise<ClipWithMetadata[]> {
 	return ClipQueryOrchestrator.getClips(
 		{
@@ -88,6 +91,7 @@ export async function getClipsByChannelIds(
 			tagsAll,
 			tagsExclude,
 			searchQuery,
+			accessibleChannelIds,
 		},
 		{
 			limit,
@@ -396,4 +400,21 @@ export async function getClipGuildId(
 		.executeTakeFirst();
 
 	return result?.guild_id;
+}
+
+/** Minimal clip authorization data, intentionally excluding media URLs. */
+export async function getClipAccessScope(clipId: string) {
+	return getDb()
+		.selectFrom("clip")
+		.innerJoin("message", "message.id", "clip.message_id")
+		.select([
+			"clip.guild_id",
+			"clip.channel_id",
+			"clip.visibility",
+			"message.author_id",
+		])
+		.where("clip.id", "=", clipId)
+		.where("clip.deleted_at", "is", null)
+		.where("message.deleted_at", "is", null)
+		.executeTakeFirst();
 }
