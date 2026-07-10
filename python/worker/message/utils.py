@@ -48,7 +48,7 @@ def extract_cdn_expiry(cdn_url: str) -> datetime:
         try:
             timestamp = int(params['ex'][0], 16)  # Hex timestamp
             return datetime.fromtimestamp(timestamp, timezone.utc)
-        except (ValueError, OverflowError):
+        except (ValueError, OverflowError, OSError):
             pass
     
     # Default: 24 hours from now

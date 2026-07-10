@@ -7,7 +7,7 @@ import discord
 from shared.db.models import Message, Clip, Author
 from shared.settings import settings
 from worker.thumbnail.thumbnail_handler import ThumbnailHandler
-from worker.message.utils import compute_settings_hash
+from worker.message.utils import compute_settings_hash, extract_cdn_expiry
 from worker.message.validators import should_process_message, filter_video_attachments
 from worker.message.clip_metadata import extract_clip_info
 from worker.settings_helpers.user_settings import get_default_visibility
@@ -159,7 +159,7 @@ class MessageHandler:
                 "file_size": clip_info.file_size,
                 "mime_type": clip_info.mime_type,
                 "cdn_url": final_url,  # Store proxy_url if available, cdn_url as fallback
-                "expires_at": clip_info.expires_at,
+                "expires_at": extract_cdn_expiry(final_url),
                 "thumbnail_status": "pending",
                 "settings_hash": settings_hash
             }

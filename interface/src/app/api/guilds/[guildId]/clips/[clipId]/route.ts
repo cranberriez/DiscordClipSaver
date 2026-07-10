@@ -5,6 +5,12 @@ import { updateClipCdnUrl } from "@/server/db/queries/clips";
 import { rateLimit } from "@/server/rate-limit";
 import { fetchBotApi, getBotApiUrl } from "@/server/bot-api";
 import { resolveAccessibleChannelIds } from "@/server/services/channel-access-service";
+import {
+	getDiscordCdnExpiry,
+	getEffectiveCdnExpiry,
+} from "@/lib/utils/discord-cdn";
+
+const CDN_REFRESH_SKEW_MS = 30_000;
 
 /**
  * GET /api/guilds/[guildId]/clips/[clipId]
@@ -86,8 +92,13 @@ export async function GET(
 		}
 
 		// Check if CDN URL has expired and refresh if needed
+		const effectiveExpiry = getEffectiveCdnExpiry(
+			clipWithMetadata.clip.cdn_url,
+			clipWithMetadata.clip.expires_at
+		);
 		const isExpired =
-			new Date(clipWithMetadata.clip.expires_at) < new Date();
+			!effectiveExpiry ||
+			effectiveExpiry.getTime() - Date.now() <= CDN_REFRESH_SKEW_MS;
 
 		if (isExpired) {
 			console.log(`CDN URL expired for clip ${clipId}, refreshing...`);
@@ -119,9 +130,9 @@ export async function GET(
 
 					if (attachment) {
 						// Update database with new CDN URL
-						const expiresAt = new Date(
-							Date.now() + 24 * 60 * 60 * 1000
-						);
+						const expiresAt =
+							getDiscordCdnExpiry(attachment.url) ??
+							new Date(Date.now() + 24 * 60 * 60 * 1000);
 						await updateClipCdnUrl(
 							clipId,
 							attachment.url,

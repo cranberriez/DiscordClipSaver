@@ -5,6 +5,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useClip } from "@/lib/hooks";
 import type { FullClip } from "@/lib/api/clip";
 import { patchClipAcrossLists, patchClipDetail } from "@/lib/queries/clip";
+import { getEffectiveCdnExpiry } from "@/lib/utils/discord-cdn";
 
 /**
  * useLatestVideoUrl
@@ -24,9 +25,15 @@ export function useLatestVideoUrl(
 				guildId: undefined as string | undefined,
 				clipId: undefined as string | undefined,
 			};
-		const expiresAt = new Date(clip.clip.expires_at).getTime();
+		const expiresAt = getEffectiveCdnExpiry(
+			clip.clip.cdn_url,
+			clip.clip.expires_at
+		)?.getTime();
 		const now = Date.now();
-		const needs = isFinite(expiresAt) ? expiresAt - now <= skewMs : true;
+		const needs =
+			expiresAt !== undefined && Number.isFinite(expiresAt)
+				? expiresAt - now <= skewMs
+				: true;
 		return {
 			needsRefresh: needs,
 			guildId: clip.clip.guild_id,

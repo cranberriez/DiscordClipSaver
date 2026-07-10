@@ -7,7 +7,6 @@ import { UserAvatar } from "@/components/core/UserAvatar";
 import { Heart, Play, Loader2, AlertCircle } from "lucide-react";
 import Image from "next/image";
 import { messageTitleOrFilename } from "@/features/clips/lib/discordText";
-import { parseIsoTimestamp } from "@/lib/utils/time-helpers";
 import { Thumbnail } from "@/lib/api/clip";
 import { ClipOptionsDropdown } from "./ClipOptionsDropdown";
 import { useToggleFavorite } from "@/lib/hooks/useFavorites";
@@ -16,6 +15,7 @@ import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { TagManager } from "@/features/clips/components/tags/TagManager";
 import { ClipCardBadges } from "./clip-card-badges/ClipCardBadges";
+import { getEffectiveCdnExpiry } from "@/lib/utils/discord-cdn";
 
 interface ClipCardProps {
 	clip: FullClip;
@@ -71,8 +71,12 @@ export function ClipCard({
 	);
 
 	const showThumbnail = thumbnailUrl;
+	const effectiveExpiry = getEffectiveCdnExpiry(
+		clip.clip.cdn_url,
+		clip.clip.expires_at
+	);
 	const isExpired =
-		parseIsoTimestamp(clip.clip.expires_at) < Date.now() / 1000;
+		!effectiveExpiry || effectiveExpiry.getTime() < Date.now();
 
 	const thumbnailStatus = clip.clip.thumbnail_status;
 	const isProcessing =
