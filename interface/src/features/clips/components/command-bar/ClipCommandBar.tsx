@@ -7,6 +7,12 @@ import { getSortLabel } from "../../lib/filtering";
 import { ServerSwitcher } from "./ServerSwitcher";
 import { FilterTokenStrip } from "./FilterTokenStrip";
 import { NavbarCompact } from "@/components/composite/navbarCompact";
+import {
+	Tooltip,
+	TooltipContent,
+	TooltipProvider,
+	TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import type { GuildWithStats } from "@/lib/api/guild";
 import type { ChannelWithStats } from "@/lib/api/channel";
@@ -39,21 +45,27 @@ function ModeButton({
 }) {
 	const { openPalette } = useClipFiltersStore();
 	return (
-		<button
-			type="button"
-			title={title}
-			aria-label={title}
-			onClick={(e) => {
-				e.stopPropagation();
-				openPalette(seed);
-			}}
-			className={cn(
-				"hover:bg-accent flex h-7 w-7 flex-none cursor-pointer items-center justify-center rounded-full font-mono text-sm font-bold transition-colors hover:brightness-125",
-				colorClass
-			)}
-		>
-			{label}
-		</button>
+		<Tooltip>
+			<TooltipTrigger asChild>
+				<button
+					type="button"
+					aria-label={title}
+					onClick={(e) => {
+						e.stopPropagation();
+						openPalette(seed);
+					}}
+					className={cn(
+						"hover:bg-accent flex h-7 w-7 flex-none cursor-pointer items-center justify-center rounded-full font-mono text-sm font-bold transition-colors hover:brightness-125",
+						colorClass
+					)}
+				>
+					{label}
+				</button>
+			</TooltipTrigger>
+			<TooltipContent side="bottom" sideOffset={8}>
+				{title}
+			</TooltipContent>
+		</Tooltip>
 	);
 }
 
@@ -132,24 +144,26 @@ export function ClipCommandBar({
 						{trimmedQuery || placeholder}
 					</span>
 					<span className="hidden items-center md:flex">
-						<ModeButton
-							label="#"
-							title="Filter by channel"
-							seed="#"
-							colorClass="text-indigo-300"
-						/>
-						<ModeButton
-							label="@"
-							title="Filter by author"
-							seed="@"
-							colorClass="text-emerald-300"
-						/>
-						<ModeButton
-							label="!"
-							title="Filter by tag"
-							seed="!"
-							colorClass="text-amber-300"
-						/>
+						<TooltipProvider delayDuration={250}>
+							<ModeButton
+								label="#"
+								title="Filter by channel"
+								seed="#"
+								colorClass="text-indigo-300"
+							/>
+							<ModeButton
+								label="@"
+								title="Filter by author"
+								seed="@"
+								colorClass="text-emerald-300"
+							/>
+							<ModeButton
+								label="!"
+								title="Filter by tag"
+								seed="!"
+								colorClass="text-amber-300"
+							/>
+						</TooltipProvider>
 					</span>
 					<kbd className="border-border bg-sidebar text-muted-foreground hidden flex-none rounded-md border px-1.5 py-0.5 font-mono text-[10px] sm:inline-block">
 						Ctrl K
@@ -169,29 +183,40 @@ export function ClipCommandBar({
 				</button>
 
 				{/* Favorites toggle */}
-				<button
-					type="button"
-					onClick={() => setFavoritesOnly(!favoritesOnly)}
-					className={cn(
-						"hover:bg-accent flex h-9 w-9 flex-none cursor-pointer items-center justify-center rounded-full transition-colors",
-						favoritesOnly
-							? "text-rose-500"
-							: "text-muted-foreground hover:text-foreground"
-					)}
-					title={
-						favoritesOnly
-							? "Showing favorites only"
-							: "Show favorites only"
-					}
-					aria-pressed={favoritesOnly}
-				>
-					<Heart
-						className={cn(
-							"h-4 w-4",
-							favoritesOnly && "fill-current"
-						)}
-					/>
-				</button>
+				<TooltipProvider delayDuration={250}>
+					<Tooltip>
+						<TooltipTrigger asChild>
+							<button
+								type="button"
+								onClick={() => setFavoritesOnly(!favoritesOnly)}
+								className={cn(
+									"hover:bg-accent flex h-9 w-9 flex-none cursor-pointer items-center justify-center rounded-full transition-colors",
+									favoritesOnly
+										? "text-rose-500"
+										: "text-muted-foreground hover:text-foreground"
+								)}
+								aria-label={
+									favoritesOnly
+										? "Showing favorites only"
+										: "Show favorites only"
+								}
+								aria-pressed={favoritesOnly}
+							>
+								<Heart
+									className={cn(
+										"h-4 w-4",
+										favoritesOnly && "fill-current"
+									)}
+								/>
+							</button>
+						</TooltipTrigger>
+						<TooltipContent side="bottom" sideOffset={8}>
+							{favoritesOnly
+								? "Showing favorites only"
+								: "Show favorites only"}
+						</TooltipContent>
+					</Tooltip>
+				</TooltipProvider>
 
 				<div className="bg-border h-5 w-px flex-none" />
 
