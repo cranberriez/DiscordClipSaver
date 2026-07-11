@@ -5,7 +5,10 @@ import { DataService } from "@/server/services/data-service";
 import { requireAuth } from "@/server/middleware/auth";
 import { rateLimit } from "@/server/rate-limit";
 import { resolveAccessibleChannelIds } from "@/server/services/channel-access-service";
-import { getThumbnailDelivery } from "@/server/thumbnail-storage";
+import {
+	getThumbnailDelivery,
+	thumbnailBrowserCacheControl,
+} from "@/server/thumbnail-storage";
 import { canAccessThumbnail } from "@/server/thumbnail-authorization";
 
 const ParamsSchema = z.object({
@@ -79,10 +82,11 @@ export async function GET(
 	try {
 		const delivery = await getThumbnailDelivery(scope.storage_path);
 		if (!delivery) return notFound();
+		const cacheControl = thumbnailBrowserCacheControl();
 		if (delivery.kind === "redirect") {
 			return NextResponse.redirect(delivery.url, {
 				status: 302,
-				headers: { "Cache-Control": "private, no-store" },
+				headers: { "Cache-Control": cacheControl },
 			});
 		}
 		const body = new Blob([delivery.body as BlobPart], {
@@ -91,7 +95,7 @@ export async function GET(
 		return new NextResponse(body, {
 			headers: {
 				"Content-Type": scope.mime_type || "image/webp",
-				"Cache-Control": "private, no-store",
+				"Cache-Control": cacheControl,
 				"X-Content-Type-Options": "nosniff",
 			},
 		});

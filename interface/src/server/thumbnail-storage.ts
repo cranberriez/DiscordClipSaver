@@ -39,15 +39,33 @@ async function readLocal(root: string, objectKey: string) {
 	}
 }
 
-function signedUrlTtlMs(): number {
-	const raw = process.env.GCS_SIGNED_URL_TTL_SECONDS ?? "300";
+function signedUrlTtlSeconds(): number {
+	const raw = process.env.GCS_SIGNED_URL_TTL_SECONDS ?? "3900";
 	const seconds = Number(raw);
-	if (!Number.isInteger(seconds) || seconds < 30 || seconds > 900) {
+	if (!Number.isInteger(seconds) || seconds < 30 || seconds > 7200) {
 		throw new Error(
-			"GCS_SIGNED_URL_TTL_SECONDS must be an integer from 30 to 900"
+			"GCS_SIGNED_URL_TTL_SECONDS must be an integer from 30 to 7200"
 		);
 	}
-	return seconds * 1000;
+	return seconds;
+}
+
+export function thumbnailBrowserCacheControl(): string {
+	const signedSeconds = signedUrlTtlSeconds();
+	const raw = process.env.THUMBNAIL_BROWSER_CACHE_SECONDS ?? "3600";
+	const seconds = Number(raw);
+	if (
+		!Number.isInteger(seconds) ||
+		seconds < 0 ||
+		seconds > Math.max(0, signedSeconds - 30)
+	) {
+		throw new Error(
+			"THUMBNAIL_BROWSER_CACHE_SECONDS must be non-negative and at least 30 seconds shorter than GCS_SIGNED_URL_TTL_SECONDS"
+		);
+	}
+	return seconds === 0
+		? "private, no-store, max-age=0, no-transform"
+		: `private, max-age=${seconds}, no-transform`;
 }
 
 export async function getThumbnailDelivery(
@@ -76,7 +94,7 @@ export async function getThumbnailDelivery(
 		const [url] = await file.getSignedUrl({
 			version: "v4",
 			action: "read",
-			expires: Date.now() + signedUrlTtlMs(),
+			expires: Date.now() + signedUrlTtlSeconds() * 1000,
 		});
 		return { kind: "redirect", url };
 	}

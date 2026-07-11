@@ -27,6 +27,7 @@ class MigrationStats:
     examined: int = 0
     would_upload: int = 0
     would_update_rows: int = 0
+    metadata_updated: int = 0
     uploaded: int = 0
     already_present: int = 0
     rows_updated: int = 0
@@ -109,6 +110,8 @@ async def migrate(
                         stats.already_present += 1
                 else:
                     stats.already_present += 1
+                    if apply and await destination.update_cache_control(target):
+                        stats.metadata_updated += 1
 
                 if apply and thumbnail.storage_path != target:
                     thumbnail.storage_path = target
@@ -168,6 +171,7 @@ async def _main() -> int:
         f"examined={stats.examined} would_upload={stats.would_upload} "
         f"would_update_rows={stats.would_update_rows} uploaded={stats.uploaded} "
         f"already_present={stats.already_present} rows_updated={stats.rows_updated} "
+        f"metadata_updated={stats.metadata_updated} "
         f"missing_source={stats.missing_source} failed={stats.failed}"
     )
     if not args.apply:

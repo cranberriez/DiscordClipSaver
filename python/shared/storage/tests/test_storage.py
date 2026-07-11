@@ -5,6 +5,7 @@ from unittest.mock import patch
 from pathlib import Path
 
 from shared.storage.local import LocalStorageBackend
+from shared.storage.gcs import GCSStorageBackend
 from shared.storage.thumbnail_keys import thumbnail_object_key
 from worker import migrate_thumbnails_to_gcs as migration
 from worker.migrate_thumbnails_to_gcs import _source_path
@@ -22,6 +23,32 @@ class ThumbnailKeyTests(unittest.TestCase):
             thumbnail_object_key("123", "../456", "a" * 32, "small")
         with self.assertRaises(ValueError):
             thumbnail_object_key("123", "456", "not-a-clip", "small")
+
+
+class ThumbnailCacheControlTests(unittest.TestCase):
+    def test_private_cache_is_bounded_by_signed_url(self):
+        with patch.dict(
+            "os.environ",
+            {
+                "GCS_SIGNED_URL_TTL_SECONDS": "300",
+                "THUMBNAIL_BROWSER_CACHE_SECONDS": "240",
+            },
+        ):
+            self.assertEqual(
+                GCSStorageBackend._get_cache_control(),
+                "private, max-age=240, no-transform",
+            )
+
+    def test_rejects_cache_longer_than_signed_url_margin(self):
+        with patch.dict(
+            "os.environ",
+            {
+                "GCS_SIGNED_URL_TTL_SECONDS": "300",
+                "THUMBNAIL_BROWSER_CACHE_SECONDS": "300",
+            },
+        ):
+            with self.assertRaises(ValueError):
+                GCSStorageBackend._get_cache_control()
 
 
 class LocalStorageTests(unittest.IsolatedAsyncioTestCase):

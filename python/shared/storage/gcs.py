@@ -5,6 +5,7 @@ Requires: pip install google-cloud-storage
 """
 import asyncio
 import logging
+import os
 from typing import Optional
 
 from .base import StorageBackend
@@ -35,6 +36,7 @@ class GCSStorageBackend(StorageBackend):
             )
         
         self.bucket_name = bucket_name
+        self.cache_control = self._get_cache_control()
         self.client = storage.Client(project=project_id)
         self.bucket = self.client.bucket(bucket_name)
         
@@ -43,6 +45,7 @@ class GCSStorageBackend(StorageBackend):
     async def save(self, file_data: bytes, path: str) -> str:
         """Upload a private object to GCS."""
         blob = self.bucket.blob(path)
+        blob.cache_control = self.cache_control
         content_type = self._get_content_type(path)
         await asyncio.to_thread(
             blob.upload_from_string,
@@ -58,6 +61,7 @@ class GCSStorageBackend(StorageBackend):
         from google.api_core.exceptions import PreconditionFailed
 
         blob = self.bucket.blob(path)
+        blob.cache_control = self.cache_control
         try:
             await asyncio.to_thread(
                 blob.upload_from_string,
@@ -67,6 +71,18 @@ class GCSStorageBackend(StorageBackend):
             )
             return True
         except PreconditionFailed:
+            return False
+
+    async def update_cache_control(self, path: str) -> bool:
+        """Apply the configured private browser-cache policy to an object."""
+        from google.api_core.exceptions import NotFound
+
+        blob = self.bucket.blob(path)
+        blob.cache_control = self.cache_control
+        try:
+            await asyncio.to_thread(blob.patch)
+            return True
+        except NotFound:
             return False
     
     async def read(self, path: str) -> bytes:
@@ -110,3 +126,18 @@ class GCSStorageBackend(StorageBackend):
             'webm': 'video/webm',
         }
         return content_types.get(ext, 'application/octet-stream')
+
+    @staticmethod
+    def _get_cache_control() -> str:
+        signed_seconds = int(os.getenv("GCS_SIGNED_URL_TTL_SECONDS", "3900"))
+        cache_seconds = int(os.getenv("THUMBNAIL_BROWSER_CACHE_SECONDS", "3600"))
+        if signed_seconds < 30 or signed_seconds > 7200:
+            raise ValueError("GCS_SIGNED_URL_TTL_SECONDS must be from 30 to 7200")
+        if cache_seconds < 0 or cache_seconds > max(0, signed_seconds - 30):
+            raise ValueError(
+                "THUMBNAIL_BROWSER_CACHE_SECONDS must be non-negative and at "
+                "least 30 seconds shorter than GCS_SIGNED_URL_TTL_SECONDS"
+            )
+        if cache_seconds == 0:
+            return "private, no-store, max-age=0, no-transform"
+        return f"private, max-age={cache_seconds}, no-transform"
