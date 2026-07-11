@@ -2,11 +2,13 @@
 
 import { Channel } from "@/lib/api/channel";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { InfoPanel, BulkScanActions, ScanStatusTable } from "../index";
+import { ScanStatusTable } from "../index";
+import { ScanToolbar } from "./ScanToolbar";
 import { toast } from "sonner";
 import { useScanStatusNotifications } from "../lib/useScanStatusNotifications";
 import { useScanStats } from "../lib/useScanStats";
 import { useBulkScanActions } from "../lib/useBulkScanActions";
+import { useBulkUpdateChannels } from "@/lib/hooks";
 
 interface ScansPanelProps {
 	guildId: string;
@@ -19,25 +21,26 @@ export function ScansPanel({
 }: ScansPanelProps) {
 	const {
 		channels,
-		totalChannels,
 		enabledChannelsCount,
 		failedScans,
-		unscannedOrFailedCount,
-		activeScans,
-		successfulScans,
-		totalMessagesScanned,
-		totalClips,
 		isLoading,
 		error,
 		refetch,
 	} = useScanStats(guildId, serverChannels);
 
 	const {
-		scanUnscannedOrFailed,
+		scanUnscanned,
+		rescanFailed,
 		updateAllChannels,
 		historicalScan,
 		isPending,
 	} = useBulkScanActions(guildId, channels);
+
+	const bulkUpdateMutation = useBulkUpdateChannels(guildId);
+
+	const unscannedCount = channels.filter(
+		(ch) => !ch.scanStatus && ch.message_scan_enabled
+	).length;
 
 	useScanStatusNotifications(
 		channels.map((ch) => ch.scanStatus).filter(Boolean) as NonNullable<
@@ -136,28 +139,20 @@ export function ScansPanel({
 	}
 
 	return (
-		<div className="space-y-6">
-			<div className="flex flex-col gap-4 sm:flex-row">
-				<div className="w-full shrink-0 sm:w-60">
-					<InfoPanel
-						totalChannels={totalChannels}
-						enabledChannelsCount={enabledChannelsCount}
-						failedScans={failedScans}
-						activeScans={activeScans}
-						successfulScans={successfulScans}
-						totalMessagesScanned={totalMessagesScanned}
-						totalClips={totalClips}
-					/>
-				</div>
-				<BulkScanActions
-					unscannedOrFailedCount={unscannedOrFailedCount}
-					enabledChannelsCount={enabledChannelsCount}
-					isPending={isPending}
-					onScanUnscannedOrFailed={scanUnscannedOrFailed}
-					onUpdateAllChannels={updateAllChannels}
-					onHistoricalScan={historicalScan}
-				/>
-			</div>
+		<div className="space-y-3">
+			<ScanToolbar
+				onRefresh={refetch}
+				unscannedCount={unscannedCount}
+				failedCount={failedScans}
+				enabledChannelsCount={enabledChannelsCount}
+				isPending={isPending}
+				bulkTogglePending={bulkUpdateMutation.isPending}
+				onScanUnscanned={scanUnscanned}
+				onCatchUpAll={updateAllChannels}
+				onRescanFailed={rescanFailed}
+				onHistoricalScan={historicalScan}
+				onBulkToggle={(enabled) => bulkUpdateMutation.mutate(enabled)}
+			/>
 
 			<ScanStatusTable channels={channels} onRefresh={refetch} />
 		</div>

@@ -92,10 +92,10 @@ export function SetupComplete({ guild }: { guild: Guild }) {
 							Dashboard
 						</Button>
 					</Link>
-					<Link href={`/dashboard/${guild.id}/scans`}>
+					<Link href={`/dashboard/${guild.id}/channels`}>
 						<Button variant="outline" className="w-full">
 							<BarChart3 className="mr-2 h-4 w-4" />
-							Scans
+							Channels & Scans
 						</Button>
 					</Link>
 				</div>

@@ -11,7 +11,6 @@ import { sortChannels } from "../lib/scanStatusTableHelpers";
 import { useScanTableState } from "../lib/useScanTableState";
 import type { ChannelWithStatus } from "../types";
 import { ChannelRow } from "./ChannelRow";
-import { ScanToolbar } from "./ScanToolbar";
 
 interface ScanStatusTableProps {
 	channels: ChannelWithStatus[];
@@ -19,71 +18,65 @@ interface ScanStatusTableProps {
 }
 
 export function ScanStatusTable({ channels, onRefresh }: ScanStatusTableProps) {
-	const { simpleView, sortBy } = useScanVisibilityStore();
+	const { sortBy } = useScanVisibilityStore();
 
-	const { processedChannels, groupedChannels, selectedIds } =
+	const { processedChannels, groupedChannels, handleChannelToggle } =
 		useScanTableState(channels, onRefresh);
 
 	const sortedChannelTypes = getSortedChannelTypes();
 
 	return (
-		<div className="space-y-3">
-			<ScanToolbar onRefresh={onRefresh} />
+		<div className="space-y-0">
+			{sortedChannelTypes.map((type) => {
+				const channelsOfType = groupedChannels[type];
+				if (!channelsOfType || channelsOfType.length === 0) return null;
 
-			<div className="space-y-0">
-				{sortedChannelTypes.map((type) => {
-					const channelsOfType = groupedChannels[type];
-					if (!channelsOfType || channelsOfType.length === 0)
-						return null;
+				const sorted = sortChannels(channelsOfType, sortBy);
+				const typeTotal = channelsOfType.length;
+				const typeActive = channelsOfType.filter(
+					(ch) =>
+						ch.scanStatus?.status === "RUNNING" ||
+						ch.scanStatus?.status === "QUEUED"
+				).length;
 
-					const sorted = sortChannels(channelsOfType, sortBy);
-					const typeTotal = channelsOfType.length;
-					const typeActive = channelsOfType.filter(
-						(ch) =>
-							ch.scanStatus?.status === "RUNNING" ||
-							ch.scanStatus?.status === "QUEUED"
-					).length;
+				return (
+					<React.Fragment key={type}>
+						<div className="flex min-h-12 items-center gap-2 py-2 pl-1">
+							<ChannelTypeHeader type={type} />
+							<span className="text-muted-foreground/50 text-xs">
+								{typeTotal}
+							</span>
+							{typeActive > 0 && (
+								<Badge className="border-blue-500/30 bg-blue-500/20 text-xs text-blue-400">
+									{typeActive} active
+								</Badge>
+							)}
+						</div>
 
-					return (
-						<React.Fragment key={type}>
-							<div className="flex min-h-12 items-center gap-2 py-2 pl-1">
-								<ChannelTypeHeader type={type} />
-								<span className="text-muted-foreground/50 text-xs">
-									{typeTotal}
-								</span>
-								{typeActive > 0 && (
-									<Badge className="border-blue-500/30 bg-blue-500/20 text-xs text-blue-400">
-										{typeActive} active
-									</Badge>
-								)}
-							</div>
+						<div className="space-y-1.5">
+							{sorted.map((channel) => (
+								<ChannelRow
+									key={channel.id}
+									channel={channel}
+									guildId={channel.guild_id}
+									onToggle={handleChannelToggle}
+								/>
+							))}
+						</div>
+					</React.Fragment>
+				);
+			})}
 
-							<div className="space-y-1.5">
-								{sorted.map((channel) => (
-									<ChannelRow
-										key={channel.id}
-										channel={channel}
-										simpleView={simpleView}
-										checked={selectedIds.has(channel.id)}
-										guildId={channel.guild_id}
-									/>
-								))}
-							</div>
-						</React.Fragment>
-					);
-				})}
-
-				{processedChannels.length === 0 && channels.length > 0 && (
-					<div className="text-muted-foreground py-8 text-center text-sm">
-						No channels match the current filters.
-					</div>
-				)}
-				{channels.length === 0 && (
-					<div className="text-muted-foreground py-8 text-center text-sm">
-						No channels found
-					</div>
-				)}
-			</div>
+			{processedChannels.length === 0 && channels.length > 0 && (
+				<div className="text-muted-foreground py-8 text-center text-sm">
+					No channels match the current filters.
+				</div>
+			)}
+			{channels.length === 0 && (
+				<div className="text-muted-foreground py-8 text-center text-sm">
+					No channels found
+				</div>
+			)}
 		</div>
 	);
 }

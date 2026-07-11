@@ -22,8 +22,8 @@ export function StatusBadge({ status, grayscale = false }: StatusBadgeProps) {
 		FAILED: "bg-red-500/10 text-red-400",
 		CANCELLED: "bg-gray-500/10 text-gray-400",
 		QUEUED: "bg-yellow-500/10 text-yellow-400",
-		RUNNING: "bg-blue-500/10 text-blue-400 ",
-		SUCCEEDED: "bg-green-500/10 text-green-400 ",
+		RUNNING: "bg-blue-500/10 text-blue-400",
+		SUCCEEDED: "bg-green-500/10 text-green-400",
 	};
 
 	const customLabelMap: Record<string, string> = {
@@ -31,7 +31,7 @@ export function StatusBadge({ status, grayscale = false }: StatusBadgeProps) {
 		CANCELLED: "CANCELLED",
 		QUEUED: "QUEUED",
 		RUNNING: "RUNNING",
-		SUCCEEDED: "SUCCEEDED",
+		SUCCEEDED: "UP TO DATE",
 	};
 
 	const customColor = colorMap[status];
@@ -50,7 +50,7 @@ function Badge({
 	return (
 		<div
 			className={cn(
-				"flex h-9 w-24 items-center justify-center rounded-sm px-4 py-1 text-xs font-medium",
+				"flex h-9 w-26 items-center justify-center rounded-sm px-2 py-1 text-xs font-semibold tracking-wide whitespace-nowrap",
 				className
 			)}
 		>

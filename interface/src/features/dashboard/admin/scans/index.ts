@@ -1,8 +1,7 @@
-export { InfoPanel } from "./components/InfoPanel";
-export { BulkScanActions } from "./components/BulkScanActions";
 export { ScanStatusTable } from "./components/ScanStatusTable";
 export { StatusBadge } from "./components/StatusBadge";
 export { ScansPanel } from "./components/ScansPanel";
+export { ScanToolbar } from "./components/ScanToolbar";
 
 export { mergeChannelsWithStatuses } from "./lib/mergeChannelsWithStatuses";
 export { useScanStats } from "./lib/useScanStats";

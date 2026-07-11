@@ -1,4 +1,5 @@
-import { ChannelsList } from "@/features/dashboard/admin/channels";
+import { DataService } from "@/server/services/data-service";
+import { ScansPanel } from "@/features/dashboard/admin/scans";
 
 type PageProps = {
 	params: Promise<{ guildId: string }>;
@@ -7,5 +8,8 @@ type PageProps = {
 export default async function ChannelsPage({ params }: PageProps) {
 	const { guildId } = await params;
 
-	return <ChannelsList guildId={guildId} />;
+	// Fetch channels for the merged channels & scans panel
+	const channels = await DataService.getChannelsByGuildId(guildId);
+
+	return <ScansPanel guildId={guildId} channels={channels || []} />;
 }

@@ -1,7 +1,8 @@
 "use client";
 
-import { useToggleScanning, useGuild } from "@/lib/hooks";
+import { useToggleScanning, useGuild, useChannels } from "@/lib/hooks";
 import type { Guild } from "@/lib/api/types";
+import Link from "next/link";
 import {
 	Card,
 	CardContent,
@@ -10,8 +11,10 @@ import {
 	CardTitle,
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Info, CheckCircle2, XCircle } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
+import { cn } from "@/lib/utils";
+import { useScanStats } from "../scans/lib/useScanStats";
+import { useScanVisibilityStore } from "../scans/stores/useScanVisibilityStore";
 
 interface GuildHeaderProps {
 	guild: Guild;
@@ -59,6 +62,7 @@ export function GuildHeader({ guild: initialGuild }: GuildHeaderProps) {
 			</div>
 
 			<GuildScanningCard
+				guildId={guild.id}
 				messageScanEnabled={messageScanEnabled}
 				handleToggle={handleToggle}
 				toggleMutation={toggleMutation}
@@ -68,10 +72,12 @@ export function GuildHeader({ guild: initialGuild }: GuildHeaderProps) {
 }
 
 function GuildScanningCard({
+	guildId,
 	messageScanEnabled,
 	handleToggle,
 	toggleMutation,
 }: {
+	guildId: string;
 	messageScanEnabled: boolean;
 	handleToggle: () => void;
 	toggleMutation: any;
@@ -79,75 +85,140 @@ function GuildScanningCard({
 	const error = toggleMutation.error as Error | null;
 
 	return (
-		<Card className="flex-1 gap-3 py-4 md:h-32">
+		<Card className="flex-1 gap-3 py-4">
 			<CardHeader className="flex flex-wrap justify-between">
 				<CardTitle className="text-lg">Message Scanning</CardTitle>
-				<CardAction className="flex items-center gap-2">
+				<CardAction className="flex items-center gap-3">
 					{error && (
 						<p className="text-destructive text-sm">
 							{error.message}
 						</p>
 					)}
-					<ToggleGuildScanning
-						messageScanEnabled={messageScanEnabled}
-						handleToggle={handleToggle}
-						toggleMutation={toggleMutation}
+					<Switch
+						checked={messageScanEnabled}
+						onCheckedChange={handleToggle}
+						disabled={toggleMutation.isPending || !!error}
+						title={
+							messageScanEnabled
+								? "Pause message scanning"
+								: "Resume message scanning"
+						}
 					/>
 				</CardAction>
 			</CardHeader>
-			<CardContent className="text-muted-foreground flex items-center gap-2 text-sm">
-				<Info className="mt-0.5 h-4 w-4 flex-shrink-0" />
-				<span>
-					This controls whether scans are allowed to run. Use the
-					Scans tab to configure and start scanning specific channels.
-				</span>
+			<CardContent className="space-y-3">
+				<ScanStatusLine
+					active={messageScanEnabled}
+					pending={toggleMutation.isPending}
+				/>
+				<GuildScanStats guildId={guildId} />
 			</CardContent>
 		</Card>
 	);
 }
 
-function ToggleGuildScanning({
-	messageScanEnabled,
-	handleToggle,
-	toggleMutation,
-}: {
-	messageScanEnabled: boolean;
-	handleToggle: () => void;
-	toggleMutation: any;
-}) {
-	const error = toggleMutation.error as Error | null;
+function formatStatCount(n: number): string {
+	if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
+	if (n >= 1_000) return `${(n / 1_000).toFixed(1)}k`;
+	return String(n);
+}
+
+function GuildScanStats({ guildId }: { guildId: string }) {
+	const { data: channels = [], isLoading: channelsLoading } =
+		useChannels(guildId);
+	const {
+		totalChannels,
+		enabledChannelsCount,
+		failedScans,
+		totalMessagesScanned,
+		totalClips,
+		isLoading,
+		error,
+	} = useScanStats(guildId, channels);
+	const { setStatusFilter } = useScanVisibilityStore();
+
+	if (channelsLoading || isLoading || error) return null;
 
 	return (
-		<Button
-			onClick={handleToggle}
-			disabled={toggleMutation.isPending || error}
-			variant="ghost"
-			className={`relative min-w-[140px] cursor-pointer px-4 transition-all ${
-				error
-					? "border-destructive/40 bg-destructive/10 text-destructive border"
-					: messageScanEnabled
-						? "border border-green-400/40 bg-green-950/30 text-green-400 shadow-[0_0_12px_rgba(74,222,128,0.15)] hover:bg-green-950/30! hover:shadow-[0_0_16px_rgba(74,222,128,0.25)]"
-						: "border border-red-400/40 bg-red-950/30 text-red-400 shadow-[0_0_12px_rgba(248,113,113,0.15)] hover:bg-red-950/30! hover:shadow-[0_0_16px_rgba(248,113,113,0.25)]"
-			}`}
-		>
-			<div className="absolute top-1/2 left-3 -translate-y-1/2">
-				{messageScanEnabled ? (
-					<CheckCircle2 className="h-4 w-4" />
-				) : (
-					<XCircle className="h-4 w-4" />
-				)}
-			</div>
-			<span
-				className={`flex items-center font-semibold tracking-wider uppercase ${
-					toggleMutation.isPending ? "text-xs" : ""
-				}`}
-			>
-				{toggleMutation.isPending
-					? "Updating..."
-					: messageScanEnabled
-						? "Active"
-						: "Inactive"}
+		<div className="text-muted-foreground/60 flex flex-wrap items-center gap-x-1.5 gap-y-1 border-t pt-3 text-xs">
+			<span>
+				<b className="text-muted-foreground font-mono font-semibold">
+					{enabledChannelsCount}
+				</b>
+				/{totalChannels} enabled
 			</span>
-		</Button>
+			<span>·</span>
+			<span>
+				<b className="text-muted-foreground font-mono font-semibold">
+					{formatStatCount(totalClips)}
+				</b>{" "}
+				clips
+			</span>
+			<span>·</span>
+			<span>
+				<b className="text-muted-foreground font-mono font-semibold">
+					{formatStatCount(totalMessagesScanned)}
+				</b>{" "}
+				messages scanned
+			</span>
+			{failedScans > 0 && (
+				<>
+					<span>·</span>
+					<Link
+						href={`/dashboard/${guildId}/channels`}
+						className="text-destructive hover:underline"
+						onClick={() => setStatusFilter("failed")}
+						title="Show only failed channels"
+					>
+						<b className="font-mono font-semibold">{failedScans}</b>{" "}
+						failed →
+					</Link>
+				</>
+			)}
+		</div>
+	);
+}
+
+function ScanStatusLine({
+	active,
+	pending,
+}: {
+	active: boolean;
+	pending: boolean;
+}) {
+	if (pending) {
+		return (
+			<div className="text-muted-foreground flex items-center gap-2.5 text-sm">
+				<span className="bg-muted-foreground/50 h-2 w-2 flex-shrink-0 rounded-full" />
+				<span>Updating...</span>
+			</div>
+		);
+	}
+
+	return (
+		<div
+			className={cn(
+				"flex items-center gap-2.5 text-sm",
+				active ? "text-muted-foreground" : "text-red-400"
+			)}
+		>
+			<span
+				className={cn(
+					"h-2 w-2 flex-shrink-0 rounded-full",
+					active ? "animate-pulse bg-green-400" : "bg-red-400"
+				)}
+			/>
+			{active ? (
+				<span>
+					<span className="font-medium text-green-400">Active</span> —
+					new clips are picked up automatically.
+				</span>
+			) : (
+				<span>
+					<span className="font-medium">Paused</span> — new clips are
+					not being picked up.
+				</span>
+			)}
+		</div>
 	);
 }

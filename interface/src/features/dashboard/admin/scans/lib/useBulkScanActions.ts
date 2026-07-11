@@ -9,17 +9,35 @@ export function useBulkScanActions(
 ) {
 	const { mutate, isPending } = useStartBulkScan(guildId);
 
-	const scanUnscannedOrFailed = () => {
+	/** Initial scan for channels that have never been scanned. */
+	const scanUnscanned = () => {
+		const channelIds = channels
+			.filter((ch) => !ch.scanStatus && ch.message_scan_enabled)
+			.map((ch) => ch.id);
+
+		if (channelIds.length === 0) {
+			alert("No unscanned channels found");
+			return;
+		}
+
+		mutate({
+			channelIds,
+			options: { isUpdate: false, autoContinue: true, rescan: "stop" },
+		});
+	};
+
+	/** Re-run the initial scan for channels whose last scan failed. */
+	const rescanFailed = () => {
 		const channelIds = channels
 			.filter(
 				(ch) =>
-					(!ch.scanStatus || ch.scanStatus.status === "FAILED") &&
+					ch.scanStatus?.status === "FAILED" &&
 					ch.message_scan_enabled
 			)
 			.map((ch) => ch.id);
 
 		if (channelIds.length === 0) {
-			alert("No unscanned or failed channels found");
+			alert("No failed channels found");
 			return;
 		}
 
@@ -90,7 +108,8 @@ export function useBulkScanActions(
 	};
 
 	return {
-		scanUnscannedOrFailed,
+		scanUnscanned,
+		rescanFailed,
 		updateAllChannels,
 		historicalScan,
 		isPending,

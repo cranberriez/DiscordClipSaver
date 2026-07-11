@@ -14,10 +14,9 @@ export function GuildTabNav({ guildId }: GuildTabNavProps) {
 	const tabs = [
 		{
 			id: "channels",
-			label: "Channels",
+			label: "Channels & Scans",
 			href: `/dashboard/${guildId}/channels`,
 		},
-		{ id: "scans", label: "Scans", href: `/dashboard/${guildId}/scans` },
 		{ id: "tags", label: "Tags", href: `/dashboard/${guildId}/tags` },
 		{
 			id: "settings",

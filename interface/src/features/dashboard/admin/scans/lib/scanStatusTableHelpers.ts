@@ -19,6 +19,14 @@ export function getHitRateColor(rate: number): string {
 	return "text-muted-foreground";
 }
 
+/**
+ * Discord snowflake IDs encode their creation timestamp
+ * (ms since the Discord epoch, 2015-01-01).
+ */
+export function snowflakeToDate(id: string): Date {
+	return new Date(Number(BigInt(id) >> BigInt(22)) + 1420070400000);
+}
+
 export function makeDiscordMessageLink(
 	guildId: string,
 	channelId: string,
