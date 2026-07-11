@@ -99,13 +99,14 @@ export function ClipCommandPalette({
 	const inputRef = useRef<HTMLInputElement>(null);
 	const listRef = useRef<HTMLDivElement>(null);
 
-	// Apply seed whenever the palette opens
+	// Apply an explicit mode seed, or restore the current clip search so it
+	// remains editable after the active filter tokens.
 	useEffect(() => {
 		if (isPaletteOpen) {
-			setValue(paletteSeed);
+			setValue(paletteSeed || searchQuery);
 			setHot(0);
 		}
-	}, [isPaletteOpen, paletteSeed]);
+	}, [isPaletteOpen, paletteSeed, searchQuery]);
 
 	const { mode, query } = parsePaletteInput(value);
 

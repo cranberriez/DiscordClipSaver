@@ -30,12 +30,10 @@ export function FilterTokenStrip({
 		selectedChannelIds,
 		selectedAuthorIds,
 		tags: selectedTags,
-		searchQuery,
 		favoritesOnly,
 		setChannelIds,
 		setAuthorIds,
 		setTags,
-		setSearchQuery,
 		setFavoritesOnly,
 		clearFilters,
 	} = useClipFiltersStore();
@@ -59,7 +57,6 @@ export function FilterTokenStrip({
 		selectedChannelIds.length > 0 ||
 		selectedAuthorIds.length > 0 ||
 		selectedTags.length > 0 ||
-		!!searchQuery.trim() ||
 		favoritesOnly;
 
 	if (!hasFilters) return null;
@@ -84,13 +81,6 @@ export function FilterTokenStrip({
 					{resultCount.toLocaleString()} clip
 					{resultCount === 1 ? "" : "s"}
 				</span>
-			)}
-			{searchQuery.trim() && (
-				<FilterToken
-					variant="search"
-					label={searchQuery.trim()}
-					onRemove={() => setSearchQuery("")}
-				/>
 			)}
 			{selectedChannelIds.map((id) => (
 				<FilterToken
