@@ -29,16 +29,12 @@ export function FilterTokenStrip({
 		selectedGuildId,
 		selectedChannelIds,
 		selectedAuthorIds,
-		tagsAny,
-		tagsAll,
-		tagsExclude,
+		tags: selectedTags,
 		searchQuery,
 		favoritesOnly,
 		setChannelIds,
 		setAuthorIds,
-		setTagsAny,
-		setTagsAll,
-		setTagsExclude,
+		setTags,
 		setSearchQuery,
 		setFavoritesOnly,
 		clearFilters,
@@ -62,9 +58,7 @@ export function FilterTokenStrip({
 	const hasFilters =
 		selectedChannelIds.length > 0 ||
 		selectedAuthorIds.length > 0 ||
-		tagsAny.length > 0 ||
-		tagsAll.length > 0 ||
-		tagsExclude.length > 0 ||
+		selectedTags.length > 0 ||
 		!!searchQuery.trim() ||
 		favoritesOnly;
 
@@ -79,7 +73,7 @@ export function FilterTokenStrip({
 			<button
 				type="button"
 				onClick={clearFilters}
-				className="border-border/35 bg-sidebar/55 text-rose-400 hover:border-border/55 hover:bg-accent/70 focus-visible:ring-ring inline-flex h-7 w-7 flex-none cursor-pointer items-center justify-center rounded-lg border shadow-[inset_0_1px_0_rgba(255,255,255,0.1)] backdrop-blur-md transition-colors focus-visible:ring-2 focus-visible:outline-none active:translate-y-px"
+				className="border-border/35 bg-sidebar/55 hover:border-border/55 hover:bg-accent/70 focus-visible:ring-ring inline-flex h-7 w-7 flex-none cursor-pointer items-center justify-center rounded-lg border text-rose-400 shadow-[inset_0_1px_0_rgba(255,255,255,0.1)] backdrop-blur-md transition-colors focus-visible:ring-2 focus-visible:outline-none active:translate-y-px"
 				aria-label="Clear all filters"
 				title="Clear all filters"
 			>
@@ -103,11 +97,7 @@ export function FilterTokenStrip({
 					key={`ch-${id}`}
 					variant="channel"
 					label={channelNames.get(id) ?? id}
-					onRemove={removeFrom(
-						selectedChannelIds,
-						setChannelIds,
-						id
-					)}
+					onRemove={removeFrom(selectedChannelIds, setChannelIds, id)}
 				/>
 			))}
 			{selectedAuthorIds.map((id) => (
@@ -118,28 +108,12 @@ export function FilterTokenStrip({
 					onRemove={removeFrom(selectedAuthorIds, setAuthorIds, id)}
 				/>
 			))}
-			{tagsAny.map((slug) => (
+			{selectedTags.map((slug) => (
 				<FilterToken
-					key={`tany-${slug}`}
+					key={`tag-${slug}`}
 					variant="tag"
 					label={tagNames.get(slug) ?? slug}
-					onRemove={removeFrom(tagsAny, setTagsAny, slug)}
-				/>
-			))}
-			{tagsAll.map((slug) => (
-				<FilterToken
-					key={`tall-${slug}`}
-					variant="tag"
-					label={`all: ${tagNames.get(slug) ?? slug}`}
-					onRemove={removeFrom(tagsAll, setTagsAll, slug)}
-				/>
-			))}
-			{tagsExclude.map((slug) => (
-				<FilterToken
-					key={`tex-${slug}`}
-					variant="tag"
-					label={`not: ${tagNames.get(slug) ?? slug}`}
-					onRemove={removeFrom(tagsExclude, setTagsExclude, slug)}
+					onRemove={removeFrom(selectedTags, setTags, slug)}
 				/>
 			))}
 			{favoritesOnly && (

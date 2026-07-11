@@ -32,9 +32,7 @@ export function ClipsPageContent() {
 		closeTagModal,
 		selectedChannelIds,
 		selectedAuthorIds,
-		tagsAny,
-		tagsAll,
-		tagsExclude,
+		tags,
 		searchQuery,
 		favoritesOnly,
 	} = useClipFiltersStore();
@@ -42,9 +40,7 @@ export function ClipsPageContent() {
 	const hasActiveFilters =
 		selectedChannelIds.length > 0 ||
 		selectedAuthorIds.length > 0 ||
-		tagsAny.length > 0 ||
-		tagsAll.length > 0 ||
-		tagsExclude.length > 0 ||
+		tags.length > 0 ||
 		!!searchQuery.trim() ||
 		favoritesOnly;
 

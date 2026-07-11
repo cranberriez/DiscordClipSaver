@@ -7,9 +7,7 @@ interface ClipFiltersState {
 	selectedGuildId: string | null;
 	selectedChannelIds: string[];
 	selectedAuthorIds: string[];
-	tagsAny: string[];
-	tagsAll: string[];
-	tagsExclude: string[];
+	tags: string[];
 	searchQuery: string;
 	sortType: SortType;
 	sortOrder: SortOrder;
@@ -30,9 +28,7 @@ interface ClipFiltersState {
 	setGuildId: (guildId: string | null) => void;
 	setChannelIds: (channelIds: string[]) => void;
 	setAuthorIds: (authorIds: string[]) => void;
-	setTagsAny: (tags: string[]) => void;
-	setTagsAll: (tags: string[]) => void;
-	setTagsExclude: (tags: string[]) => void;
+	setTags: (tags: string[]) => void;
 	setSearchQuery: (query: string) => void;
 	setSortType: (type: SortType) => void;
 	setSortOrder: (order: SortOrder) => void;
@@ -65,9 +61,7 @@ export const useClipFiltersStore = create<ClipFiltersState>()(
 			selectedGuildId: null as string | null,
 			selectedChannelIds: [] as string[],
 			selectedAuthorIds: [] as string[],
-			tagsAny: [] as string[],
-			tagsAll: [] as string[],
-			tagsExclude: [] as string[],
+			tags: [] as string[],
 			searchQuery: "",
 			sortType: "date" as SortType,
 			sortOrder: "desc" as SortOrder,
@@ -88,9 +82,7 @@ export const useClipFiltersStore = create<ClipFiltersState>()(
 					// Reset channel, author, and tag filters when guild changes
 					selectedChannelIds: [],
 					selectedAuthorIds: [],
-					tagsAny: [],
-					tagsAll: [],
-					tagsExclude: [],
+					tags: [],
 				}),
 
 			setChannelIds: (channelIds) =>
@@ -98,9 +90,7 @@ export const useClipFiltersStore = create<ClipFiltersState>()(
 
 			setAuthorIds: (authorIds) => set({ selectedAuthorIds: authorIds }),
 
-			setTagsAny: (tags) => set({ tagsAny: tags }),
-			setTagsAll: (tags) => set({ tagsAll: tags }),
-			setTagsExclude: (tags) => set({ tagsExclude: tags }),
+			setTags: (tags) => set({ tags }),
 
 			setSearchQuery: (query) => set({ searchQuery: query }),
 
@@ -130,9 +120,7 @@ export const useClipFiltersStore = create<ClipFiltersState>()(
 					selectedGuildId: null,
 					selectedChannelIds: [],
 					selectedAuthorIds: [],
-					tagsAny: [],
-					tagsAll: [],
-					tagsExclude: [],
+					tags: [],
 					searchQuery: "",
 					sortType: "date",
 					favoritesOnly: false,
@@ -143,9 +131,7 @@ export const useClipFiltersStore = create<ClipFiltersState>()(
 				set({
 					selectedChannelIds: [],
 					selectedAuthorIds: [],
-					tagsAny: [],
-					tagsAll: [],
-					tagsExclude: [],
+					tags: [],
 					searchQuery: "",
 					favoritesOnly: false,
 				}),
@@ -157,9 +143,7 @@ export const useClipFiltersStore = create<ClipFiltersState>()(
 				selectedGuildId: state.selectedGuildId,
 				selectedChannelIds: state.selectedChannelIds,
 				selectedAuthorIds: state.selectedAuthorIds,
-				tagsAny: state.tagsAny,
-				tagsAll: state.tagsAll,
-				tagsExclude: state.tagsExclude,
+				tags: state.tags,
 				searchQuery: state.searchQuery,
 				sortType: state.sortType,
 				favoritesOnly: state.favoritesOnly,

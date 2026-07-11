@@ -25,17 +25,14 @@ export function MainMenu({
 		selectedGuildId,
 		selectedChannelIds,
 		selectedAuthorIds,
-		tagsAny,
-		tagsAll,
-		tagsExclude,
+		tags,
 		sortType,
 		sortOrder,
 		favoritesOnly,
 		searchQuery,
 	} = useClipFiltersStore();
 
-	const hasTagsFilter =
-		tagsAny.length > 0 || tagsAll.length > 0 || tagsExclude.length > 0;
+	const hasTagsFilter = tags.length > 0;
 
 	const mainMenuItems = [
 		{

@@ -17,15 +17,7 @@ const ClipsQuerySchema = z.object({
 		.transform((val) => val.split(",").map((id) => id.trim()))
 		.pipe(z.array(z.string().regex(/^\d{17,21}$/, "Invalid author ID")))
 		.optional(),
-	tagsAny: z
-		.string()
-		.transform((val) => val.split(",").map((t) => t.trim()))
-		.optional(),
-	tagsAll: z
-		.string()
-		.transform((val) => val.split(",").map((t) => t.trim()))
-		.optional(),
-	tagsExclude: z
+	tags: z
 		.string()
 		.transform((val) => val.split(",").map((t) => t.trim()))
 		.optional(),
@@ -101,9 +93,7 @@ export async function GET(
 	const {
 		channelIds,
 		authorIds,
-		tagsAny,
-		tagsAll,
-		tagsExclude,
+		tags,
 		searchQuery,
 		favorites,
 		limit,
@@ -177,9 +167,7 @@ export async function GET(
 					auth.discordUserId, // User ID for favorites
 					favoritesOnly,
 					auth.isOwner, // Pass isGuildOwner
-					tagsAny,
-					tagsAll,
-					tagsExclude,
+					tags,
 					searchQuery,
 					seed,
 					access.channelIds
@@ -194,9 +182,7 @@ export async function GET(
 					auth.discordUserId, // User ID for favorites
 					favoritesOnly,
 					auth.isOwner, // Pass isGuildOwner
-					tagsAny,
-					tagsAll,
-					tagsExclude,
+					tags,
 					searchQuery,
 					seed,
 					access.channelIds

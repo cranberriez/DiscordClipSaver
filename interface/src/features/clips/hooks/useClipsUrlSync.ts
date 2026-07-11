@@ -34,9 +34,7 @@ export function useClipsUrlSync() {
 		selectedGuildId,
 		selectedChannelIds,
 		selectedAuthorIds,
-		tagsAny,
-		tagsAll,
-		tagsExclude,
+		tags,
 		favoritesOnly,
 		searchQuery,
 		sortOrder,
@@ -44,9 +42,7 @@ export function useClipsUrlSync() {
 		setGuildId,
 		setChannelIds,
 		setAuthorIds,
-		setTagsAny,
-		setTagsAll,
-		setTagsExclude,
+		setTags,
 		setFavoritesOnly,
 		setSearchQuery,
 		setSortOrder,
@@ -89,10 +85,7 @@ export function useClipsUrlSync() {
 		() => (selectedAuthorIds?.length ? selectedAuthorIds.join(",") : ""),
 		[selectedAuthorIds]
 	);
-	const tagsKey = useMemo(
-		() => [tagsAny.join(","), tagsAll.join(","), tagsExclude.join(",")].join("|"),
-		[tagsAny, tagsAll, tagsExclude]
-	);
+	const tagsKey = useMemo(() => tags.join(","), [tags]);
 
 	// Hydrate store from URL once
 	useEffect(() => {
@@ -101,9 +94,7 @@ export function useClipsUrlSync() {
 		const guildId = searchParams.get("guildId");
 		const channelIds = parseCsv(searchParams.get("channelIds"));
 		const authorIds = parseCsv(searchParams.get("authorIds"));
-		const urlTagsAny = parseCsv(searchParams.get("tagsAny"));
-		const urlTagsAll = parseCsv(searchParams.get("tagsAll"));
-		const urlTagsExclude = parseCsv(searchParams.get("tagsExclude"));
+		const urlTags = parseCsv(searchParams.get("tags"));
 		const fav = searchParams.get("fav");
 		const q = searchParams.get("q") || "";
 		const sort = (searchParams.get("sort") as SortOrder | null) || null;
@@ -114,9 +105,7 @@ export function useClipsUrlSync() {
 		if (guildId != null) setGuildId(guildId || null);
 		if (channelIds) setChannelIds(channelIds);
 		if (authorIds) setAuthorIds(authorIds);
-		if (urlTagsAny) setTagsAny(urlTagsAny);
-		if (urlTagsAll) setTagsAll(urlTagsAll);
-		if (urlTagsExclude) setTagsExclude(urlTagsExclude);
+		if (urlTags) setTags(urlTags);
 		if (fav != null) setFavoritesOnly(fav === "1");
 		if (q !== "") setSearchQuery(q);
 		if (sort === "asc" || sort === "desc") setSortOrder(sort);
@@ -153,10 +142,7 @@ export function useClipsUrlSync() {
 				selectedAuthorIds && selectedAuthorIds.length > 0
 					? selectedAuthorIds.join(",")
 					: undefined,
-			tagsAny: tagsAny.length > 0 ? tagsAny.join(",") : undefined,
-			tagsAll: tagsAll.length > 0 ? tagsAll.join(",") : undefined,
-			tagsExclude:
-				tagsExclude.length > 0 ? tagsExclude.join(",") : undefined,
+			tags: tags.length > 0 ? tags.join(",") : undefined,
 			fav: favoritesOnly ? "1" : undefined,
 			// Intentionally do not sync search query to URL to avoid router.replace churn
 			// and main-thread jank while typing.
@@ -179,9 +165,7 @@ export function useClipsUrlSync() {
 		selectedGuildId,
 		selectedChannelIds,
 		selectedAuthorIds,
-		tagsAny,
-		tagsAll,
-		tagsExclude,
+		tags,
 		favoritesOnly,
 		sortOrder,
 		sortType,
@@ -205,12 +189,7 @@ export function useClipsUrlSync() {
 					selectedAuthorIds && selectedAuthorIds.length > 0
 						? selectedAuthorIds.join(",")
 						: undefined,
-				tagsAny: tagsAny.length > 0 ? tagsAny.join(",") : undefined,
-				tagsAll: tagsAll.length > 0 ? tagsAll.join(",") : undefined,
-				tagsExclude:
-					tagsExclude.length > 0
-						? tagsExclude.join(",")
-						: undefined,
+				tags: tags.length > 0 ? tags.join(",") : undefined,
 				fav: favoritesOnly ? "1" : undefined,
 				q: searchQuery?.trim() ? searchQuery.trim() : undefined,
 				sort: sortOrder === "desc" ? undefined : sortOrder,
@@ -227,9 +206,7 @@ export function useClipsUrlSync() {
 			selectedGuildId,
 			selectedChannelIds,
 			selectedAuthorIds,
-			tagsAny,
-			tagsAll,
-			tagsExclude,
+			tags,
 			favoritesOnly,
 			searchQuery,
 			sortOrder,
@@ -250,10 +227,7 @@ export function useClipsUrlSync() {
 				selectedAuthorIds && selectedAuthorIds.length > 0
 					? selectedAuthorIds.join(",")
 					: undefined,
-			tagsAny: tagsAny.length > 0 ? tagsAny.join(",") : undefined,
-			tagsAll: tagsAll.length > 0 ? tagsAll.join(",") : undefined,
-			tagsExclude:
-				tagsExclude.length > 0 ? tagsExclude.join(",") : undefined,
+			tags: tags.length > 0 ? tags.join(",") : undefined,
 			fav: favoritesOnly ? "1" : undefined,
 			q: undefined,
 			sort: sortOrder === "desc" ? undefined : sortOrder,
@@ -295,12 +269,7 @@ export function useClipsUrlSync() {
 					selectedAuthorIds && selectedAuthorIds.length > 0
 						? selectedAuthorIds.join(",")
 						: undefined,
-				tagsAny: tagsAny.length > 0 ? tagsAny.join(",") : undefined,
-				tagsAll: tagsAll.length > 0 ? tagsAll.join(",") : undefined,
-				tagsExclude:
-					tagsExclude.length > 0
-						? tagsExclude.join(",")
-						: undefined,
+				tags: tags.length > 0 ? tags.join(",") : undefined,
 				fav: favoritesOnly ? "1" : undefined,
 				q: searchQuery?.trim() ? searchQuery.trim() : undefined,
 				sort: sortOrder === "desc" ? undefined : sortOrder,

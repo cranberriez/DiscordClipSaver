@@ -52,10 +52,10 @@ export function InfoBar({
 	const {
 		selectedChannelIds,
 		selectedAuthorIds,
-		tagsAny,
+		tags,
 		setChannelIds,
 		setAuthorIds,
-		setTagsAny,
+		setTags,
 	} = useClipFiltersStore();
 
 	const addToFilter = (
@@ -151,11 +151,7 @@ export function InfoBar({
 										currentTagSlugs={fullClip.tags || []}
 										readOnly={!canEditTags}
 										onTagClick={(tag) =>
-											addToFilter(
-												tagsAny,
-												setTagsAny,
-												tag.slug
-											)
+											addToFilter(tags, setTags, tag.slug)
 										}
 									/>
 								</div>

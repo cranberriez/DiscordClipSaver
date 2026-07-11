@@ -13,17 +13,10 @@ import {
 } from "@/components/ui/dropdown-menu";
 
 export function ViewFilter() {
-	const {
-		favoritesOnly,
-		setFavoritesOnly,
-		openTagModal,
-		tagsAny,
-		tagsAll,
-		tagsExclude,
-	} = useClipFiltersStore();
+	const { favoritesOnly, setFavoritesOnly, openTagModal, tags } =
+		useClipFiltersStore();
 
-	const hasActiveTagFilters =
-		tagsAny.length > 0 || tagsAll.length > 0 || tagsExclude.length > 0;
+	const hasActiveTagFilters = tags.length > 0;
 
 	return (
 		<DropdownMenu>

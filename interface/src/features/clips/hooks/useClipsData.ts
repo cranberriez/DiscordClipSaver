@@ -16,9 +16,7 @@ export function useClipsData(opts: { hydrated: boolean; targetPage?: number }) {
 		selectedGuildId,
 		selectedChannelIds,
 		selectedAuthorIds,
-		tagsAny,
-		tagsAll,
-		tagsExclude,
+		tags,
 		searchQuery,
 		sortOrder,
 		sortType,
@@ -40,7 +38,8 @@ export function useClipsData(opts: { hydrated: boolean; targetPage?: number }) {
 		randomSeedRef.current = genSeed();
 	}
 	prevSortTypeRef.current = sortType;
-	const randomSeed = sortType === "random" ? randomSeedRef.current : undefined;
+	const randomSeed =
+		sortType === "random" ? randomSeedRef.current : undefined;
 
 	// Use selectedGuildId immediately if available, but still wait for hydration for other URL params
 	// This prevents the race condition where URL hydrates before Zustand store on first navigation
@@ -82,9 +81,7 @@ export function useClipsData(opts: { hydrated: boolean; targetPage?: number }) {
 			selectedAuthorIds.length < authors.length
 				? selectedAuthorIds
 				: undefined,
-		tagsAny: tagsAny.length > 0 ? tagsAny : undefined,
-		tagsAll: tagsAll.length > 0 ? tagsAll : undefined,
-		tagsExclude: tagsExclude.length > 0 ? tagsExclude : undefined,
+		tags: tags.length > 0 ? tags : undefined,
 		searchQuery: deferredSearchQuery.trim() || undefined,
 		limit: 50,
 		sortOrder: sortOrder,

@@ -12,9 +12,7 @@ export interface ClipQueryFilters {
 	userId?: string;
 	favoritesOnly?: boolean;
 	isGuildOwner?: boolean;
-	tagsAny?: string[];
-	tagsAll?: string[];
-	tagsExclude?: string[];
+	tags?: string[];
 	searchQuery?: string;
 	/** Exact channel IDs the requesting member may view; undefined means owner bypass. */
 	accessibleChannelIds?: string[];
@@ -117,6 +115,7 @@ function getSearchPredicate(query: string) {
  */
 class ClipQueryBuilder {
 	private searchQuery?: string;
+	private tags: string[] = [];
 	private query: SelectQueryBuilder<
 		any,
 		"clip" | "message" | "author",
@@ -231,49 +230,10 @@ class ClipQueryBuilder {
 			this.query = onlyFavorites(this.query, filters.userId);
 		}
 
-		// Tag Filters
-		if (filters.tagsAny && filters.tagsAny.length > 0) {
-			this.query = this.query.where(({ exists, selectFrom }) =>
-				exists(
-					selectFrom("clip_tags")
-						.innerJoin(
-							"server_tags",
-							"server_tags.id",
-							"clip_tags.tag_id"
-						)
-						.select("clip_tags.id")
-						.whereRef("clip_tags.clip_id", "=", "clip.id")
-						.where("server_tags.slug", "in", filters.tagsAny!)
-						.where("server_tags.is_active", "=", true)
-				)
-			);
-		}
-
-		if (filters.tagsExclude && filters.tagsExclude.length > 0) {
-			this.query = this.query.where(({ not, exists, selectFrom }) =>
-				not(
-					exists(
-						selectFrom("clip_tags")
-							.innerJoin(
-								"server_tags",
-								"server_tags.id",
-								"clip_tags.tag_id"
-							)
-							.select("clip_tags.id")
-							.whereRef("clip_tags.clip_id", "=", "clip.id")
-							.where(
-								"server_tags.slug",
-								"in",
-								filters.tagsExclude!
-							)
-							.where("server_tags.is_active", "=", true)
-					)
-				)
-			);
-		}
-
-		if (filters.tagsAll && filters.tagsAll.length > 0) {
-			const requiredCount = filters.tagsAll.length;
+		// Match clips containing at least one selected tag. The same correlated
+		// count is used as the primary sort key below, before LIMIT/OFFSET.
+		if (filters.tags && filters.tags.length > 0) {
+			this.tags = [...new Set(filters.tags)];
 			this.query = this.query.where((eb) =>
 				eb(
 					eb
@@ -287,10 +247,10 @@ class ClipQueryBuilder {
 							sub.fn.count<number>("server_tags.id").as("count")
 						)
 						.whereRef("clip_tags.clip_id", "=", "clip.id")
-						.where("server_tags.slug", "in", filters.tagsAll!)
+						.where("server_tags.slug", "in", this.tags)
 						.where("server_tags.is_active", "=", true),
-					"=",
-					requiredCount
+					">",
+					0
 				)
 			);
 		}
@@ -325,6 +285,26 @@ class ClipQueryBuilder {
 			seed = "",
 		} = options;
 		const fetchLimit = Math.min(limit * fetchMultiplier, 200);
+
+		if (this.tags.length > 0) {
+			this.query = this.query.orderBy(
+				(eb) =>
+					eb
+						.selectFrom("clip_tags")
+						.innerJoin(
+							"server_tags",
+							"server_tags.id",
+							"clip_tags.tag_id"
+						)
+						.select((sub) =>
+							sub.fn.count<number>("server_tags.id").as("count")
+						)
+						.whereRef("clip_tags.clip_id", "=", "clip.id")
+						.where("server_tags.slug", "in", this.tags)
+						.where("server_tags.is_active", "=", true),
+				"desc"
+			);
+		}
 
 		if (this.searchQuery) {
 			this.query = this.query.orderBy(

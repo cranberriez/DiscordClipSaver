@@ -165,9 +165,7 @@ export class DataService {
 		userId?: string,
 		favoritesOnly?: boolean,
 		isGuildOwner?: boolean,
-		tagsAny?: string[],
-		tagsAll?: string[],
-		tagsExclude?: string[],
+		tags?: string[],
 		searchQuery?: string,
 		seed?: string,
 		accessibleChannelIds?: string[]
@@ -182,9 +180,7 @@ export class DataService {
 			userId,
 			favoritesOnly,
 			isGuildOwner,
-			tagsAny,
-			tagsAll,
-			tagsExclude,
+			tags,
 			searchQuery,
 			seed,
 			accessibleChannelIds
@@ -209,9 +205,7 @@ export class DataService {
 		userId?: string,
 		favoritesOnly?: boolean,
 		isGuildOwner?: boolean,
-		tagsAny?: string[],
-		tagsAll?: string[],
-		tagsExclude?: string[],
+		tags?: string[],
 		searchQuery?: string,
 		seed?: string,
 		accessibleChannelIds?: string[]
@@ -227,9 +221,7 @@ export class DataService {
 			userId,
 			favoritesOnly,
 			isGuildOwner,
-			tagsAny,
-			tagsAll,
-			tagsExclude,
+			tags,
 			searchQuery,
 			seed,
 			accessibleChannelIds

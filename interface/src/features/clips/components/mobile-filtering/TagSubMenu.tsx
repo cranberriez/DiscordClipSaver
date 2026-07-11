@@ -8,14 +8,7 @@ import { useClipFiltersStore } from "../../stores/useClipFiltersStore";
 import { useGuildTags } from "@/lib/queries/tags";
 
 export function TagSubMenu({ guildId }: { guildId: string }) {
-	const {
-		tagsAny,
-		setTagsAny,
-		tagsAll,
-		tagsExclude,
-		setTagsAll,
-		setTagsExclude,
-	} = useClipFiltersStore();
+	const { tags: selectedTags, setTags } = useClipFiltersStore();
 	const { data: tags = [], isLoading } = useGuildTags(guildId);
 	const [search, setSearch] = useState("");
 
@@ -26,22 +19,14 @@ export function TagSubMenu({ guildId }: { guildId: string }) {
 	}, [tags, search]);
 
 	const toggleTag = (slug: string) => {
-		if (tagsAny.includes(slug)) {
-			setTagsAny(tagsAny.filter((t) => t !== slug));
+		if (selectedTags.includes(slug)) {
+			setTags(selectedTags.filter((tag) => tag !== slug));
 		} else {
-			setTagsAny([...tagsAny, slug]);
-			if (tagsExclude.includes(slug))
-				setTagsExclude(tagsExclude.filter((t) => t !== slug));
-			if (tagsAll.includes(slug))
-				setTagsAll(tagsAll.filter((t) => t !== slug));
+			setTags([...selectedTags, slug]);
 		}
 	};
 
-	const handleReset = () => {
-		setTagsAny([]);
-		setTagsAll([]);
-		setTagsExclude([]);
-	};
+	const handleReset = () => setTags([]);
 
 	return (
 		<div className="flex h-full flex-col overflow-hidden">
@@ -55,9 +40,7 @@ export function TagSubMenu({ guildId }: { guildId: string }) {
 						className="pl-9"
 					/>
 				</div>
-				{(tagsAny.length > 0 ||
-					tagsAll.length > 0 ||
-					tagsExclude.length > 0) && (
+				{selectedTags.length > 0 && (
 					<Button
 						variant="ghost"
 						size="sm"
@@ -82,23 +65,18 @@ export function TagSubMenu({ guildId }: { guildId: string }) {
 				) : (
 					<div className="flex flex-wrap gap-2 pb-4">
 						{filteredTags.map((tag) => {
-							const isSelected = tagsAny.includes(tag.slug);
-							const isAll = tagsAll.includes(tag.slug);
-							const isExclude = tagsExclude.includes(tag.slug);
+							const isSelected = selectedTags.includes(tag.slug);
 
 							let customStyles = {};
 							let stateClass =
 								"text-foreground hover:bg-muted/50 border-dashed";
 
-							if (isSelected || isAll) {
+							if (isSelected) {
 								stateClass =
 									"border-transparent text-white shadow-sm";
 								customStyles = {
 									backgroundColor: tag.color || "#52525b",
 								};
-							} else if (isExclude) {
-								stateClass =
-									"border-red-500/50 text-red-500 hover:bg-red-500/10";
 							} else {
 								customStyles = {
 									borderColor: tag.color || "#52525b",

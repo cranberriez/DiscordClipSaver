@@ -75,7 +75,7 @@ export function ClipCommandPalette({
 		selectedGuildId,
 		selectedChannelIds,
 		selectedAuthorIds,
-		tagsAny,
+		tags: selectedTags,
 		searchQuery,
 		sortType,
 		sortOrder,
@@ -84,7 +84,7 @@ export function ClipCommandPalette({
 		closePalette,
 		setChannelIds,
 		setAuthorIds,
-		setTagsAny,
+		setTags,
 		setSearchQuery,
 		setSortType,
 		setSortOrder,
@@ -139,17 +139,12 @@ export function ClipCommandPalette({
 		[authors]
 	);
 
-	const activeTags = useMemo(
-		() => tags.filter((t) => t.is_active),
-		[tags]
-	);
+	const activeTags = useMemo(() => tags.filter((t) => t.is_active), [tags]);
 
 	const toggleIn = useCallback(
 		(list: string[], setter: (v: string[]) => void, id: string) => {
 			setter(
-				list.includes(id)
-					? list.filter((v) => v !== id)
-					: [...list, id]
+				list.includes(id) ? list.filter((v) => v !== id) : [...list, id]
 			);
 		},
 		[]
@@ -162,8 +157,7 @@ export function ClipCommandPalette({
 		(c: ChannelWithStats): PaletteRow => ({
 			key: `ch-${c.id}`,
 			keepOpen: true,
-			onSelect: () =>
-				toggleIn(selectedChannelIds, setChannelIds, c.id),
+			onSelect: () => toggleIn(selectedChannelIds, setChannelIds, c.id),
 			content: (
 				<>
 					<Check
@@ -275,15 +269,13 @@ export function ClipCommandPalette({
 					rows: matches.map((t) => ({
 						key: `tag-${t.slug}`,
 						keepOpen: true,
-						onSelect: () =>
-							toggleIn(tagsAny, setTagsAny, t.slug),
+						onSelect: () => toggleIn(selectedTags, setTags, t.slug),
 						content: (
 							<>
 								<Check
 									className={cn(
 										"text-primary h-4 w-4 flex-none",
-										!tagsAny.includes(t.slug) &&
-											"invisible"
+										!selectedTags.includes(t.slug) && "invisible"
 									)}
 								/>
 								{t.color && (
@@ -303,8 +295,7 @@ export function ClipCommandPalette({
 		if (mode === "sort") {
 			const matches = SORT_OPTIONS.filter(
 				(o) =>
-					matchesQuery(o.label, query) ||
-					matchesQuery(o.group, query)
+					matchesQuery(o.label, query) || matchesQuery(o.group, query)
 			);
 			return [
 				{
@@ -449,22 +440,19 @@ export function ClipCommandPalette({
 		selectableChannels,
 		sortedAuthors,
 		activeTags,
-		tagsAny,
+		selectedTags,
 		sortType,
 		sortOrder,
 		channelRow,
 		authorRow,
 		toggleIn,
-		setTagsAny,
+		setTags,
 		setSortType,
 		setSortOrder,
 		setSearchQuery,
 	]);
 
-	const flatRows = useMemo(
-		() => sections.flatMap((s) => s.rows),
-		[sections]
-	);
+	const flatRows = useMemo(() => sections.flatMap((s) => s.rows), [sections]);
 
 	// Clamp the highlighted row when the list shrinks
 	useEffect(() => {
@@ -508,22 +496,23 @@ export function ClipCommandPalette({
 				remove: () =>
 					setAuthorIds(selectedAuthorIds.filter((v) => v !== id)),
 			})),
-			...tagsAny.map((slug) => ({
+			...selectedTags.map((slug) => ({
 				variant: "tag" as const,
 				label: tagNames.get(slug) ?? slug,
-				remove: () => setTagsAny(tagsAny.filter((v) => v !== slug)),
+				remove: () =>
+					setTags(selectedTags.filter((v) => v !== slug)),
 			})),
 		],
 		[
 			selectedChannelIds,
 			selectedAuthorIds,
-			tagsAny,
+			selectedTags,
 			channelNames,
 			authorNames,
 			tagNames,
 			setChannelIds,
 			setAuthorIds,
-			setTagsAny,
+			setTags,
 		]
 	);
 
@@ -669,7 +658,9 @@ export function ClipCommandPalette({
 				{/* Footer */}
 				<div className="border-border/50 text-muted-foreground flex items-center gap-4 border-t px-4 py-2 text-[11px]">
 					<span>↑↓ navigate</span>
-					<span>↵ {mode && mode !== "sort" ? "toggle" : "select"}</span>
+					<span>
+						↵ {mode && mode !== "sort" ? "toggle" : "select"}
+					</span>
 					<span>⌫ remove filter</span>
 					<span>esc close</span>
 					{mode && (
