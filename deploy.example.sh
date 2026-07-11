@@ -9,12 +9,15 @@
 #
 set -euo pipefail
 
-COMPOSE="docker compose -f docker-compose-prod.yml"
+ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+cd "$ROOT_DIR"
+
+COMPOSE=(bash "$ROOT_DIR/scripts/compose.sh" --production)
 BRANCH="${DEPLOY_BRANCH:-master}"
 # Only our own GHCR images are pulled each run (avoids hammering Docker Hub's
 # anonymous rate limit for postgres/redis/traefik on every poll). db-schema
 # shares the worker image, so it is not listed separately.
-APP_SERVICES="interface bot-api bot-discord worker"
+APP_SERVICES=(interface bot-api bot-discord worker)
 
 echo "Starting deploy..."
 
@@ -22,7 +25,7 @@ echo "Starting deploy..."
 git pull --ff-only origin "$BRANCH"
 
 # Pull the latest app images and reconcile the stack.
-$COMPOSE pull $APP_SERVICES
-$COMPOSE up -d
+"${COMPOSE[@]}" pull "${APP_SERVICES[@]}"
+"${COMPOSE[@]}" up -d --remove-orphans
 
 echo "Deploy complete."

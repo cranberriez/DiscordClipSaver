@@ -293,6 +293,13 @@ export class DataService {
 		return db.getClipAccessScope(clipId);
 	}
 
+	static async getThumbnailAccessScope(
+		clipId: string,
+		size: "small" | "large"
+	) {
+		return db.getThumbnailAccessScope(clipId, size);
+	}
+
 	// New method for user's favorites across guilds
 	static async getFavoriteClips(
 		userId: string,

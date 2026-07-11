@@ -16,7 +16,7 @@ def create_storage_backend() -> StorageBackend:
     Create storage backend based on STORAGE_TYPE environment variable
     
     Environment variables:
-        STORAGE_TYPE: "local" | "gcs" | "s3" (default: "local")
+        STORAGE_TYPE: "local" | "gcs" (default: "local")
         
         For local:
             STORAGE_PATH: Base path for storage (default: "./storage")
@@ -26,12 +26,6 @@ def create_storage_backend() -> StorageBackend:
             GCS_PROJECT_ID: GCP project ID (optional)
             GOOGLE_APPLICATION_CREDENTIALS: Path to service account JSON
         
-        For S3:
-            S3_BUCKET_NAME: S3 bucket name (required)
-            AWS_ACCESS_KEY_ID: AWS access key
-            AWS_SECRET_ACCESS_KEY: AWS secret key
-            AWS_REGION: AWS region (default: "us-east-1")
-    
     Returns:
         Configured storage backend
     """
@@ -55,19 +49,8 @@ def create_storage_backend() -> StorageBackend:
         from .gcs import GCSStorageBackend
         return GCSStorageBackend(bucket_name=bucket_name, project_id=project_id)
     
-    elif storage_type == "s3":
-        bucket_name = os.getenv("S3_BUCKET_NAME")
-        if not bucket_name:
-            raise ValueError("S3_BUCKET_NAME environment variable is required for S3 storage")
-        
-        logger.info("Using S3 storage backend")
-        logger.log(VERBOSE, f"Bucket: {bucket_name}")
-        
-        from .s3 import S3StorageBackend
-        return S3StorageBackend(bucket_name=bucket_name)
-    
     else:
-        raise ValueError(f"Unknown storage type: {storage_type}. Use 'local', 'gcs', or 's3'")
+        raise ValueError(f"Unknown storage type: {storage_type}. Use 'local' or 'gcs'")
 
 
 # Singleton instance

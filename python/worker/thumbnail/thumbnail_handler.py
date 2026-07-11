@@ -8,14 +8,12 @@ Coordinates between the thumbnail generator and database models to:
 - Handle retries with exponential backoff
 """
 import logging
-import os
-import aiofiles.os
 import uuid
 from datetime import datetime, timezone, timedelta
 from typing import Tuple, Optional
 
 from shared.db.models import Clip, Thumbnail, FailedThumbnail
-from shared.storage import get_storage_backend
+from shared.storage import get_storage_backend, thumbnail_object_key
 from worker.thumbnail.thumbnail_generator import (
     ThumbnailGenerator,
     THUMBNAIL_SMALL_WIDTH,
@@ -53,8 +51,12 @@ class ThumbnailHandler:
         
         try:
             # Check if thumbnails already exist in storage (even if DB says completed)
-            small_path = f"thumbnails/guild_{clip.guild_id}/{clip.id}_small.webp"
-            large_path = f"thumbnails/guild_{clip.guild_id}/{clip.id}_large.webp"
+            small_path = thumbnail_object_key(
+                str(clip.guild_id), str(clip.channel_id), str(clip.id), "small"
+            )
+            large_path = thumbnail_object_key(
+                str(clip.guild_id), str(clip.channel_id), str(clip.id), "large"
+            )
             
             small_exists = await self.storage.exists(small_path)
             large_exists = await self.storage.exists(large_path)
@@ -78,28 +80,9 @@ class ThumbnailHandler:
             # Generate thumbnails and extract video metadata
             small_path, large_path, video_metadata = await self.generator.generate_for_clip(clip)
             
-            # Get file sizes for database records
-            small_full_path = os.path.join(
-                self.storage.base_path if hasattr(self.storage, 'base_path') else './storage',
-                small_path
-            )
-            large_full_path = os.path.join(
-                self.storage.base_path if hasattr(self.storage, 'base_path') else './storage',
-                large_path
-            )
-            
-            # Get file sizes asynchronously
-            try:
-                small_stat = await aiofiles.os.stat(small_full_path)
-                small_size = small_stat.st_size
-            except FileNotFoundError:
-                small_size = 0
-            
-            try:
-                large_stat = await aiofiles.os.stat(large_full_path)
-                large_size = large_stat.st_size
-            except FileNotFoundError:
-                large_size = 0
+            # Storage-neutral object metadata (local filesystem or GCS).
+            small_size = await self.storage.get_size(small_path)
+            large_size = await self.storage.get_size(large_path)
             
             # Create or update small thumbnail record
             await Thumbnail.update_or_create(

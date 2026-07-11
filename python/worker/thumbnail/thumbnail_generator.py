@@ -20,7 +20,7 @@ import aiofiles.os
 import ffmpeg
 from PIL import Image
 from shared.db.models import Clip, Thumbnail
-from shared.storage import get_storage_backend
+from shared.storage import get_storage_backend, thumbnail_object_key
 from shared.logger import VERBOSE
 
 logger = logging.getLogger(__name__)
@@ -174,21 +174,20 @@ class ThumbnailGenerator:
             )
             logger.info(f"  Large thumbnail size: {len(large_thumbnail_data):,} bytes")
             
-            # Save small thumbnail (using clip ID as filename)
-            small_storage_path = f"thumbnails/guild_{clip.guild_id}/{clip.id}_small.webp"
+            # Object keys include the immutable authorization scope. The bucket
+            # remains private; delivery is handled by the authenticated interface.
+            small_storage_path = thumbnail_object_key(
+                str(clip.guild_id), str(clip.channel_id), str(clip.id), "small"
+            )
             small_saved_path = await self.storage.save(small_thumbnail_data, small_storage_path)
             logger.info(f"  Saved small thumbnail to: {small_saved_path}")
             
             # Save large thumbnail
-            large_storage_path = f"thumbnails/guild_{clip.guild_id}/{clip.id}_large.webp"
+            large_storage_path = thumbnail_object_key(
+                str(clip.guild_id), str(clip.channel_id), str(clip.id), "large"
+            )
             large_saved_path = await self.storage.save(large_thumbnail_data, large_storage_path)
             logger.info(f"  Saved large thumbnail to: {large_saved_path}")
-            
-            # Get public URLs
-            small_public_url = self.storage.get_public_url(small_storage_path)
-            large_public_url = self.storage.get_public_url(large_storage_path)
-            logger.info(f"  Small thumbnail URL: {small_public_url}")
-            logger.info(f"  Large thumbnail URL: {large_public_url}")
             
             logger.info(f"  Thumbnail generation complete")
             

@@ -48,7 +48,7 @@ export function ClipCard({
 		}
 
 		if (thumbnail && thumbnail.url) {
-			return `/api/storage/${thumbnail.url}`;
+			return thumbnail.url;
 		}
 		return null;
 	};

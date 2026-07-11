@@ -41,6 +41,7 @@ export {
 	getFavoriteClips,
 	getClipGuildId,
 	getClipAccessScope,
+	getThumbnailAccessScope,
 } from "./queries/clips";
 export type { ClipQueryOptions, ClipQueryFilters } from "./queries/clips";
 export {

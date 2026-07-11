@@ -3,7 +3,7 @@ Google Cloud Storage backend
 
 Requires: pip install google-cloud-storage
 """
-import os
+import asyncio
 import logging
 from typing import Optional
 
@@ -41,44 +41,62 @@ class GCSStorageBackend(StorageBackend):
         logger.info(f"GCSStorageBackend initialized for bucket: {bucket_name}")
     
     async def save(self, file_data: bytes, path: str) -> str:
-        """Upload file to GCS"""
+        """Upload a private object to GCS."""
         blob = self.bucket.blob(path)
-        
-        # Upload with content type detection
         content_type = self._get_content_type(path)
-        blob.upload_from_string(file_data, content_type=content_type)
+        await asyncio.to_thread(
+            blob.upload_from_string,
+            file_data,
+            content_type=content_type,
+        )
         
         logger.info(f"Uploaded file to GCS: gs://{self.bucket_name}/{path}")
         return f"gs://{self.bucket_name}/{path}"
+
+    async def save_if_absent(self, file_data: bytes, path: str) -> bool:
+        """Create an object without overwriting an object written concurrently."""
+        from google.api_core.exceptions import PreconditionFailed
+
+        blob = self.bucket.blob(path)
+        try:
+            await asyncio.to_thread(
+                blob.upload_from_string,
+                file_data,
+                content_type=self._get_content_type(path),
+                if_generation_match=0,
+            )
+            return True
+        except PreconditionFailed:
+            return False
     
     async def read(self, path: str) -> bytes:
         """Download file from GCS"""
         blob = self.bucket.blob(path)
-        return blob.download_as_bytes()
+        return await asyncio.to_thread(blob.download_as_bytes)
     
     async def delete(self, path: str) -> bool:
         """Delete file from GCS"""
+        from google.api_core.exceptions import NotFound
+
         try:
             blob = self.bucket.blob(path)
-            blob.delete()
+            await asyncio.to_thread(blob.delete)
             logger.info(f"Deleted file from GCS: {path}")
             return True
-        except Exception as e:
-            logger.error(f"Failed to delete file from GCS: {e}")
+        except NotFound:
+            logger.warning(f"GCS object not found for deletion: {path}")
             return False
     
     async def exists(self, path: str) -> bool:
         """Check if file exists in GCS"""
         blob = self.bucket.blob(path)
-        return blob.exists()
-    
-    def get_public_url(self, path: str) -> str:
-        """
-        Get public URL for the file
-        
-        Note: Bucket must have public access enabled, or use signed URLs
-        """
-        return f"https://storage.googleapis.com/{self.bucket_name}/{path}"
+        return await asyncio.to_thread(blob.exists)
+
+    async def get_size(self, path: str) -> int:
+        """Return a GCS object's size without downloading it."""
+        blob = self.bucket.blob(path)
+        await asyncio.to_thread(blob.reload)
+        return int(blob.size or 0)
     
     def _get_content_type(self, path: str) -> str:
         """Determine content type from file extension"""

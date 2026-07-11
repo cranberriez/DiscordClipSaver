@@ -1,0 +1,18 @@
+services:
+    worker:
+        volumes:
+            - type: bind
+              source: ${GCS_CREDENTIALS_FILE:?Set GCS_CREDENTIALS_FILE to the service-account JSON path}
+              target: /var/run/secrets/google/service-account.json
+              read_only: true
+              bind:
+                  create_host_path: false
+
+    interface:
+        volumes:
+            - type: bind
+              source: ${GCS_CREDENTIALS_FILE:?Set GCS_CREDENTIALS_FILE to the service-account JSON path}
+              target: /var/run/secrets/google/service-account.json
+              read_only: true
+              bind:
+                  create_host_path: false

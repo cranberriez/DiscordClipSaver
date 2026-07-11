@@ -410,3 +410,31 @@ export async function getClipAccessScope(clipId: string) {
 		.where("message.deleted_at", "is", null)
 		.executeTakeFirst();
 }
+
+/** Exact thumbnail authorization data. Includes archived clips deliberately. */
+export async function getThumbnailAccessScope(
+	clipId: string,
+	size: "small" | "large"
+) {
+	return getDb()
+		.selectFrom("thumbnail")
+		.innerJoin("clip", "clip.id", "thumbnail.clip_id")
+		.innerJoin("message", "message.id", "clip.message_id")
+		.innerJoin("channel", "channel.id", "clip.channel_id")
+		.select([
+			"clip.id as clip_id",
+			"clip.guild_id",
+			"clip.channel_id",
+			"clip.visibility",
+			"clip.deleted_at as clip_deleted_at",
+			"message.author_id",
+			"message.deleted_at as message_deleted_at",
+			"channel.deleted_at as channel_deleted_at",
+			"thumbnail.storage_path",
+			"thumbnail.mime_type",
+		])
+		.where("thumbnail.clip_id", "=", clipId)
+		.where("thumbnail.size_type", "=", size)
+		.where("thumbnail.deleted_at", "is", null)
+		.executeTakeFirst();
+}

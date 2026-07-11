@@ -4,8 +4,6 @@ Abstract base class for storage backends
 Supports local filesystem, Docker volumes, and cloud storage (GCS, S3, etc.)
 """
 from abc import ABC, abstractmethod
-from typing import BinaryIO, Optional
-from pathlib import Path
 
 
 class StorageBackend(ABC):
@@ -63,16 +61,16 @@ class StorageBackend(ABC):
             True if file exists
         """
         pass
-    
+
     @abstractmethod
-    def get_public_url(self, path: str) -> str:
+    async def get_size(self, path: str) -> int:
         """
-        Get public URL for accessing the file
+        Get the size of an object in bytes.
         
         Args:
             path: Path to the file
             
         Returns:
-            Public URL (for cloud) or local path (for filesystem)
+            Object size in bytes
         """
         pass

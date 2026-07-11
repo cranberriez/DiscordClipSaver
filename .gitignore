@@ -26,3 +26,6 @@ deploy.sh
 
 # Internal review docs (keep local, not for the userbase)
 docs/FINAL-*.md
+
+# Deployment scripts
+deploy/

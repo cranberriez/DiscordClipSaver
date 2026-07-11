@@ -216,10 +216,10 @@ export function ClipModal({
 		}
 
 		if (largeThumbnail && largeThumbnail.url) {
-			return `/api/storage/${largeThumbnail.url}`;
+			return largeThumbnail.url;
 		}
 		if (smallThumbnail && smallThumbnail.url) {
-			return `/api/storage/${smallThumbnail.url}`;
+			return smallThumbnail.url;
 		}
 		return null;
 	};

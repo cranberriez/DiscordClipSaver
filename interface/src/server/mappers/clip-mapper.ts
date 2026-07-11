@@ -51,7 +51,8 @@ export class ClipMapper {
 
 	static toThumbnail(dbThumbnail: DbThumbnail): Thumbnail {
 		return {
-			url: dbThumbnail.storage_path || null,
+			// Never expose the object key/folder hierarchy in clip payloads.
+			url: `/api/thumbnails/${encodeURIComponent(dbThumbnail.clip_id)}/${encodeURIComponent(dbThumbnail.size_type)}`,
 			size: dbThumbnail.size_type as "small" | "large",
 			width: dbThumbnail.width,
 			height: dbThumbnail.height,
