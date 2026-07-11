@@ -92,23 +92,47 @@ export const PALETTE_PREFIXES: Record<string, PaletteMode> = {
 };
 
 /**
- * Parse palette input into a mode + remaining query.
+ * Parse palette input into a mode, its completion query, and any plain search
+ * text before it. Selectors may start the input or follow search text.
  * "#tar" -> { mode: "channel", query: "tar" }
+ * "funny moment #tar" ->
+ *   { mode: "channel", query: "tar", searchText: "funny moment" }
  * "hello" -> { mode: null, query: "hello" }
  */
 export function parsePaletteInput(value: string): {
 	mode: PaletteMode | null;
 	query: string;
+	searchText: string;
 } {
-	const selectorMode = PALETTE_PREFIXES[value[0]];
-	if (selectorMode) {
-		return { mode: selectorMode, query: value.slice(1) };
+	let modeStart = -1;
+	let mode: PaletteMode | null = null;
+	let queryStart = -1;
+
+	for (const match of value.matchAll(/(^|\s)([#@!])/g)) {
+		const selectorStart = match.index + match[1].length;
+		if (selectorStart >= modeStart) {
+			modeStart = selectorStart;
+			mode = PALETTE_PREFIXES[match[2]];
+			queryStart = selectorStart + 1;
+		}
 	}
 
-	const sortMatch = value.match(/^sort:(.*)$/i);
-	if (sortMatch) {
-		return { mode: "sort", query: sortMatch[1] };
+	for (const match of value.matchAll(/(^|\s)sort:/gi)) {
+		const selectorStart = match.index + match[1].length;
+		if (selectorStart >= modeStart) {
+			modeStart = selectorStart;
+			mode = "sort";
+			queryStart = selectorStart + "sort:".length;
+		}
 	}
 
-	return { mode: null, query: value };
+	if (mode && queryStart >= 0) {
+		return {
+			mode,
+			query: value.slice(queryStart),
+			searchText: value.slice(0, modeStart).trimEnd(),
+		};
+	}
+
+	return { mode: null, query: value, searchText: value };
 }

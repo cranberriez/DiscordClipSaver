@@ -8,7 +8,7 @@ import {
 	useState,
 	type ReactNode,
 } from "react";
-import { Check, Hash, Search } from "lucide-react";
+import { ArrowRight, Check, Hash, Search } from "lucide-react";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { UserAvatar } from "@/components/core/UserAvatar";
 import { useClipFiltersStore } from "../../stores/useClipFiltersStore";
@@ -104,11 +104,11 @@ export function ClipCommandPalette({
 	useEffect(() => {
 		if (isPaletteOpen) {
 			setValue(paletteSeed || searchQuery);
-			setHot(0);
+			setHot(paletteSeed ? 0 : -1);
 		}
 	}, [isPaletteOpen, paletteSeed, searchQuery]);
 
-	const { mode, query } = parsePaletteInput(value);
+	const { mode, query, searchText } = parsePaletteInput(value);
 
 	// ------------------------------------------------------------------
 	// Data helpers
@@ -397,7 +397,9 @@ export function ClipCommandPalette({
 				key: `seed-${prefix}`,
 				keepOpen: true,
 				onSelect: () => {
-					setValue(prefix);
+					setValue(
+						`${query.trimEnd()}${query.trim() ? " " : ""}${prefix}`
+					);
 					setHot(0);
 					inputRef.current?.focus();
 				},
@@ -465,7 +467,7 @@ export function ClipCommandPalette({
 
 	// Clamp the highlighted row when the list shrinks
 	useEffect(() => {
-		if (hot >= flatRows.length) setHot(0);
+		if (hot >= flatRows.length) setHot(flatRows.length === 0 ? -1 : 0);
 	}, [flatRows.length, hot]);
 
 	// Keep the highlighted row in view
@@ -527,6 +529,11 @@ export function ClipCommandPalette({
 	// ------------------------------------------------------------------
 	// Handlers
 	// ------------------------------------------------------------------
+	const submitSearch = () => {
+		setSearchQuery(value.trim());
+		closePalette();
+	};
+
 	const selectRow = (index: number) => {
 		const row = flatRows[index];
 		if (!row) return;
@@ -534,27 +541,36 @@ export function ClipCommandPalette({
 		if (!row.keepOpen) closePalette();
 		else {
 			if (row.valueAfterSelect !== undefined) {
-				setValue(row.valueAfterSelect);
-				setHot(0);
+				const nextValue =
+					mode && searchText
+						? `${searchText} `
+						: row.valueAfterSelect;
+				setValue(nextValue);
+				setHot(mode && searchText ? -1 : 0);
 			}
 			inputRef.current?.focus();
 		}
 	};
 
+	const activateArrow = () => {
+		if (mode) selectRow(hot >= 0 ? hot : 0);
+		else submitSearch();
+	};
+
 	const onKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
 		if (e.key === "ArrowDown" || e.key === "ArrowUp") {
 			e.preventDefault();
-			if (flatRows.length === 0) return;
+			const optionCount = flatRows.length + 1;
+			const direction = e.key === "ArrowDown" ? 1 : -1;
 			setHot(
-				(h) =>
-					(h + (e.key === "ArrowDown" ? 1 : flatRows.length - 1)) %
-					flatRows.length
+				(h) => ((h + 1 + direction + optionCount) % optionCount) - 1
 			);
 			return;
 		}
 		if (e.key === "Enter") {
 			e.preventDefault();
-			selectRow(hot);
+			if (hot === -1) activateArrow();
+			else selectRow(hot);
 			return;
 		}
 		if (e.key === "Backspace" && value === "" && inputTokens.length > 0) {
@@ -594,8 +610,9 @@ export function ClipCommandPalette({
 						ref={inputRef}
 						value={value}
 						onChange={(e) => {
-							setValue(e.target.value);
-							setHot(0);
+							const nextValue = e.target.value;
+							setValue(nextValue);
+							setHot(parsePaletteInput(nextValue).mode ? 0 : -1);
 						}}
 						onKeyDown={onKeyDown}
 						placeholder={
@@ -610,12 +627,32 @@ export function ClipCommandPalette({
 						aria-expanded="true"
 						aria-controls="clip-palette-listbox"
 						aria-activedescendant={
-							flatRows[hot] ? `palette-row-${hot}` : undefined
+							hot === -1
+								? "palette-search-submit"
+								: flatRows[hot]
+									? `palette-row-${hot}`
+									: undefined
 						}
 					/>
-					<kbd className="border-border bg-sidebar text-muted-foreground flex-none rounded border px-1.5 py-0.5 font-mono text-[10px]">
-						esc
-					</kbd>
+					<button
+						id="palette-search-submit"
+						type="button"
+						onClick={activateArrow}
+						onMouseMove={() => setHot(-1)}
+						className={cn(
+							"border-border bg-sidebar text-muted-foreground hover:bg-accent hover:text-foreground focus-visible:ring-ring flex h-7 w-7 flex-none cursor-pointer items-center justify-center rounded-md border transition-colors focus-visible:ring-2 focus-visible:outline-none",
+							hot === -1 &&
+								"bg-accent text-foreground ring-ring ring-2"
+						)}
+						aria-label={
+							mode
+								? "Select highlighted option"
+								: "Apply clip search"
+						}
+						title={mode ? "Select option" : "Apply search"}
+					>
+						<ArrowRight className="h-3.5 w-3.5" />
+					</button>
 				</div>
 
 				{/* Results */}
@@ -673,7 +710,12 @@ export function ClipCommandPalette({
 				<div className="border-border/50 text-muted-foreground flex items-center gap-4 border-t px-4 py-2 text-[11px]">
 					<span>↑↓ navigate</span>
 					<span>
-						↵ {mode && mode !== "sort" ? "toggle" : "select"}
+						↵{" "}
+						{mode
+							? mode === "sort"
+								? "select"
+								: "toggle"
+							: "search"}
 					</span>
 					<span>⌫ remove filter</span>
 					<span>esc close</span>
