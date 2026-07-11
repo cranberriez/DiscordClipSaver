@@ -31,6 +31,8 @@ interface PaletteRow {
 	onSelect: () => void;
 	/** Keep the palette open after selecting (multi-select toggles) */
 	keepOpen?: boolean;
+	/** Reset the input to this value after selecting while the palette stays open. */
+	valueAfterSelect?: string;
 }
 
 interface Section {
@@ -157,6 +159,7 @@ export function ClipCommandPalette({
 		(c: ChannelWithStats): PaletteRow => ({
 			key: `ch-${c.id}`,
 			keepOpen: true,
+			valueAfterSelect: "#",
 			onSelect: () => toggleIn(selectedChannelIds, setChannelIds, c.id),
 			content: (
 				<>
@@ -186,6 +189,7 @@ export function ClipCommandPalette({
 		(a: AuthorWithStats): PaletteRow => ({
 			key: `au-${a.user_id}`,
 			keepOpen: true,
+			valueAfterSelect: "@",
 			onSelect: () =>
 				toggleIn(selectedAuthorIds, setAuthorIds, a.user_id),
 			content: (
@@ -269,13 +273,15 @@ export function ClipCommandPalette({
 					rows: matches.map((t) => ({
 						key: `tag-${t.slug}`,
 						keepOpen: true,
+						valueAfterSelect: "!",
 						onSelect: () => toggleIn(selectedTags, setTags, t.slug),
 						content: (
 							<>
 								<Check
 									className={cn(
 										"text-primary h-4 w-4 flex-none",
-										!selectedTags.includes(t.slug) && "invisible"
+										!selectedTags.includes(t.slug) &&
+											"invisible"
 									)}
 								/>
 								{t.color && (
@@ -302,6 +308,8 @@ export function ClipCommandPalette({
 					heading: "Sort order",
 					rows: matches.map((o) => ({
 						key: `sort-${o.sortType}-${o.sortOrder}`,
+						keepOpen: true,
+						valueAfterSelect: "sort:",
 						onSelect: () => {
 							setSortType(o.sortType);
 							setSortOrder(o.sortOrder);
@@ -499,8 +507,7 @@ export function ClipCommandPalette({
 			...selectedTags.map((slug) => ({
 				variant: "tag" as const,
 				label: tagNames.get(slug) ?? slug,
-				remove: () =>
-					setTags(selectedTags.filter((v) => v !== slug)),
+				remove: () => setTags(selectedTags.filter((v) => v !== slug)),
 			})),
 		],
 		[
@@ -524,7 +531,13 @@ export function ClipCommandPalette({
 		if (!row) return;
 		row.onSelect();
 		if (!row.keepOpen) closePalette();
-		else inputRef.current?.focus();
+		else {
+			if (row.valueAfterSelect !== undefined) {
+				setValue(row.valueAfterSelect);
+				setHot(0);
+			}
+			inputRef.current?.focus();
+		}
 	};
 
 	const onKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
