@@ -553,8 +553,7 @@ export function ClipCommandPalette({
 	};
 
 	const activateArrow = () => {
-		if (mode) selectRow(hot >= 0 ? hot : 0);
-		else submitSearch();
+		submitSearch();
 	};
 
 	const onKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -644,12 +643,8 @@ export function ClipCommandPalette({
 							hot === -1 &&
 								"bg-accent text-foreground ring-ring ring-2"
 						)}
-						aria-label={
-							mode
-								? "Select highlighted option"
-								: "Apply clip search"
-						}
-						title={mode ? "Select option" : "Apply search"}
+						aria-label="Apply clip search literally"
+						title="Search this text"
 					>
 						<ArrowRight className="h-3.5 w-3.5" />
 					</button>
@@ -711,11 +706,11 @@ export function ClipCommandPalette({
 					<span>↑↓ navigate</span>
 					<span>
 						↵{" "}
-						{mode
-							? mode === "sort"
-								? "select"
-								: "toggle"
-							: "search"}
+						{hot === -1
+							? "search"
+							: mode && mode !== "sort"
+								? "toggle"
+								: "select"}
 					</span>
 					<span>⌫ remove filter</span>
 					<span>esc close</span>
