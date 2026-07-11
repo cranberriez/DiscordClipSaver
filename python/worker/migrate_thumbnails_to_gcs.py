@@ -25,6 +25,8 @@ logger = logging.getLogger(__name__)
 @dataclass
 class MigrationStats:
     examined: int = 0
+    would_upload: int = 0
+    would_update_rows: int = 0
     uploaded: int = 0
     already_present: int = 0
     rows_updated: int = 0
@@ -79,16 +81,6 @@ async def migrate(
                     thumbnail.size_type,
                 )
 
-                if thumbnail.storage_path == target:
-                    if await destination.exists(target):
-                        stats.already_present += 1
-                    else:
-                        logger.error(
-                            "Database points to a missing destination object: %s", target
-                        )
-                        stats.failed += 1
-                    continue
-
                 destination_exists = await destination.exists(target)
                 if not destination_exists:
                     source = _source_path(source_root, thumbnail.storage_path)
@@ -101,6 +93,9 @@ async def migrate(
                         stats.missing_source += 1
                         continue
                     if not apply:
+                        stats.would_upload += 1
+                        if thumbnail.storage_path != target:
+                            stats.would_update_rows += 1
                         logger.info(
                             "Would upload %s -> gs://%s/%s", source, bucket, target
                         )
@@ -115,10 +110,12 @@ async def migrate(
                 else:
                     stats.already_present += 1
 
-                if apply:
+                if apply and thumbnail.storage_path != target:
                     thumbnail.storage_path = target
                     await thumbnail.save(update_fields=["storage_path", "updated_at"])
                     stats.rows_updated += 1
+                elif not apply and destination_exists and thumbnail.storage_path != target:
+                    stats.would_update_rows += 1
             except Exception:
                 stats.failed += 1
                 logger.exception("Failed to migrate thumbnail %s", thumbnail.id)
@@ -166,10 +163,15 @@ async def _main() -> int:
 
     mode = "APPLY" if args.apply else "DRY RUN"
     print(
-        f"{mode}: examined={stats.examined} uploaded={stats.uploaded} "
+        f"{mode}: bucket={os.getenv('GCS_BUCKET_NAME')} "
+        f"project={os.getenv('GCS_PROJECT_ID') or '(ADC default)'} "
+        f"examined={stats.examined} would_upload={stats.would_upload} "
+        f"would_update_rows={stats.would_update_rows} uploaded={stats.uploaded} "
         f"already_present={stats.already_present} rows_updated={stats.rows_updated} "
         f"missing_source={stats.missing_source} failed={stats.failed}"
     )
+    if not args.apply:
+        print("DRY RUN ONLY: no objects or database rows were changed. Rerun with --apply.")
     return 1 if stats.failed or stats.missing_source else 0
 
 

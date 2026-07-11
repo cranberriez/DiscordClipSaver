@@ -59,3 +59,7 @@ echo "Running thumbnail migration ${mode}..."
     --source-root /app/storage \
     "$mode" \
     "${extra_args[@]}"
+
+if [[ "$mode" == "--dry-run" ]]; then
+    echo "Dry run complete; GCS was not modified. Use --apply to perform the migration."
+fi
