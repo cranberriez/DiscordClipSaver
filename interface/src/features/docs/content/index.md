@@ -1,6 +1,6 @@
-# Welcome to Guild Moments
+# Discord Clip Saver documentation
 
-Guild Moments is a platform designed to save, search, and organize your Discord server's video clips. Whether you're capturing funny moments, clutch gameplay, or important server events, Guild Moments makes it easy to preserve them forever.
+Discord Clip Saver indexes video attachments posted in Discord, creates persistent thumbnails, and gives members a searchable web library. Original videos remain on Discord and are played from refreshed Discord CDN URLs. The application can run as a complete Docker stack on your own server or as individual services during development.
 
 ## Choose your setup path
 
@@ -14,7 +14,7 @@ If you just want to use the bot without worrying about servers, databases, or up
 
 ### 2. Self-hosting
 
-If you prefer to maintain full control over your data and infrastructure, you can host Guild Moments yourself. This requires setting up your own Discord Bot application and having a server/VPS to run the Docker containers.
+If you prefer to maintain full control over your data and infrastructure, you can host Discord Clip Saver yourself. This requires setting up a Discord application and having a server/VPS to run the Docker containers.
 
 - [Self-hosted Setup Guide](/docs/getting-started/self-hosted)
 
@@ -28,5 +28,6 @@ If you're a developer looking to contribute to the project, or you just want to 
 
 We've organized the documentation to help you get up and running quickly:
 
-- **Getting Started**: Step-by-step guides for each deployment method.
-- **Features & Usage**: Learn how to manage channels, tags, settings, and view your clips.
+- **Getting Started**: Setup paths and the collection lifecycle.
+- **Setup Guides**: Discord credentials, environment configuration, FFmpeg, and optional Google Cloud Storage.
+- **Features & Usage**: Channel scanning, clip permissions, command palette filtering, tags, privacy, settings, and cleanup.

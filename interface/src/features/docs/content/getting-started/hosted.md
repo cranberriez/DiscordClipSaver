@@ -1,6 +1,6 @@
-# Hosted Setup
+# Hosted setup
 
-Welcome to Guild Moments! This guide covers how to set up and use the official hosted version of the platform. Using our servers is the fastest and easiest way to start saving, searching, and organizing your server's clips without worrying about databases, storage, or bot hosting.
+This guide covers how to set up and use a hosted Discord Clip Saver instance. It is the fastest way to save, search, and organize server clips without operating databases, storage, or bot processes yourself.
 
 ## Prerequisites
 
@@ -10,22 +10,25 @@ Welcome to Guild Moments! This guide covers how to set up and use the official h
 ## Steps
 
 ### 1. Sign In
+
 Click the **Sign In** button at the top right of the screen. You'll be redirected to Discord to securely log in and grant us permission to see which servers you're in.
 
 ### 2. Invite the Bot
-Once signed in, click on the **Servers** list. Find the server you want to enable and click **Setup**. You'll be prompted to invite the Guild Moments bot to your server. 
 
-*Note: The bot only asks for the minimum permissions necessary to read message history, view channels, and read attachments.*
+Once signed in, open the server list, find the server to enable, and select **Setup**. You will be prompted to invite the Discord Clip Saver bot.
+
+_The bot must be able to view the selected channels and read their message history. Restricted channels may need a channel-level permission override._
 
 ### 3. Complete the Setup Flow
-After the bot joins, our interface will guide you through a quick setup:
-- Choose which channels the bot should monitor for new clips going forward.
-- Select channels to run an **Initial Scan** on. This will fetch historical clips posted before the bot was invited.
+
+After the bot joins, the setup flow discovers the server channels, enables scanning for the guild and its channels, and automatically queues an initial scan for channels that have not been scanned before. You can disable channels later from **Channels & Scans** in the dashboard.
 
 ### 4. Wait for Scans to Complete
-If you selected channels for an initial scan, our workers will begin pulling down historical videos. You can monitor the progress directly from your dashboard's **Scans** tab.
+
+Workers index historical messages in batches and generate thumbnails in the background. Monitor progress from **Channels & Scans** in the dashboard. Use **Catch Up** for newer gaps and **Import Full History** when you need to extend the scanned range backward.
 
 ### 5. Enjoy your Clips!
+
 Once scanning finishes, head over to the **Clips** tab to browse, search, and watch your saved media.
 
 ## Next steps

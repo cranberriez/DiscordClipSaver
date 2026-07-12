@@ -3,21 +3,21 @@ import { Metadata } from "next";
 
 export const metadata: Metadata = {
 	title: {
-		default: "Documentation | Guild Moments",
-		template: "%s | Guild Moments Docs",
+		default: "Documentation | Discord Clip Saver",
+		template: "%s | Discord Clip Saver Docs",
 	},
 	description:
-		"Learn how to set up, configure, and use Guild Moments - the ultimate Discord clip saver for your community.",
+		"Learn how to set up, configure, and use Discord Clip Saver for your community.",
 	keywords: [
-		"guild moments docs",
+		"discord clip saver docs",
 		"discord clip saver setup",
 		"how to save discord clips",
 		"discord video bot documentation",
 	],
 	openGraph: {
-		title: "Documentation | Guild Moments",
+		title: "Documentation | Discord Clip Saver",
 		description:
-			"Learn how to set up, configure, and use Guild Moments - the ultimate Discord clip saver for your community.",
+			"Learn how to set up, configure, and use Discord Clip Saver for your community.",
 	},
 };
 

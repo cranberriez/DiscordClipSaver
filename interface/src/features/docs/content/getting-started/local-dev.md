@@ -1,69 +1,79 @@
-# Local Development
+# Local development
 
-This guide is for developers who want to contribute to the project or test modifications locally.
+Use either the complete Docker stack for realistic integration testing or Docker only for PostgreSQL and Redis while you run the interface and Python services directly.
 
 ## Prerequisites
 
-- **Node.js** (v20+ recommended)
-- **Python** (v3.13+ recommended)
-- **Docker** (Required for spinning up Postgres and Redis)
-- **FFmpeg** (Required for local thumbnail generation)
+- Node.js 20 or newer.
+- Python 3.12 or 3.13. The current asyncpg dependency does not support Python 3.14.
+- Docker Desktop/Engine with Docker Compose.
+- FFmpeg only when a worker runs directly on your machine; Docker worker images include it. See [FFmpeg setup](/docs/setup/ffmpeg).
+- A Discord test application with localhost redirect URLs; see [Discord application setup](/docs/setup/discord-application).
 
-## Project Structure
+## Option A: full Docker stack
 
-The repository is structured into two main parts:
-- `/interface`: The Next.js web application.
-- `/python`: The Discord bot and background worker.
+Copy `.env.example` to `.env` and `.env.global.example` to `.env.global`, add real Discord credentials, then run:
 
-## Running Locally
-
-### 1. Start Dependencies
-First, start the database and caching layers using Docker.
 ```bash
-docker compose up dcs-postgres dcs-redis -d
+docker compose up -d --build
+docker compose logs -f bot-api bot-discord worker interface
 ```
 
-### 2. Configure Environment
-Copy `.env.global.example` to `.env.global` and fill out the required Discord developer credentials. Ensure both the `interface` and `python` components can read this file. You will need a test bot token and OAuth credentials from the Discord Developer Portal.
+Open `http://localhost:3000`. This is the quickest option when you need all services, including database schema initialization, to behave like a deployment.
 
-### 3. Run the Next.js Interface
+## Option B: Docker infrastructure, host processes
+
+Start only the dependencies:
+
+```bash
+docker compose up -d dcs-postgres dcs-redis
+```
+
+Create the relevant service-local env files under `interface/`, `python/bot/`, and `python/worker/`. Use `localhost` for database and Redis addresses in direct host processes, rather than Docker service names. Initialize the database from `python/`:
+
+```bash
+python -m shared.db.schema
+```
+
+Run the interface:
+
 ```bash
 cd interface
 npm install
 npm run dev
 ```
-The interface will be available at `http://localhost:3000`.
 
-### 4. Run the Bot and Worker
-In a new terminal, set up your Python virtual environment:
+In separate terminals, create and activate a Python virtual environment, then install dependencies from `python/`:
+
 ```bash
-cd python
 python -m venv .venv
-# On Windows:
-.venv\Scripts\activate
-# On Linux/macOS:
-source .venv/bin/activate
-
-pip install -r requirements.txt
+# Windows PowerShell: .venv\Scripts\Activate.ps1
+# Linux/macOS: source .venv/bin/activate
+pip install -r bot/requirements.txt
+pip install -r worker/requirements.txt
 ```
 
-Initialize missing database tables:
-```bash
-python -m shared.db.schema
-```
+Start the bot API, the Discord gateway, and a worker as independent processes:
 
-Start the bot:
 ```bash
-python -m bot.main
-```
-
-Start the background worker (in yet another terminal):
-```bash
+BOT_RUNTIME_MODE=api python -m bot.main
+BOT_RUNTIME_MODE=discord python -m bot.main
 python -m worker.main
 ```
 
-## Contribution Guidelines
+On Windows PowerShell, set a mode before the command, for example `$env:BOT_RUNTIME_MODE = "api"; python -m bot.main`. You can use `BOT_RUNTIME_MODE=all` for a combined bot process, or `WORKER_MODE=maintenance` to test only database/storage cleanup and thumbnail work.
 
-- **Keep changes small and focused**: Open pull requests for specific features or bug fixes.
-- **Follow the architecture**: We use Kysely for database queries and Zustand for frontend state.
-- **Test your changes**: Ensure your changes don't break the bot's ability to scan or the web UI's ability to play clips.
+## Useful checks
+
+```bash
+# Interface
+cd interface
+npm run lint
+npm run build
+
+# Python storage tests
+cd python
+python -m unittest shared.storage.tests.test_storage
+```
+
+For a browser-facing test, verify that `NEXTAUTH_URL` matches the exact local address and that Discord has both localhost callback routes registered.

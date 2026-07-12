@@ -17,6 +17,8 @@ export const PageContainer = React.forwardRef<
 >(({ children, className, maxWidth = "default" }, ref) => {
 	const maxWidthClass = {
 		default: "max-w-[1600px]",
+		"6xl": "max-w-6xl",
+		"7xl": "max-w-7xl",
 		full: "max-w-full",
 	}[maxWidth];
 

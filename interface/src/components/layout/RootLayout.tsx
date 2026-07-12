@@ -10,7 +10,7 @@ export function RootLayout({
 	hideNavbar?: boolean;
 }) {
 	return (
-		<div className="bg-background relative flex min-h-screen flex-col overflow-x-hidden">
+		<div className="bg-background relative flex min-h-screen flex-col overflow-x-clip">
 			{areDiscordInvitesDisabled() && <AnnouncementBar />}
 			{!hideNavbar && <Navbar />}
 			<main className="flex flex-1 flex-col">{children}</main>

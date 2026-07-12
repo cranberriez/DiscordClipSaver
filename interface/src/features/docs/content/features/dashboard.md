@@ -1,46 +1,41 @@
 # Using the Dashboard
 
-Once you've set up Guild Moments and invited the bot, the Dashboard is your central hub for managing how clips are collected and categorized.
+Once you have invited Discord Clip Saver, the [Dashboard](/dashboard) is the central place for managing collection, scans, tags, and server settings. Choose a server there to open its management pages.
 
-## Channels Management
+## Channels & Scans
 
-The **Channels** tab allows you to toggle which channels the bot monitors.
-- **Enable Scanning**: The bot will listen for new video attachments in this channel.
-- **Disable Scanning**: The bot will ignore this channel completely.
+The **Channels & Scans** tab combines channel controls with scan status and actions.
 
-## Scans Panel
+- **Enable scanning** allows new and historical messages in that channel to be processed.
+- **Disable scanning** stops that channel from being archived. The bot may still receive Discord events, but workers will not process clips from the disabled channel.
+- **Catch Up** scans forward from the channel's last scanned message. **Catch Up All** does the same for every enabled channel.
+- **Scan Unscanned** starts the first scan for enabled channels that have no scan history.
+- **Import Full History** scans backward from the oldest scanned message to bring in older history.
+- **Deep Integrity Scan** rechecks all messages for gaps while skipping clips already processed.
+- **Rescan Failed** retries channels whose most recent scan failed.
+- **Force Reprocess** clears scan state and processes everything again. It is slow and should be reserved for cases where parsing or metadata must be regenerated.
 
-The **Scans** tab is where you control historical message scanning. There are two levels of scanning: Global (all enabled channels) and Individual (specific channels).
+The table shows each channel's scan status, newest and oldest scanned messages, and clip count. Large scans run asynchronously through Redis and may take time to finish.
 
-### Global Scans (All Channels)
-These scans run across every channel you currently have enabled.
-- **Quick Catch-up**: Scans recent history to pick up any clips missed while the bot was offline. Use this if you know a clip was posted but the bot missed it due to a restart or outage.
-- **Deep Historical Scan**: A heavy operation that scans backwards through the entire history of all enabled channels. You can choose to skip existing clips or force an update.
+## Normal collection lifecycle
 
-### Individual Channel Scans
-These options appear next to specific channels and perform the exact same operations as their Global counterparts, but restricted to that single channel.
-- **Initial Historical Scan**: Typically run once when you first enable a channel to pull down its backlog of older clips.
+You rarely need advanced scan actions after setup:
 
-### The Golden Rule of Scanning
-**You rarely need to run manual scans.** 
-
-Guild Moments is designed to be fully autonomous once setup:
-1. **Real-time Listening**: If a channel is enabled, any new video attached to a message is saved instantly. You do not need to scan to get new clips.
-2. **Automatic Gap Filling**: If the bot goes offline, it automatically detects the gap when it reconnects and catches up on the messages it missed.
-3. **One and Done**: Once you have performed a Deep Historical scan on a channel and it has parsed through its entire message history, you *never* need to scan it again. 
-
-*Note: In the future, the UI will add a visual indicator to let you know when a channel's history has been fully backfilled to the very beginning, confirming that no further historical scans are necessary.*
+1. New messages in enabled channels are batched briefly and queued automatically.
+2. When the bot reconnects after an outage, it detects history gaps and queues catch-up work.
+3. Use **Import Full History** once for each channel whose older history you want.
+4. Use **Catch Up** when you need to fill recent activity manually. Integrity and force-reprocess actions are maintenance tools.
 
 ## Tags
 
-The **Tags** tab lets you define custom labels for your server (e.g., `#funny`, `#fail`, `#highlight`). 
-- Any user with access to the dashboard can apply these tags to clips.
-- Tags make it much easier to filter and search for specific moments later.
+The **Tags** tab lets the claimed installation owner create, rename, recolor, and delete server-specific labels such as `#funny`, `#fail`, or `#highlight`. A clip's author, the claimed owner, or a system administrator can apply existing tags to that clip. Read [Using tags](/docs/features/tags) for filtering and administration details.
 
-## Danger Zone & Purging
+## Settings and purging
 
-If you need to clean up data, the **Settings** tab contains the Danger Zone.
-- **Purge Channel**: Deletes all clips and thumbnails for a specific channel (subject to a cooldown).
-- **Purge All Channels**: Wipes all clip data but keeps the bot in the server.
-- **Purge Guild**: Completely deletes all data associated with your server and instructs the bot to leave.
+The **Settings** tab contains guild defaults, personal defaults, and destructive cleanup controls.
 
+- **Purge Channel** deletes archived records and thumbnails for one channel, subject to the configured cooldown.
+- **Purge All Channels** removes clip data from every channel but keeps the bot in the server.
+- **Purge Guild** removes the server's stored data and instructs the bot to leave.
+
+Purge operations are asynchronous and destructive. Confirm backups and the selected scope before starting one.

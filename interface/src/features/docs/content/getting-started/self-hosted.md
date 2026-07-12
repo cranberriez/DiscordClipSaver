@@ -1,95 +1,59 @@
-# Self-hosted Setup
+# Self-hosted setup
 
-This guide is for users who want to run Guild Moments on their own infrastructure. Self-hosting gives you complete control over your data, storage, and bot customization.
+This deployment runs Discord Clip Saver on infrastructure you control. The production Compose stack uses PostgreSQL for metadata, Redis for background work, Docker volumes for persistent data, and Traefik for HTTPS.
 
-## Prerequisites
+## Before you begin
 
-Before you begin, ensure you have the following:
+- A Linux server/VPS with Docker Engine, the Docker Compose plugin, and Git.
+- A public DNS name pointing to the server. Ports 80 and 443 must be reachable for HTTPS certificates. An `sslip.io` hostname can work for a temporary IP-based setup.
+- A Discord application with a bot token and OAuth client credentials. Follow the [Discord application guide](/docs/setup/discord-application).
+- Access to back up Docker volumes or PostgreSQL.
 
-- **A Server / VPS**: A Linux machine (e.g., Ubuntu) with Docker and Docker Compose installed.
-- **A Discord Bot Application**: You need to create a bot in the [Discord Developer Portal](https://discord.com/developers/applications) and get its Bot Token.
-- **Domain Name (Optional)**: To host the web interface securely via HTTPS using Traefik.
-- **Basic Docker Knowledge**: Familiarity with `docker-compose` and environment variables.
+## Deploy
 
-## What you'll deploy
-
-Our provided `docker-compose-prod.yml` will spin up the following containers:
-
-- **Next.js Interface**: The web dashboard you're reading this on.
-- **Bot API**: FastAPI service for Discord-backed API actions.
-- **Discord Bot**: Gateway listener that watches messages in real-time.
-- **Python Worker**: Background task processor for downloading clips and generating thumbnails.
-- **PostgreSQL**: The main database for storing clips, messages, and settings.
-- **Redis**: Used for task queuing (RQ) and caching.
-- **Dozzle**: Used for Docker log aggregation and viewing.
-- **Uptime Kuma**: Used for service uptime monitoring.
-
-The web interface depends on PostgreSQL for normal browsing. Redis, the bot
-services, and workers can be temporarily offline; scan, purge, thumbnail, and
-live Discord update features will be degraded until those services recover.
-
-## Quick Start
-
-### 1. Create a Discord Bot
-
-1. Go to the [Discord Developer Portal](https://discord.com/developers/applications).
-2. Create a New Application.
-3. Navigate to the **Bot** tab, enable the **Message Content Intent** (Required to read messages with clips) and **Server Members Intent** (Required to fetch member information and channel access).
-4. Copy the **Bot Token** and save it for later.
-5. Under the **OAuth2 > General** tab, copy the **Client ID** and **Client Secret** and save them for later.
-6. Set up your OAuth2 Redirect URI to point to `https://<your-domain>/api/auth/callback/discord` also add `https://<your-domain>/api/discord/bot/claim`.
-7. In the **Installation** tab, select the Guild Install method only and set Install Link to None, this is recommended to avoid the bot joining servers without assigning ownership to the person who invited it.
-
-### 2. Clone the Repository
-
-SSH into your server and clone the Guild Moments repository:
+### 1. Clone and configure
 
 ```bash
 git clone https://github.com/cranberriez/DiscordClipSaver.git
 cd DiscordClipSaver
-```
-
-### 3. Configure Environment Variables
-
-Copy the example environment file:
-
-```bash
 cp .env.example .env
 cp .env.global.example .env.global
 ```
 
-Edit `.env` using your preferred text editor (like `nano` or `vim`) and fill in the required variables:
+Edit `.env` with your bot token, Discord OAuth client ID and secret, database password, `PUBLIC_DOMAIN`, `ACME_EMAIL`, and independently generated `NEXTAUTH_SECRET`, `INTERNAL_API_TOKEN`, and `INTERNAL_HEALTH_TOKEN`. The examples label each value. Keep this file private and out of source control.
 
-- `BOT_TOKEN`: Your Bot Token.
-- `NEXTAUTH_SECRET`: Generate a random string (e.g., `openssl rand -hex 32`).
-- `DISCORD_CLIENT_ID` & `DISCORD_CLIENT_SECRET`: From your Discord app.
-- `PUBLIC_DOMAIN`: Your website domain for Traefik routing.
-- `ACME_EMAIL`: Your email for Let's Encrypt SSL certificates.
-- Database credentials, storage paths, and an `INTERNAL_HEALTH_TOKEN`.
+Set `STORAGE_TYPE=local` in `.env.global` to keep thumbnails in the Docker volume, or follow the [Google Cloud Storage guide](/docs/setup/google-cloud-storage) before starting with GCS.
 
-### 4. Start the Containers
+### 2. Start the production stack
 
-Once configured, use Docker Compose to build and start the stack:
+Production Compose pulls published images; it does not build application images on the server.
 
 ```bash
-docker compose -f docker-compose-prod.yml up -d --build
+docker compose -f docker-compose-prod.yml pull
+docker compose -f docker-compose-prod.yml up -d
+docker compose -f docker-compose-prod.yml ps
 ```
 
-### 5. Setup your Server
+The one-shot `db-schema` service creates missing database tables before application services start. Inspect startup with:
 
-Once the interface is running, the steps to invite the bot and start scanning are exactly the same as the hosted version.
-
-**[Follow the Hosted Setup steps to configure your server](/docs/getting-started/hosted)**
-
-## Common Issues
-
-### I don't have a domain name
-Traefik (the reverse proxy) requires a domain name to route traffic and generate SSL certificates. If you only have an IP address (e.g. `1.2.3.4`), you can use a free wildcard DNS service like `sslip.io`.
-
-In your `.env` file, set:
-```env
-PUBLIC_DOMAIN=1.2.3.4.sslip.io
-NEXTAUTH_URL=https://1.2.3.4.sslip.io
+```bash
+docker compose -f docker-compose-prod.yml logs -f
 ```
-Traefik will treat this as a real domain and automatically provision a certificate for it.
 
+### 3. Connect your Discord server
+
+Open `https://<your-domain>`, sign in through Discord, and use the setup flow to invite the bot and choose channels. For enabled channels, the bot receives new messages while workers process historical scans and thumbnail jobs. See the [typical lifecycle](/docs/getting-started/lifecycle) for what happens next.
+
+## Operations
+
+Scale workers when you have a substantial backlog:
+
+```bash
+docker compose -f docker-compose-prod.yml up -d --scale worker=3
+```
+
+Back up PostgreSQL and the `worker_storage` volume when using local storage. Do not run `docker compose down -v` unless you deliberately intend to remove database, Redis, and thumbnail volumes. See [environment and service patterns](/docs/setup/environment) for the full-stack and split-development alternatives.
+
+## Using an IP address
+
+Traefik needs a routable host name to obtain an HTTPS certificate. If your server IP is `1.2.3.4`, set `PUBLIC_DOMAIN=1.2.3.4.sslip.io`, point Discord’s redirect URLs to that HTTPS origin, and ensure ports 80/443 are open. Production Compose derives `NEXTAUTH_URL` from `PUBLIC_DOMAIN`.
