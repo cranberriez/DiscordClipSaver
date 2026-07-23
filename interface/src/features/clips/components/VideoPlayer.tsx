@@ -115,10 +115,7 @@ export function VideoPlayer({
 					}
 				>
 					<MediaProvider>
-						<Poster
-							className="vds-poster"
-							crossOrigin="use-credentials"
-						/>
+						<Poster className="vds-poster" />
 					</MediaProvider>
 					<DefaultVideoLayout icons={defaultLayoutIcons} />
 				</MediaPlayer>
